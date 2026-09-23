@@ -32,6 +32,11 @@ struct TagsView: View {
     @State private var selection: String?
     @State private var showInspector = true
 
+    init(model: AppModel, selection: String? = nil) {
+        self.model = model
+        _selection = State(initialValue: selection)
+    }
+
     var body: some View {
         let rows = TagRow.rows(tags: model.ledger.allTags(), resolved: model.resolved, now: model.now)
         List(rows, selection: $selection) { row in

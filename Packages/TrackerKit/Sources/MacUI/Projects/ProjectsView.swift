@@ -88,27 +88,41 @@ struct ProjectsView: View {
     @State private var selection: ProjectListRow.Kind?
     @State private var showArchived = false
     @State private var showInspector = true
+    /// Clients folded away; the rest show their projects.
+    @State private var collapsed: Set<ProjectListRow.Kind> = []
+
+    init(model: AppModel, selection: ProjectListRow.Kind? = nil) {
+        self.model = model
+        _selection = State(initialValue: selection)
+    }
 
     var body: some View {
         let rows = ProjectListRow.rows(ledger: model.ledger, resolved: model.resolved, now: model.now, showArchived: showArchived)
-        List(rows, children: \.children, selection: $selection) { row in
-            HStack(spacing: 8) {
-                if let color = row.color {
-                    Circle()
-                        .fill(Color(hex: color))
-                        .frame(width: 9, height: 9)
+        List(selection: $selection) {
+            ForEach(rows) { row in
+                if let children = row.children {
+                    DisclosureGroup(isExpanded: Binding(
+                        get: { !collapsed.contains(row.id) },
+                        set: { expanded in
+                            if expanded {
+                                collapsed.remove(row.id)
+                            } else {
+                                collapsed.insert(row.id)
+                            }
+                        }
+                    )) {
+                        ForEach(children) { child in
+                            ProjectListRowView(row: child)
+                                .tag(child.id)
+                        }
+                    } label: {
+                        ProjectListRowView(row: row)
+                            .tag(row.id)
+                    }
+                } else {
+                    ProjectListRowView(row: row)
+                        .tag(row.id)
                 }
-                Text(row.title)
-                    .foregroundStyle(row.archived ? .secondary : .primary)
-                if row.archived {
-                    Text("Archived")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Text(Format.duration(row.milliseconds))
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
             }
         }
         .overlay {
@@ -192,6 +206,32 @@ struct ProjectsView: View {
         let id = model.addProject(named: "New Project", client: clientID, color: ProjectColors.next(in: model.ledger), undoManager: undoManager)
         selection = .project(id)
         showInspector = true
+    }
+}
+
+/// A client or project with its color and the time logged to it.
+struct ProjectListRowView: View {
+    let row: ProjectListRow
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if let color = row.color {
+                Circle()
+                    .fill(Color(hex: color))
+                    .frame(width: 9, height: 9)
+            }
+            Text(row.title)
+                .foregroundStyle(row.archived ? .secondary : .primary)
+            if row.archived {
+                Text("Archived")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text(Format.duration(row.milliseconds))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+        }
     }
 }
 

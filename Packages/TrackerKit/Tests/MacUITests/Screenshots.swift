@@ -22,16 +22,22 @@ struct Screenshots {
         let sample = SampleData()
         defer { sample.cleanUp() }
         let model = await sample.model()
+        let size = CGSize(width: 1200, height: 740)
 
         for screen in Screen.allCases {
-            try render(
-                MainWindow(model: model, screen: screen),
-                size: CGSize(width: 1200, height: 740),
-                to: folder.appendingPathComponent("main-\(screen.rawValue).png")
-            )
+            try render(MainWindow(model: model, screen: screen), size: size, to: folder.appendingPathComponent("main-\(screen.rawValue).png"))
         }
         try render(MenuBarPopover(model: model), size: nil, to: folder.appendingPathComponent("menu-bar.png"))
         try render(SettingsView(model: model), size: nil, to: folder.appendingPathComponent("settings.png"))
+
+        // The inspectors, with something selected.
+        try render(EntriesView(model: model, selection: [sample.ids["Call with Globex"]!]), size: size, to: folder.appendingPathComponent("editor-entry.png"))
+        let tuesday = ["Moodboard", "Hero section", "Offline mode"].map { sample.ids[$0]! }
+        try render(EntriesView(model: model, selection: Set(tuesday)), size: size, to: folder.appendingPathComponent("editor-entries.png"))
+        try render(DayTimelineScreen(model: model, selection: sample.ids["Landing page copy"]!), size: size, to: folder.appendingPathComponent("editor-timeline.png"))
+        try render(ProjectsView(model: model, selection: .project(sample.ids["Website redesign"]!)), size: size, to: folder.appendingPathComponent("editor-project.png"))
+        try render(ProjectsView(model: model, selection: .client(sample.ids["Acme"]!)), size: size, to: folder.appendingPathComponent("editor-client.png"))
+        try render(TagsView(model: model, selection: "design"), size: size, to: folder.appendingPathComponent("editor-tag.png"))
     }
 
     struct RenderError: Error {}
@@ -72,10 +78,12 @@ struct Screenshots {
 /// running timer, an overlap, an unassigned entry and one recorded in New
 /// York. "Now" is Wednesday, September 23, 2026, at 15:40 in Berlin.
 @MainActor
-struct SampleData {
+final class SampleData {
     let root: URL
     let suiteName: String
     let defaults: UserDefaults
+    /// Ids of the clients, projects and entries, by name or note.
+    var ids: [String: UUID] = [:]
 
     init() {
         let name = "Screenshots-\(UUID().uuidString)"
@@ -104,14 +112,15 @@ struct SampleData {
         let internalWork = model.addProject(named: "Internal", client: nil, color: "#8064A2", undoManager: nil)
         let admin = model.addProject(named: "Admin", client: nil, color: "#7F7F7F", undoManager: nil)
         model.updateProject(admin, undoManager: nil) { $0.archived = true }
+        ids["Acme"] = acme
+        ids["Website redesign"] = website
 
         func add(_ project: UUID?, _ start: String, _ end: String, _ note: String, _ tags: [String] = [], zone: String = "Europe/Berlin", offset: String = "+02:00") {
             let startTime = DateTimeFormat.parse("2026-09-\(start):00\(offset)")!
             let endTime = DateTimeFormat.parse("2026-09-\(end):00\(offset)")!
-            model.addEntry(
-                TimeEntry(projectID: project, start: startTime, end: endTime, timeZone: zone, tags: tags, note: note, updated: startTime),
-                undoManager: nil
-            )
+            let entry = TimeEntry(projectID: project, start: startTime, end: endTime, timeZone: zone, tags: tags, note: note, updated: startTime)
+            model.addEntry(entry, undoManager: nil)
+            ids[note] = entry.id
         }
 
         add(brand, "18T10:00", "18T12:00", "Client visit", ["client-call"], zone: "America/New_York", offset: "-04:00")
@@ -133,6 +142,7 @@ struct SampleData {
 
         model.startTimer(Combination(projectID: website, tags: ["design"]), note: "Landing page copy", undoManager: nil)
         model.setRunningStart(DateTimeFormat.parse("2026-09-23T14:45:00+02:00")!, undoManager: nil)
+        ids["Landing page copy"] = model.running?.id
         return model
     }
 

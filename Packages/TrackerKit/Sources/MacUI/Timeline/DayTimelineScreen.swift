@@ -9,9 +9,14 @@ import TrackerKit
 struct DayTimelineScreen: View {
     let model: AppModel
     /// The day shown, or nil for today.
-    @State private var day: LocalDate?
+    @State private var day: LocalDate? = nil
     @State private var selection: UUID?
     @State private var showInspector = true
+
+    init(model: AppModel, selection: UUID? = nil) {
+        self.model = model
+        _selection = State(initialValue: selection)
+    }
 
     private var shownDay: LocalDate { day ?? model.today }
 

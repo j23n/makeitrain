@@ -56,44 +56,50 @@ struct EntryRow: Identifiable {
 struct EntriesView: View {
     let model: AppModel
     @Environment(\.undoManager) private var undoManager
-    @State private var selection: Set<UUID> = []
+    @State private var selection: Set<UUID>
     @State private var sortOrder = [KeyPathComparator(\EntryRow.start, order: .reverse)]
     @State private var search = ""
     @State private var overlapsOnly = false
     @State private var showInspector = true
+
+    init(model: AppModel, selection: Set<UUID> = []) {
+        self.model = model
+        _selection = State(initialValue: selection)
+    }
 
     var body: some View {
         Table(rows, selection: $selection, sortOrder: $sortOrder) {
             TableColumn("", value: \EntryRow.status) { row in
                 EntryStatusIcon(row: row)
             }
-            .width(18)
+            .width(16)
             TableColumn("Date", value: \EntryRow.day) { row in
                 Text(row.day.year == model.today.year ? Format.day(row.day) : Format.longDay(row.day))
             }
-            .width(min: 90, ideal: 110)
+            .width(min: 80, ideal: 95)
             TableColumn("Start", value: \EntryRow.start) { row in
                 Text(row.startText)
                     .monospacedDigit()
             }
-            .width(min: 60, ideal: 80)
+            .width(min: 56, ideal: 72)
             TableColumn("End", value: \EntryRow.endSort) { row in
                 Text(row.endText)
                     .monospacedDigit()
             }
-            .width(min: 60, ideal: 80)
+            .width(min: 56, ideal: 72)
             TableColumn("Duration", value: \EntryRow.duration) { row in
                 Text(Format.duration(row.duration))
                     .monospacedDigit()
             }
-            .width(min: 56, ideal: 64)
+            .width(min: 44, ideal: 56)
             TableColumn("Project", value: \EntryRow.projectTitle) { row in
                 ProjectLabel(ledger: model.ledger, projectID: row.entry.entry.projectID)
             }
-            .width(min: 120, ideal: 200)
+            .width(min: 100, ideal: 160)
             TableColumn("Tags", value: \EntryRow.tagsText)
-                .width(min: 60, ideal: 120)
+                .width(min: 50, ideal: 90)
             TableColumn("Note", value: \EntryRow.note)
+                .width(min: 80, ideal: 160)
         }
         .contextMenu(forSelectionType: UUID.self) { ids in
             if !ids.isEmpty {

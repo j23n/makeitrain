@@ -23,7 +23,7 @@ public struct AppScenes: Scene {
             MainWindow(model: model)
                 .dockIcon()
         }
-        .defaultSize(width: 1000, height: 660)
+        .defaultSize(width: 1200, height: 720)
 
         Settings {
             SettingsView(model: model)
