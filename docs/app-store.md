@@ -24,7 +24,7 @@ For App Store Connect's App Privacy section, answer that the app doesn't collect
 - Entries, projects and backups stay on the device or in the user's own iCloud Drive, where the developer can't see them.
 - There's no analytics, crash reporting SDK, advertising or tracking.
 
-The privacy manifests say the same: no tracking, no tracking domains and no collected data. They declare one required-reason API: `UserDefaults`, with reason `CA92.1`, for settings only this app reads (where the data lives and the first day of the week).
+The privacy manifests say the same: no tracking, no tracking domains and no collected data. They declare one required-reason API: `UserDefaults`, with reason `CA92.1`, for settings only this app reads, such as where the data lives, the first day of the week and which panels are shown.
 
 ## Notes for App Review
 
