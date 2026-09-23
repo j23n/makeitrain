@@ -49,6 +49,7 @@ final class MemoryFiles: FileAccess, @unchecked Sendable {
     private var files: [String: Data] = [:]
     private var writeCount = 0
     private var budget: Int?
+    private var missing: Set<String> = []
 
     /// Writes so far.
     var writes: Int {
@@ -59,6 +60,12 @@ final class MemoryFiles: FileAccess, @unchecked Sendable {
     var writeBudget: Int? {
         get { locked { budget } }
         set { locked { budget = newValue } }
+    }
+
+    /// Paths whose reads fail as if iCloud hadn't downloaded them yet.
+    var notDownloaded: Set<String> {
+        get { locked { missing } }
+        set { locked { missing = newValue } }
     }
 
     func put(_ path: String, _ data: Data) {
@@ -90,7 +97,10 @@ final class MemoryFiles: FileAccess, @unchecked Sendable {
     }
 
     func read(_ file: URL) throws -> Data? {
-        locked { files[file.path] }
+        try locked {
+            if missing.contains(file.path) { throw FileProblem.notDownloaded }
+            return files[file.path]
+        }
     }
 
     func write(_ data: Data, to file: URL) throws {

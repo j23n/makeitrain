@@ -43,18 +43,22 @@ extension TimeEntry {
             && a.tags == b.tags && a.note == b.note && a.deleted == b.deleted
     }
 
-    /// `end` with the stamp it merges on, or nil for an entry that never stopped.
+    /// `end` with the stamp it merges on, or nil for an entry whose end was
+    /// never set.
     private var endVersion: EndVersion? {
-        end.map { EndVersion(stamp: endUpdated ?? updated, end: $0) }
+        guard let stamp = endUpdated ?? (end == nil ? nil : updated) else { return nil }
+        return EndVersion(stamp: stamp, end: end)
     }
 }
 
+/// An end and its stamp. A cleared end (nil) sorts before any time.
 private struct EndVersion: Comparable {
     var stamp: Timestamp
-    var end: Timestamp
+    var end: Timestamp?
 
     static func < (lhs: EndVersion, rhs: EndVersion) -> Bool {
-        (lhs.stamp, lhs.end) < (rhs.stamp, rhs.end)
+        if lhs.stamp != rhs.stamp { return lhs.stamp < rhs.stamp }
+        return Order.compareOptional(lhs.end, rhs.end) < 0
     }
 }
 

@@ -6,6 +6,16 @@ public enum FileProblem: Error, Hashable, Sendable {
     case unreadable(String)
     /// The file was written by a newer version of the app.
     case newerVersion(Int)
+    /// iCloud hasn't downloaded the file to this device yet.
+    case notDownloaded
+}
+
+extension FileProblem {
+    /// `error` as a file problem: itself if it is one, otherwise the file
+    /// counts as unreadable, with the error's description.
+    init(_ error: any Error) {
+        self = error as? FileProblem ?? .unreadable(String(describing: error))
+    }
 }
 
 /// Reading and writing the data files: `projects.json` and one file per month.
@@ -140,7 +150,9 @@ extension TimeEntry: Decodable {
         }
         if let end {
             members["end"] = time(end)
-            members["endUpdated"] = time(endUpdated ?? updated)
+        }
+        if let stamp = endUpdated ?? (end == nil ? nil : updated) {
+            members["endUpdated"] = time(stamp)
         }
         if let deleted {
             members["deleted"] = time(deleted)

@@ -70,9 +70,10 @@ public struct TimeEntry: Identifiable, Hashable, Sendable {
     public var start: Timestamp
     /// Whole seconds, or nil while the timer runs.
     public var end: Timestamp?
-    /// When `end` was last set. `end` merges on this stamp, separately from
-    /// the other fields, so a stop survives an edit made to an out-of-date
-    /// copy on another device.
+    /// When `end` was last set or cleared, or nil if it never was. `end`
+    /// merges on this stamp, separately from the other fields, so a stop
+    /// survives an edit made to an out-of-date copy on another device.
+    /// Undoing a stop clears `end` and stamps it here.
     public var endUpdated: Timestamp?
     /// The zone the entry was recorded in, such as "Europe/Berlin". The entry
     /// is shown, edited and filed in this zone.
@@ -85,8 +86,7 @@ public struct TimeEntry: Identifiable, Hashable, Sendable {
     /// tags, so an older copy can't bring it back.
     public var deleted: Timestamp?
 
-    /// `end` and `endUpdated` come as a pair: without an `endUpdated`, an
-    /// `end` is stamped with `updated`.
+    /// Without an `endUpdated`, an `end` is stamped with `updated`.
     public init(
         id: UUID = UUID(),
         projectID: UUID? = nil,
@@ -103,7 +103,7 @@ public struct TimeEntry: Identifiable, Hashable, Sendable {
         self.projectID = projectID
         self.start = start
         self.end = end
-        self.endUpdated = end == nil ? nil : endUpdated ?? updated
+        self.endUpdated = endUpdated ?? (end == nil ? nil : updated)
         self.timeZone = timeZone
         self.tags = tags
         self.note = note

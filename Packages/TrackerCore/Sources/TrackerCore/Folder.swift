@@ -120,16 +120,16 @@ public struct Folder: Sendable {
         for name in try access.fileNames(in: root).sorted() {
             guard let fileName = DataFileName(name), fileName.base == "projects" else { continue }
             let url = root.appendingPathComponent(name)
-            guard let data = try access.coordinateReading(url, { try access.read(url) }) else { continue }
             do {
+                guard let data = try access.coordinateReading(url, { try access.read(url) }) else { continue }
                 let contents = try FileFormat.decodeProjects(from: data)
                 for client in contents.clients { result.ledger.merge(client) }
                 for project in contents.projects { result.ledger.merge(project) }
                 if fileName.copy != nil {
                     result.pending.projects = true
                 }
-            } catch let problem as FileProblem {
-                result.issues.append(FileIssue(path: name, problem: problem))
+            } catch {
+                result.issues.append(FileIssue(path: name, problem: FileProblem(error)))
             }
         }
 
@@ -137,16 +137,16 @@ public struct Folder: Sendable {
         for name in try access.fileNames(in: entriesFolder).sorted() {
             guard let fileName = DataFileName(name), let month = MonthKey(fileName.base) else { continue }
             let url = entriesFolder.appendingPathComponent(name)
-            guard let data = try access.coordinateReading(url, { try access.read(url) }) else { continue }
             do {
+                guard let data = try access.coordinateReading(url, { try access.read(url) }) else { continue }
                 let entries = try FileFormat.decodeEntries(from: data)
                 for entry in entries { result.ledger.merge(entry) }
                 filed.append((month, entries))
                 if fileName.copy != nil {
                     result.pending.months.insert(month)
                 }
-            } catch let problem as FileProblem {
-                result.issues.append(FileIssue(path: "entries/" + name, problem: problem))
+            } catch {
+                result.issues.append(FileIssue(path: "entries/" + name, problem: FileProblem(error)))
             }
         }
 
@@ -219,24 +219,24 @@ public struct Folder: Sendable {
 
         return try access.coordinateWriting([file] + copies) {
             var onDisk: [TimeEntry] = []
-            if let data = try access.read(file) {
-                do {
+            do {
+                if let data = try access.read(file) {
                     onDisk = try FileFormat.decodeEntries(from: data)
-                } catch let problem as FileProblem {
-                    result.issues.append(FileIssue(path: "entries/" + month.fileName, problem: problem))
-                    result.pending.months.insert(month)
-                    return nil
                 }
+            } catch {
+                result.issues.append(FileIssue(path: "entries/" + month.fileName, problem: FileProblem(error)))
+                result.pending.months.insert(month)
+                return nil
             }
             var found = onDisk
             var folded: [URL] = []
             for copy in copies {
-                guard let data = try access.read(copy) else { continue }
                 do {
+                    guard let data = try access.read(copy) else { continue }
                     found += try FileFormat.decodeEntries(from: data)
                     folded.append(copy)
-                } catch let problem as FileProblem {
-                    result.issues.append(FileIssue(path: "entries/" + copy.lastPathComponent, problem: problem))
+                } catch {
+                    result.issues.append(FileIssue(path: "entries/" + copy.lastPathComponent, problem: FileProblem(error)))
                 }
             }
             for entry in found {
@@ -274,26 +274,26 @@ public struct Folder: Sendable {
 
         try access.coordinateWriting([projectsFile] + copies) {
             var onDisk: (clients: [Client], projects: [Project]) = ([], [])
-            if let data = try access.read(projectsFile) {
-                do {
+            do {
+                if let data = try access.read(projectsFile) {
                     onDisk = try FileFormat.decodeProjects(from: data)
-                } catch let problem as FileProblem {
-                    result.issues.append(FileIssue(path: "projects.json", problem: problem))
-                    result.pending.projects = true
-                    return
                 }
+            } catch {
+                result.issues.append(FileIssue(path: "projects.json", problem: FileProblem(error)))
+                result.pending.projects = true
+                return
             }
             var found = onDisk
             var folded: [URL] = []
             for copy in copies {
-                guard let data = try access.read(copy) else { continue }
                 do {
+                    guard let data = try access.read(copy) else { continue }
                     let contents = try FileFormat.decodeProjects(from: data)
                     found.clients += contents.clients
                     found.projects += contents.projects
                     folded.append(copy)
-                } catch let problem as FileProblem {
-                    result.issues.append(FileIssue(path: copy.lastPathComponent, problem: problem))
+                } catch {
+                    result.issues.append(FileIssue(path: copy.lastPathComponent, problem: FileProblem(error)))
                 }
             }
             for client in found.clients { result.ledger.merge(client) }
