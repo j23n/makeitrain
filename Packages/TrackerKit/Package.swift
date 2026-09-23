@@ -37,5 +37,10 @@ let package = Package(
             dependencies: ["TrackerKit"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
+        .testTarget(
+            name: "MacUITests",
+            dependencies: ["MacUI", "TrackerKit"],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
     ]
 )
