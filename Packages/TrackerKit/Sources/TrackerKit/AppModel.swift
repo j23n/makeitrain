@@ -262,10 +262,19 @@ public final class AppModel {
 
     // MARK: - Storage
 
-    public enum StorageError: Error, Equatable {
+    public enum StorageError: LocalizedError, Equatable {
         /// Some iCloud files aren't on this device yet, so a copy would miss them.
         case iCloudNotDownloaded
         case iCloudUnavailable
+
+        public var errorDescription: String? {
+            switch self {
+            case .iCloudNotDownloaded:
+                "Some of your data hasn't downloaded from iCloud yet. Try again once it has."
+            case .iCloudUnavailable:
+                "Sign in to iCloud and turn on iCloud Drive first."
+            }
+        }
     }
 
     /// Whether iCloud can be turned on.

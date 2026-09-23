@@ -3,38 +3,6 @@ import AppKit
 import SwiftUI
 import TrackerCore
 
-/// A text field that edits a draft and commits it on Return or when focus
-/// leaves, so typing doesn't make an undo step per keystroke. Until the
-/// draft is edited, it shows the current value.
-struct CommitField: View {
-    let title: String
-    let value: String
-    var axis: Axis = .horizontal
-    let commit: (String) -> Void
-    @State private var draft: String? = nil
-    @FocusState private var focused: Bool
-
-    var body: some View {
-        TextField(title, text: Binding(get: { draft ?? value }, set: { draft = $0 }), axis: axis)
-            .focused($focused)
-            .onSubmit(save)
-            .onChange(of: focused) { _, isFocused in
-                if !isFocused {
-                    save()
-                }
-            }
-            .onDisappear(perform: save)
-    }
-
-    private func save() {
-        guard let text = draft else { return }
-        draft = nil
-        if text != value {
-            commit(text)
-        }
-    }
-}
-
 /// Tags as tokens. Typing completes existing tags with their existing
 /// spelling, and `;` is dropped. Commits when editing ends.
 struct TagField: NSViewRepresentable {

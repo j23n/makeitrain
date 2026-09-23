@@ -62,10 +62,6 @@ struct SettingsView: View {
                 Task {
                     do {
                         try await model.switchStorage(to: on ? .iCloud : .local)
-                    } catch AppModel.StorageError.iCloudNotDownloaded {
-                        switchError = "Some of your data hasn't downloaded from iCloud yet. Try again once it has."
-                    } catch AppModel.StorageError.iCloudUnavailable {
-                        switchError = "Sign in to iCloud and turn on iCloud Drive first."
                     } catch {
                         switchError = error.localizedDescription
                     }
