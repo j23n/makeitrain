@@ -74,6 +74,25 @@ public enum Format {
         noon(of: day).formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, timeZone: utc))
     }
 
+    /// A range of days, such as "Sep 21 – 27, 2026", or one day with its
+    /// weekday.
+    public static func days(_ range: ClosedRange<LocalDate>) -> String {
+        guard range.lowerBound != range.upperBound else {
+            return noon(of: range.lowerBound).formatted(
+                Date.FormatStyle(timeZone: utc).weekday(.wide).month(.abbreviated).day().year()
+            )
+        }
+        return (noon(of: range.lowerBound)..<noon(of: range.upperBound)).formatted(
+            Date.IntervalFormatStyle(date: .abbreviated, time: .omitted, timeZone: utc)
+        )
+    }
+
+    /// A share of a total, such as "42%".
+    public static func percent(_ part: Int64, of total: Int64) -> String {
+        guard total > 0 else { return "" }
+        return "\(Int((Double(part) / Double(total) * 100).rounded()))%"
+    }
+
     /// A short name for a time zone, such as "CEST", shown next to times
     /// recorded in a zone other than the current one. Nil when it's the
     /// current zone.
