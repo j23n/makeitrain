@@ -60,7 +60,7 @@ struct EntriesView: View {
     @State private var sortOrder = [KeyPathComparator(\EntryRow.start, order: .reverse)]
     @State private var search = ""
     @State private var overlapsOnly = false
-    @State private var showInspector = true
+    @AppStorage("entries.inspector") private var showInspector = true
 
     init(model: AppModel, selection: Set<UUID> = []) {
         self.model = model

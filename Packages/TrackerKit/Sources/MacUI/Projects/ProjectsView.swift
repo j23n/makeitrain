@@ -87,7 +87,7 @@ struct ProjectsView: View {
     @Environment(\.undoManager) private var undoManager
     @State private var selection: ProjectListRow.Kind?
     @State private var showArchived = false
-    @State private var showInspector = true
+    @AppStorage("projects.inspector") private var showInspector = true
     /// Clients folded away; the rest show their projects.
     @State private var collapsed: Set<ProjectListRow.Kind> = []
 

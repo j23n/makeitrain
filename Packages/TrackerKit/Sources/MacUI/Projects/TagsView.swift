@@ -30,7 +30,7 @@ struct TagRow: Identifiable, Hashable {
 struct TagsView: View {
     let model: AppModel
     @State private var selection: String?
-    @State private var showInspector = true
+    @AppStorage("tags.inspector") private var showInspector = true
 
     init(model: AppModel, selection: String? = nil) {
         self.model = model

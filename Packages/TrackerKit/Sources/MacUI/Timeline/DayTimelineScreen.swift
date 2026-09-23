@@ -11,7 +11,7 @@ struct DayTimelineScreen: View {
     /// The day shown, or nil for today.
     @State private var day: LocalDate? = nil
     @State private var selection: UUID?
-    @State private var showInspector = true
+    @AppStorage("timeline.inspector") private var showInspector = true
 
     init(model: AppModel, selection: UUID? = nil) {
         self.model = model

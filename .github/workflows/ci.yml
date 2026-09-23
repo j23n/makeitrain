@@ -54,11 +54,3 @@ jobs:
           name: mac-screenshots
           path: screenshots
           if-no-files-found: warn
-      - name: Print the screenshots
-        run: |
-          for file in screenshots/main-projects.png screenshots/main-entries.png screenshots/editor-*.png; do
-            sips -Z 820 -s format jpeg -s formatOptions 50 "$file" --out "${file%.png}.jpg" > /dev/null
-            echo "BEGIN $(basename "${file%.png}.jpg")"
-            base64 -b 76 -i "${file%.png}.jpg"
-            echo "END"
-          done
