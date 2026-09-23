@@ -233,7 +233,7 @@ date,start,end,hours,client,project,tags,note
 
 Nine milestones. The app is usable every day from milestone 3, sync is tested before daily use fixes the file format, and the hardest UI piece comes once the data layer is solid.
 
-- [ ] **1. Core package:** models, JSON encoding with time zones, merging, the two-timers rule, overlap detection, and the file store's folder logic. That logic covers loading every file including numbered copies, read-merge-write saves, moves between months, and never overwriting unreadable or newer files. All unit-tested, including property tests that merging gives the same result in any order and when repeated.
+- [x] **1. Core package:** models, JSON encoding with time zones, merging, the two-timers rule, overlap detection, and the file store's folder logic. That logic covers loading every file including numbered copies, read-merge-write saves, moves between months, and never overwriting unreadable or newer files. All unit-tested, including property tests that merging gives the same result in any order and when repeated.
 - [ ] **2. iCloud spike** on two Macs: offline edits on both, the same file created on both, eviction by "Optimize Mac Storage", sign-out, and the Finder folder. The results decide between month files and the per-device fallback.
 - [ ] **3. Local storage and menu bar,** sandboxed from the start: start, stop and switch timers from the popover, and daily backups. Sandboxing moves Application Support into the app's container, so turning it on later would strand the data from earlier builds.
 - [ ] **4. Editing:** entries table with inspector, undo, and managing clients, projects and tags, including merging.

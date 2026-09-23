@@ -9,7 +9,7 @@ jobs:
     name: TrackerCore on macOS
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: swift --version
       - run: swift test --package-path TrackerCore
 
@@ -18,6 +18,6 @@ jobs:
     runs-on: ubuntu-latest
     container: swift:6.2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: swift --version
       - run: swift test --package-path TrackerCore
