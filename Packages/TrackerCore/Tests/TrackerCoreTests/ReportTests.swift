@@ -7,7 +7,7 @@ import Testing
 
     // Acme has Website and App; Internal has no client.
     let acme = uuid(20), beta = uuid(21)
-    let website = uuid(10), app = uuid(11), internal = uuid(12), betaSite = uuid(13)
+    let website = uuid(10), app = uuid(11), inHouse = uuid(12), betaSite = uuid(13)
 
     var ledger: Ledger {
         Ledger(
@@ -18,7 +18,7 @@ import Testing
             projects: [
                 Project(id: website, clientID: acme, name: "Website", color: "#111111", updated: now),
                 Project(id: app, clientID: acme, name: "App", color: "#222222", updated: now),
-                Project(id: internal, name: "Internal", color: "#333333", updated: now),
+                Project(id: inHouse, name: "Internal", color: "#333333", updated: now),
                 Project(id: betaSite, clientID: beta, name: "Site", updated: now),
             ]
         )
@@ -65,7 +65,7 @@ import Testing
         let result = report([
             entry(1, website, "23T09:00", "23T10:00"),
             entry(2, app, "23T10:00", "23T12:00"),
-            entry(3, internal, "23T13:00", "23T13:30"),
+            entry(3, inHouse, "23T13:00", "23T13:30"),
             entry(4, nil, "23T14:00", "23T14:15"),
             entry(5, betaSite, "24T09:00", "24T10:00"),
             entry(6, website, "24T10:00", "24T11:00"),
@@ -84,13 +84,13 @@ import Testing
     @Test func groupsByProjectWithClientNames() {
         let result = report([
             entry(1, website, "23T09:00", "23T10:00"),
-            entry(2, internal, "23T10:00", "23T12:00"),
+            entry(2, inHouse, "23T10:00", "23T12:00"),
             entry(3, nil, "23T12:00", "23T12:30"),
         ], ReportRequest(range: days(21, 27), grouping: .project))
 
         #expect(result.groups.map(\.title) == ["Acme › Website", "Internal", "Unassigned"])
         #expect(result.groups.map(\.milliseconds) == [hour, 2 * hour, hour / 2])
-        #expect(result.groups.map(\.kind) == [.project(website), .project(internal), .unassigned])
+        #expect(result.groups.map(\.kind) == [.project(website), .project(inHouse), .unassigned])
     }
 
     @Test func groupsByTagCountingEntriesUnderEachOfTheirTags() {
@@ -173,7 +173,7 @@ import Testing
         let entries = [
             entry(1, website, "23T09:00", "23T10:00", tags: ["Design"]),
             entry(2, app, "23T10:00", "23T12:00", tags: ["call"]),
-            entry(3, internal, "23T13:00", "23T13:30", tags: ["design", "call"]),
+            entry(3, inHouse, "23T13:00", "23T13:30", tags: ["design", "call"]),
             entry(4, nil, "23T14:00", "23T14:15"),
             entry(5, betaSite, "24T09:00", "24T10:00"),
         ]
