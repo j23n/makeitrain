@@ -75,23 +75,29 @@ struct TagField: NSViewRepresentable {
     }
 }
 
-/// A menu that sets the project of several entries at once.
-struct ProjectMenu: View {
+/// A button that opens the searchable project list in a popover and hands
+/// over the project chosen, such as for several entries at once or as a
+/// project to merge into.
+struct ProjectChooserButton: View {
     let ledger: Ledger
     let title: String
+    var offersNoProject = true
+    var excluding: UUID? = nil
     let choose: (UUID?) -> Void
+    @State private var choosing = false
 
     var body: some View {
-        Menu(title) {
-            Button("No Project") {
-                choose(nil)
+        Button(title) {
+            choosing = true
+        }
+        .popover(isPresented: $choosing, arrowEdge: .bottom) {
+            ProjectChooser(ledger: ledger, current: nil, offersNoProject: offersNoProject, excluding: excluding) { projectID in
+                choosing = false
+                choose(projectID)
+            } cancel: {
+                choosing = false
             }
-            Divider()
-            ForEach(ledger.pickerProjects()) { project in
-                Button(ledger.projectTitle(project.id)) {
-                    choose(project.id)
-                }
-            }
+            .frame(width: 320)
         }
     }
 }

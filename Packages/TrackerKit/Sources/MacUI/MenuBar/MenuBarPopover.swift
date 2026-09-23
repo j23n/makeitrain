@@ -12,6 +12,7 @@ struct MenuBarPopover: View {
     @Environment(\.undoManager) private var undoManager
     @State private var note = ""
     @State private var projectID: UUID?
+    @State private var choosingProject = false
     @State private var adjusting: Adjustment?
     @State private var adjustedTime = Date()
 
@@ -118,16 +119,36 @@ struct MenuBarPopover: View {
 
     // MARK: Quick start
 
+    /// The project list opens inline rather than in a popover of its own:
+    /// a second window would take focus from the menu bar's and close it.
     private var quickStart: some View {
         VStack(alignment: .leading, spacing: 8) {
             TextField("What are you working on?", text: $note)
                 .textFieldStyle(.roundedBorder)
                 .onSubmit(start)
             HStack {
-                ProjectPicker(ledger: model.ledger, selection: $projectID)
-                    .frame(maxWidth: 220)
+                Text("Project")
+                Button {
+                    choosingProject.toggle()
+                } label: {
+                    ProjectPickerButtonLabel(ledger: model.ledger, projectID: projectID)
+                        .frame(maxWidth: 190, alignment: .leading)
+                }
+                .help("Choose a project; type to search clients and projects")
                 Spacer()
                 Button(model.running == nil ? "Start" : "Switch", action: start)
+            }
+            if choosingProject {
+                ProjectChooser(ledger: model.ledger, current: ProjectChoice(projectID)) { chosen in
+                    projectID = chosen
+                    choosingProject = false
+                } cancel: {
+                    choosingProject = false
+                }
+                .background(.background, in: RoundedRectangle(cornerRadius: 8))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 8).strokeBorder(.separator)
+                }
             }
         }
         .padding(12)

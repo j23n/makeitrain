@@ -169,7 +169,7 @@ struct EntriesEditor: View {
                 LabeledContent("Total", value: Format.duration(entries.reduce(0) { $0 + model.duration(of: $1) }))
             }
             Section {
-                ProjectMenu(ledger: model.ledger, title: "Set Project") { projectID in
+                ProjectChooserButton(ledger: model.ledger, title: "Set Project…") { projectID in
                     model.updateEntries(ids, actionName: "Change Project", undoManager: undoManager) { $0.projectID = projectID }
                 }
                 LabeledContent("Add Tags") {

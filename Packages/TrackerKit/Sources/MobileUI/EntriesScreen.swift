@@ -165,7 +165,6 @@ struct EntryForm: View {
                     get: { entry.entry.projectID },
                     set: { projectID in update("Change Project") { $0.projectID = projectID } }
                 ))
-                .pickerStyle(.navigationLink)
                 CommitField(title: "Note", value: entry.entry.note, axis: .vertical) { note in
                     update("Change Note") { $0.note = note }
                 }

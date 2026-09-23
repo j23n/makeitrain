@@ -23,6 +23,7 @@ The rules the app follows, whichever screen or device an edit comes from. One ti
 
 - A project without a client is listed under "No client".
 - Pickers show "Acme › Website redesign"; a project without a client has no prefix.
+- Typing in a project picker narrows the list to projects whose client or project name has each word typed, ignoring case and accents: "web", "site" and "acme web" all find "Acme › Website redesign". Projects whose name starts with what's typed come first. On the Mac, the arrow keys move through the list, Return picks, and Escape clears the search or closes the list.
 - Archiving a client hides it and its projects from pickers and the menu bar's "Switch to" list. Their history stays in reports.
 - Deleting a client or project that has entries isn't possible; the app offers to archive it instead. A client has entries when any of its projects does. Deleting a client deletes its projects too.
 - Another device may still log time to a project deleted here. An entry pointing at a deleted project shows that project as archived, and so does a project whose client was deleted.

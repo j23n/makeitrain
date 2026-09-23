@@ -384,12 +384,8 @@ struct ProjectEditor: View {
                 LabeledContent("Time Logged", value: Format.duration(entries.reduce(0) { $0 + model.duration(of: $1) }))
             }
             Section {
-                Menu("Merge Into…") {
-                    ForEach(others) { other in
-                        Button(model.ledger.projectTitle(other.id)) {
-                            mergeTarget = other
-                        }
-                    }
+                ProjectChooserButton(ledger: model.ledger, title: "Merge Into…", offersNoProject: false, excluding: project.id) { projectID in
+                    mergeTarget = projectID.flatMap { model.ledger.projects[$0] }
                 }
                 .disabled(others.isEmpty)
                 Button("Delete Project…", role: .destructive) {

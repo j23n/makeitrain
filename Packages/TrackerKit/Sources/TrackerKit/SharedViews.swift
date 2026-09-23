@@ -47,33 +47,6 @@ public struct TagList: View {
     }
 }
 
-/// A menu of live projects, grouped by client, with "No Project" first. A
-/// selected project that has since been archived stays visible.
-public struct ProjectPicker: View {
-    let ledger: Ledger
-    @Binding var selection: UUID?
-    let title: String
-
-    public init(ledger: Ledger, selection: Binding<UUID?>, title: String = "Project") {
-        self.ledger = ledger
-        _selection = selection
-        self.title = title
-    }
-
-    public var body: some View {
-        Picker(title, selection: $selection) {
-            Text("No Project").tag(UUID?.none)
-            Divider()
-            ForEach(ledger.pickerProjects()) { project in
-                Text(ledger.projectTitle(project.id)).tag(UUID?.some(project.id))
-            }
-            if let selection, ledger.isArchived(project: selection) {
-                Text(ledger.projectTitle(selection)).tag(UUID?.some(selection))
-            }
-        }
-    }
-}
-
 /// A text field that edits a draft and commits it on Return or when focus
 /// leaves, so typing doesn't make an undo step per keystroke. Until the
 /// draft is edited, it shows the current value.

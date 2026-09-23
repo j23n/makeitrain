@@ -38,6 +38,19 @@ struct Screenshots {
         try render(ProjectsView(model: model, selection: .project(sample.ids["Website redesign"]!)), size: size, to: folder.appendingPathComponent("editor-project.png"))
         try render(ProjectsView(model: model, selection: .client(sample.ids["Acme"]!)), size: size, to: folder.appendingPathComponent("editor-client.png"))
         try render(TagsView(model: model, selection: "design"), size: size, to: folder.appendingPathComponent("editor-tag.png"))
+
+        // The project picker's list, as it opens and while searching.
+        let website = ProjectChoice.project(sample.ids["Website redesign"]!)
+        try render(
+            ProjectChooser(ledger: model.ledger, current: website, choose: { _ in }, cancel: {}).frame(width: 320),
+            size: nil,
+            to: folder.appendingPathComponent("chooser.png")
+        )
+        try render(
+            ProjectChooser(ledger: model.ledger, current: website, query: "re", choose: { _ in }, cancel: {}).frame(width: 320),
+            size: nil,
+            to: folder.appendingPathComponent("chooser-search.png")
+        )
     }
 
     struct RenderError: Error {}
