@@ -312,6 +312,32 @@ public struct Folder: Sendable {
     }
 }
 
+/// What a data file holds, judging by its name, including iCloud's numbered
+/// copies such as "2026-10 2.json".
+public enum DataFileKind: Hashable, Sendable {
+    case projects
+    case month(MonthKey)
+
+    public init?(fileName: String) {
+        guard let name = DataFileName(fileName) else { return nil }
+        if name.base == "projects" {
+            self = .projects
+        } else if let month = MonthKey(name.base) {
+            self = .month(month)
+        } else {
+            return nil
+        }
+    }
+
+    /// The file to save when a copy of this kind of file had changes.
+    public var changes: Changes {
+        switch self {
+        case .projects: Changes(projects: true)
+        case .month(let month): Changes(months: [month])
+        }
+    }
+}
+
 /// A data file's name split into its base and iCloud's copy number:
 /// "2026-10 2.json" is "2026-10", copy 2.
 struct DataFileName: Hashable {
