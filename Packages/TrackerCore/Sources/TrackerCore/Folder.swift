@@ -363,7 +363,7 @@ struct DataFileName: Hashable {
 /// The data folder behind an actor, so file work stays off the main thread
 /// and one save runs at a time.
 public actor FileStore {
-    public let folder: Folder
+    nonisolated public let folder: Folder
 
     public init(folder: Folder) {
         self.folder = folder
