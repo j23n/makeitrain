@@ -87,6 +87,17 @@ public enum Format {
         )
     }
 
+    /// An hour of the day for a timeline's gutter, such as "09" or "9 AM",
+    /// following the user's settings.
+    public static func hour(_ hour: Int) -> String {
+        Date(timeIntervalSince1970: Double(hour) * 3600).formatted(Date.FormatStyle(timeZone: utc).hour())
+    }
+
+    /// A wall-clock time given as seconds after midnight, such as "09:15".
+    public static func time(secondOfDay: Int) -> String {
+        Date(timeIntervalSince1970: Double(secondOfDay)).formatted(Date.FormatStyle(date: .omitted, time: .shortened, timeZone: utc))
+    }
+
     /// A share of a total, such as "42%".
     public static func percent(_ part: Int64, of total: Int64) -> String {
         guard total > 0 else { return "" }
