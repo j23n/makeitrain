@@ -158,7 +158,8 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
         undo.endUndoGrouping()
         #expect(undo.undoActionName == "Split Entry")
         #expect(model.resolved.map(\.entry.note) == ["Workshop", "Workshop"])
-        #expect(model.resolved.map { $0.duration(now: model.now) } == [20 * 60000, 40 * 60000])
+        let minute: Int64 = 60000
+        #expect(model.resolved.map { $0.duration(now: model.now) } == [20 * minute, 40 * minute])
 
         undo.undo()
         #expect(model.resolved.map(\.id) == [workshop.id])
