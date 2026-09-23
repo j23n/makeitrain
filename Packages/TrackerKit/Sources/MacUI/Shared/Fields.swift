@@ -2,6 +2,7 @@
 import AppKit
 import SwiftUI
 import TrackerCore
+import TrackerKit
 
 /// Tags as tokens. Typing completes existing tags with their existing
 /// spelling, and `;` is dropped. Commits when editing ends.

@@ -119,8 +119,8 @@ struct MenuBarPopover: View {
 
     // MARK: Quick start
 
-    /// The project list opens inline rather than in a popover of its own:
-    /// a second window would take focus from the menu bar's and close it.
+    /// The project list opens inline rather than in a popover of its own,
+    /// because a second window taking focus can close the menu bar's.
     private var quickStart: some View {
         VStack(alignment: .leading, spacing: 8) {
             TextField("What are you working on?", text: $note)
