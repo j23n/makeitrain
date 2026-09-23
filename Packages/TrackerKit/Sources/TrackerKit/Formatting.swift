@@ -10,6 +10,49 @@ public enum Format {
         return "\(minutes / 60):\(rest < 10 ? "0" : "")\(rest)"
     }
 
+    /// Reads a duration typed as "1:30", "1.5" (hours), "90m", "1h 30m" or
+    /// "1h30". Nil if it can't be read.
+    public static func parseDuration(_ text: String) -> Int64? {
+        let typed = text.lowercased().filter { !$0.isWhitespace }
+        guard !typed.isEmpty else { return nil }
+        if typed.contains(":") {
+            let parts = typed.split(separator: ":", omittingEmptySubsequences: false)
+            guard parts.count == 2, parts[1].count == 2,
+                  let hours = parts[0].isEmpty ? 0 : Int(parts[0]), let minutes = Int(parts[1]),
+                  hours >= 0, (0..<60).contains(minutes)
+            else { return nil }
+            return Int64(hours * 60 + minutes) * 60000
+        }
+        guard typed.contains("h") || typed.contains("m") else {
+            guard let hours = Double(typed.replacingOccurrences(of: ",", with: ".")), hours >= 0, hours < 10000 else {
+                return nil
+            }
+            return Int64((hours * 60).rounded()) * 60000
+        }
+        var minutes = 0.0
+        var number = ""
+        var sawHours = false
+        for character in typed {
+            if character.isASCII, character.isNumber || character == "." || character == "," {
+                number.append(character == "," ? "." : character)
+            } else if character == "h" || character == "m" {
+                guard let value = Double(number) else { return nil }
+                minutes += character == "h" ? value * 60 : value
+                sawHours = sawHours || character == "h"
+                number = ""
+            } else {
+                return nil
+            }
+        }
+        if !number.isEmpty {
+            // "1h30" means 1 hour 30 minutes.
+            guard sawHours, let value = Double(number) else { return nil }
+            minutes += value
+        }
+        guard minutes < 600_000 else { return nil }
+        return Int64(minutes.rounded()) * 60000
+    }
+
     /// Decimal hours, such as "2.42".
     public static func hours(_ milliseconds: Int64) -> String {
         String(format: "%.2f", Double(max(0, milliseconds)) / 3_600_000)

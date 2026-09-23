@@ -141,8 +141,13 @@ extension AppModel {
 
     /// Renames a tag on every entry; renaming to an existing tag merges them.
     public func renameTag(_ tag: String, to newName: String, undoManager: UndoManager?) {
-        edit("Rename Tag", undoManager: undoManager) { ledger, now in
+        edit(Tags.normalize([newName]).isEmpty ? "Remove Tag" : "Rename Tag", undoManager: undoManager) { ledger, now in
             ledger.renameTag(tag, to: newName, now: now)
         }
+    }
+
+    /// Takes a tag off every entry.
+    public func removeTag(_ tag: String, undoManager: UndoManager?) {
+        renameTag(tag, to: "", undoManager: undoManager)
     }
 }
