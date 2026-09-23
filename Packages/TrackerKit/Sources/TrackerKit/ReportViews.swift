@@ -10,10 +10,14 @@ import UniformTypeIdentifiers
 public struct ReportSummary: View {
     let report: Report
     let now: Timestamp
+    let incomplete: Bool
 
-    public init(report: Report, now: Timestamp) {
+    /// `incomplete` says some data files are still downloading or can't be
+    /// read, so the totals may be missing entries.
+    public init(report: Report, now: Timestamp, incomplete: Bool = false) {
         self.report = report
         self.now = now
+        self.incomplete = incomplete
     }
 
     public var body: some View {
@@ -38,6 +42,10 @@ public struct ReportSummary: View {
                     systemImage: "record.circle"
                 )
                 .foregroundStyle(.secondary)
+            }
+            if incomplete {
+                Label("Some data hasn't downloaded from iCloud or can't be read, so these totals may be incomplete.", systemImage: "icloud.slash")
+                    .foregroundStyle(.orange)
             }
         }
     }

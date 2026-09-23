@@ -34,7 +34,7 @@ enum Screen: String, CaseIterable, Identifiable {
 /// toolbar.
 struct MainWindow: View {
     let model: AppModel
-    @SceneStorage("screen") private var screen: Screen
+    @SceneStorage private var screen: Screen
 
     init(model: AppModel, screen: Screen = .timeline) {
         self.model = model

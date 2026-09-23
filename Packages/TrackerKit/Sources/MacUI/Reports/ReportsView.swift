@@ -26,7 +26,7 @@ struct ReportsView: View {
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    ReportSummary(report: report, now: model.now)
+                    ReportSummary(report: report, now: model.now, incomplete: model.missingFiles > 0 || !model.issues.isEmpty)
                     ReportChart(report: report, ledger: model.ledger)
                         .frame(height: 240)
                     ReportGroupList(report: report)
