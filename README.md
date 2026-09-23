@@ -17,16 +17,22 @@ swift test --package-path Packages/TrackerCore
 swift test --package-path Packages/TrackerKit
 ```
 
-GitHub Actions runs both on macOS, runs TrackerCore on Linux too, and builds both apps.
+GitHub Actions runs both on macOS, runs TrackerCore on Linux too, and builds both apps. A screenshots job also draws the Mac screens with a week of sample data and uploads the images as the `mac-screenshots` artifact; to do the same locally, run:
+
+```sh
+SCREENSHOTS_DIR=/tmp/screenshots swift test --package-path Packages/TrackerKit --filter Screenshots
+```
 
 ## Layout
 
 - `Mac/` and `iOS/` are the app targets. They hold little more than the entry point, entitlements and assets.
-- `Packages/TrackerKit` has the app model, storage and iCloud sync (`TrackerKit`), and the screens (`MacUI`, `MobileUI`).
+- `Packages/TrackerKit` has the app model, storage, iCloud sync and the views both apps share (`TrackerKit`), and each app's screens (`MacUI`, `MobileUI`).
 - `Packages/TrackerCore` has the data model, file format, merging and rules. It builds on Linux as well.
 
 ## Docs
 
 - [Architecture](docs/architecture.md): how the pieces fit together.
+- [Behavior](docs/behavior.md): the timer, overlaps, projects, tags, time zones, reports and CSV.
 - [Data format](docs/data-format.md): the JSON files and what's in them.
 - [Sync](docs/sync.md): merging, saving, iCloud and backups.
+- [App Store](docs/app-store.md): privacy, review notes, and what's left before submitting.
