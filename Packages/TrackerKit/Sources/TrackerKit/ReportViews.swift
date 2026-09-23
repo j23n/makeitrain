@@ -84,6 +84,7 @@ public struct ReportChart: View {
             .foregroundStyle(by: .value("Project", bar.project))
         }
         .chartForegroundStyleScale(domain: data.titles, range: data.colors)
+        .chartXScale(domain: days)
         .chartYAxisLabel("Hours")
         .overlay {
             if data.bars.isEmpty {
@@ -91,6 +92,14 @@ public struct ReportChart: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    /// Every day in the range, including days without bars.
+    private var days: ClosedRange<Date> {
+        let calendar = Calendar.current
+        let first = calendar.startOfDay(for: report.request.range.lowerBound.pickerDate)
+        let last = calendar.startOfDay(for: report.request.range.upperBound.pickerDate)
+        return first...(calendar.date(byAdding: .day, value: 1, to: last) ?? last)
     }
 
     /// The bars, and the projects' titles and colors, busiest first.

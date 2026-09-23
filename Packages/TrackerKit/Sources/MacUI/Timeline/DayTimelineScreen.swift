@@ -219,7 +219,7 @@ struct DayTimeline: View {
             selected: selection == block.id,
             running: resolved.isRunning
         )
-        .frame(width: max(columnWidth - 3, 8), height: max(y(endSecond) - y(startSecond), 12))
+        .frame(width: max(columnWidth - 3, 8), height: max(y(endSecond) - y(startSecond) - 2, 12))
         .overlay(alignment: .top) {
             edgeHandle(block, kind: .start)
         }

@@ -44,6 +44,7 @@ struct Screenshots {
         controller.sizingOptions = size == nil ? [.preferredContentSize] : []
         let window = NSWindow(contentViewController: controller)
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+        window.title = "Time Tracker"
         window.setContentSize(size ?? controller.view.fittingSize)
         window.makeKeyAndOrderFront(nil)
         settle()
