@@ -36,21 +36,3 @@ jobs:
         run: >
           xcodebuild build -project TimeTracker.xcodeproj -scheme TimeTrackerMobile
           -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
-
-  screenshots:
-    name: Mac screenshots
-    runs-on: macos-15
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v5
-      - name: Render the Mac screens with sample data
-        env:
-          SCREENSHOTS_DIR: ${{ github.workspace }}/screenshots
-          TZ: Europe/Berlin
-        run: swift test --package-path Packages/TrackerKit --filter Screenshots
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: mac-screenshots
-          path: screenshots
-          if-no-files-found: warn

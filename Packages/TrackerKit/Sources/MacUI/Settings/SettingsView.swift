@@ -111,4 +111,10 @@ struct LaunchAtLoginToggle: View {
         ))
     }
 }
+
+#if DEBUG
+#Preview("Settings") {
+    SettingsView(model: PreviewData.model())
+}
+#endif
 #endif

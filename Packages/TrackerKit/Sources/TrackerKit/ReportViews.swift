@@ -222,3 +222,35 @@ public struct CSVFile: Transferable {
         .suggestedFileName("Time Report.csv")
     }
 }
+
+#if DEBUG
+#Preview("Report") {
+    let week = LocalDate(year: 2026, month: 9, day: 21)...LocalDate(year: 2026, month: 9, day: 27)
+    let report = Report(ReportRequest(range: week), ledger: PreviewData.ledger, now: PreviewData.now)
+    return ScrollView {
+        VStack(alignment: .leading, spacing: 20) {
+            ReportSummary(report: report, now: PreviewData.now)
+            ReportChart(report: report, ledger: PreviewData.ledger)
+                .frame(height: 220)
+            ReportGroupList(report: report)
+        }
+        .padding()
+    }
+    .frame(width: 640, height: 720)
+}
+
+#Preview("By Tag, Incomplete") {
+    let week = LocalDate(year: 2026, month: 9, day: 21)...LocalDate(year: 2026, month: 9, day: 27)
+    let report = Report(ReportRequest(range: week, grouping: .tag), ledger: PreviewData.ledger, now: PreviewData.now)
+    return ScrollView {
+        VStack(alignment: .leading, spacing: 20) {
+            ReportSummary(report: report, now: PreviewData.now, incomplete: true)
+            ReportChart(report: report, ledger: PreviewData.ledger)
+                .frame(height: 220)
+            ReportGroupList(report: report)
+        }
+        .padding()
+    }
+    .frame(width: 640, height: 720)
+}
+#endif

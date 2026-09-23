@@ -249,4 +249,22 @@ struct RowButtonStyle: ButtonStyle {
         }
     }
 }
+
+#if DEBUG
+#Preview("Running") {
+    MenuBarPopover(model: PreviewData.model())
+}
+
+#Preview("Stopped") {
+    MenuBarPopover(model: PreviewData.model(PreviewData.stoppedLedger))
+}
+
+#Preview("No Data") {
+    MenuBarPopover(model: PreviewData.model(Ledger()))
+}
+
+#Preview("iCloud Unavailable") {
+    MenuBarPopover(model: PreviewData.model(state: .iCloudUnavailable))
+}
+#endif
 #endif

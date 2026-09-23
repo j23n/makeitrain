@@ -276,4 +276,32 @@ extension OverlapFix {
         return false
     }
 }
+
+#if DEBUG
+#Preview("Entries") {
+    EntriesScreen(model: PreviewData.model())
+}
+
+#Preview("No Entries") {
+    EntriesScreen(model: PreviewData.model(Ledger()))
+}
+
+#Preview("Entry") {
+    NavigationStack {
+        EntryForm(model: PreviewData.model(), id: PreviewData.entry("Wireframe review, round 2"))
+    }
+}
+
+#Preview("Overlapping Entry") {
+    NavigationStack {
+        EntryForm(model: PreviewData.model(), id: PreviewData.entry("Call with Globex"))
+    }
+}
+
+#Preview("Running Timer") {
+    NavigationStack {
+        EntryForm(model: PreviewData.model(), id: PreviewData.entry("Landing page copy"))
+    }
+}
+#endif
 #endif

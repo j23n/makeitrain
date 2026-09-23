@@ -190,6 +190,33 @@ extension Ledger {
         return changes
     }
 
+    /// Splits an entry in two at `time`, which has to fall inside it: the
+    /// entry ends at `time`, and a copy with the id `newID` starts there and
+    /// ends where the entry ended. Splitting the running timer stops it at
+    /// `time` and keeps the copy running.
+    @discardableResult
+    public mutating func split(_ id: UUID, at time: Timestamp, newID: UUID = UUID(), now: Timestamp) -> Changes {
+        var changes = settleOvertakenTimers(now: now)
+        let at = time.wholeSeconds
+        guard let entry = entries[id], !entry.isDeleted, at > entry.start, at < (entry.end ?? now) else {
+            return changes
+        }
+        let after = TimeEntry(
+            id: newID,
+            projectID: entry.projectID,
+            start: at,
+            end: entry.end,
+            timeZone: entry.timeZone,
+            tags: entry.tags,
+            note: entry.note,
+            updated: now
+        )
+        changes.formUnion(edit(id, now: now) { $0.end = at })
+        entries[newID] = after
+        changes.months.insert(after.month)
+        return changes
+    }
+
     /// Renames a tag, ignoring case, on every entry that has it. Renaming a
     /// tag to another tag's name merges the two.
     @discardableResult

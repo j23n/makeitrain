@@ -331,4 +331,28 @@ struct MobileProjectForm: View {
         update(archived ? "Archive Project" : "Unarchive Project") { $0.archived = archived }
     }
 }
+
+#if DEBUG
+#Preview("Settings") {
+    MobileSettingsScreen(model: PreviewData.model())
+}
+
+#Preview("Clients & Projects") {
+    NavigationStack {
+        MobileProjectsScreen(model: PreviewData.model())
+    }
+}
+
+#Preview("Client") {
+    NavigationStack {
+        MobileClientForm(model: PreviewData.model(), id: PreviewData.acme)
+    }
+}
+
+#Preview("Project") {
+    NavigationStack {
+        MobileProjectForm(model: PreviewData.model(), id: PreviewData.website)
+    }
+}
+#endif
 #endif

@@ -263,4 +263,21 @@ struct ReportsView: View {
         )
     }
 }
+
+#if DEBUG
+#Preview("This Week") {
+    ReportsView(model: PreviewData.model())
+        .frame(width: 1000, height: 720)
+}
+
+#Preview("Files Missing") {
+    ReportsView(model: PreviewData.model(missingFiles: 3))
+        .frame(width: 1000, height: 720)
+}
+
+#Preview("No Entries") {
+    ReportsView(model: PreviewData.model(Ledger()))
+        .frame(width: 1000, height: 720)
+}
+#endif
 #endif

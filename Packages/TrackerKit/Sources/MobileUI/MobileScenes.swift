@@ -1,5 +1,6 @@
 #if os(iOS)
 import SwiftUI
+import TrackerCore
 import TrackerKit
 import UIKit
 
@@ -102,4 +103,25 @@ struct MobileNotices: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("App") {
+    MobileRoot(model: PreviewData.model())
+}
+
+#Preview("No Data") {
+    MobileRoot(model: PreviewData.model(Ledger()))
+}
+
+#Preview("Notices") {
+    List {
+        MobileNotices(model: PreviewData.model(state: .waitingForICloud, missingFiles: 12))
+        MobileNotices(model: PreviewData.model(state: .iCloudUnavailable))
+        MobileNotices(model: PreviewData.model(
+            issues: [FileIssue(path: "entries/2026-09.json", problem: .unreadable("Not JSON"))],
+            lastError: "You don't have permission to save the file “projects.json”."
+        ))
+    }
+}
+#endif
 #endif

@@ -409,3 +409,39 @@ struct ProjectChooserList: View {
     }
 }
 #endif
+
+#if DEBUG
+#Preview("Picker") {
+    NavigationStack {
+        Form {
+            ProjectPicker(ledger: PreviewData.ledger, selection: .constant(PreviewData.brand))
+            ProjectPicker(ledger: PreviewData.ledger, selection: .constant(nil))
+        }
+    }
+}
+
+#if os(macOS)
+#Preview("Chooser") {
+    ProjectChooser(ledger: PreviewData.ledger, current: .project(PreviewData.website), choose: { _ in }, cancel: {})
+        .frame(width: 320)
+}
+
+#Preview("Chooser, Searching") {
+    ProjectChooser(ledger: PreviewData.ledger, current: .project(PreviewData.website), query: "re", choose: { _ in }, cancel: {})
+        .frame(width: 320)
+}
+
+#Preview("Chooser, Nothing Found") {
+    ProjectChooser(ledger: PreviewData.ledger, current: nil, query: "xyz", choose: { _ in }, cancel: {})
+        .frame(width: 320)
+}
+#endif
+
+#if os(iOS)
+#Preview("Chooser") {
+    NavigationStack {
+        ProjectChooserList(ledger: PreviewData.ledger, current: PreviewData.website, title: "Project") { _ in }
+    }
+}
+#endif
+#endif

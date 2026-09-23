@@ -141,4 +141,21 @@ struct TagEditor: View {
         renamed(name)
     }
 }
+
+#if DEBUG
+#Preview("Tag") {
+    TagsView(model: PreviewData.model(), selection: "design")
+        .frame(width: 800, height: 500)
+}
+
+#Preview("Nothing Selected") {
+    TagsView(model: PreviewData.model())
+        .frame(width: 800, height: 500)
+}
+
+#Preview("No Tags") {
+    TagsView(model: PreviewData.model(Ledger()))
+        .frame(width: 800, height: 500)
+}
+#endif
 #endif

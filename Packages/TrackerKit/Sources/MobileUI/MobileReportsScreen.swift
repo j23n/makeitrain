@@ -97,4 +97,14 @@ struct MobileReportsScreen: View {
         )
     }
 }
+
+#if DEBUG
+#Preview("This Week") {
+    MobileReportsScreen(model: PreviewData.model())
+}
+
+#Preview("No Entries") {
+    MobileReportsScreen(model: PreviewData.model(Ledger()))
+}
+#endif
 #endif

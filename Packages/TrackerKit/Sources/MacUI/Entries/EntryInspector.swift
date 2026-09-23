@@ -3,19 +3,16 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 
-/// Edits the selected entries: one in detail, or several at once.
+/// Edits the entry selected on the timeline.
 struct EntryInspector: View {
     let model: AppModel
-    let ids: Set<UUID>
+    let id: UUID?
 
     var body: some View {
-        let entries = model.resolved.filter { ids.contains($0.id) }
         Group {
-            if entries.count == 1, let entry = entries.first {
+            if let entry = model.resolved.first(where: { $0.id == id }) {
                 EntryEditor(model: model, entry: entry)
                     .id(entry.id)
-            } else if entries.count > 1 {
-                EntriesEditor(model: model, entries: entries)
             } else {
                 ContentUnavailableView("No Selection", systemImage: "clock", description: Text("Select an entry to edit it."))
             }
@@ -30,6 +27,7 @@ struct EntryEditor: View {
     let model: AppModel
     let entry: ResolvedEntry
     @Environment(\.undoManager) private var undoManager
+    @State private var splitting = false
 
     private var zone: String { entry.entry.timeZone }
 
@@ -96,6 +94,10 @@ struct EntryEditor: View {
             OverlapSection(model: model, entry: entry)
 
             Section {
+                Button("Split Entry…") {
+                    splitting = true
+                }
+                .disabled(SplitEntrySheet.range(of: entry, now: model.now) == nil)
                 Button("Delete Entry", role: .destructive) {
                     model.deleteEntries([entry.id], undoManager: undoManager)
                 }
@@ -103,6 +105,9 @@ struct EntryEditor: View {
         }
         .formStyle(.grouped)
         .disabled(model.isReadOnly)
+        .sheet(isPresented: $splitting) {
+            SplitEntrySheet(model: model, entry: entry, undoManager: undoManager)
+        }
     }
 
     private func update(_ actionName: String, _ change: (inout TimeEntry) -> Void) {
@@ -124,13 +129,13 @@ struct OverlapSection: View {
                 ForEach(overlaps, id: \.self) { overlap in
                     VStack(alignment: .leading, spacing: 6) {
                         Label {
-                            Text("\(Format.duration(overlap.duration)) with \(title(of: overlap.earlier == entry.id ? overlap.later : overlap.earlier))")
+                            Text(model.overlapDescription(overlap, from: entry.id))
                         } icon: {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundStyle(.orange)
                         }
                         if let fix = overlap.fix {
-                            Button(fixTitle(fix)) {
+                            Button(fix.title) {
                                 model.apply(fix, undoManager: undoManager)
                             }
                         }
@@ -139,77 +144,54 @@ struct OverlapSection: View {
             }
         }
     }
+}
 
-    private func title(of id: UUID) -> String {
-        guard let other = model.resolved.first(where: { $0.id == id }) else { return "another entry" }
-        return "\(model.ledger.projectTitle(other.entry.projectID)) at \(Format.time(other.start, zone: other.entry.timeZone))"
+extension AppModel {
+    /// What an overlap is with, seen from one of its entries, such as
+    /// "0:30 overlap with Globex › Brand refresh at 15:30".
+    func overlapDescription(_ overlap: Overlap, from id: UUID) -> String {
+        let otherID = overlap.earlier == id ? overlap.later : overlap.earlier
+        let other = resolved.first { $0.id == otherID }.map {
+            "\(ledger.projectTitle($0.entry.projectID)) at \(Format.time($0.start, zone: $0.entry.timeZone))"
+        }
+        return "\(Format.duration(overlap.duration)) overlap with \(other ?? "another entry")"
     }
+}
 
-    private func fixTitle(_ fix: OverlapFix) -> String {
-        switch fix {
+extension OverlapFix {
+    /// The fix, as a button names it.
+    var title: String {
+        switch self {
         case .trimEarlier: "Trim Earlier Entry"
         case .split: "Split Entry Around It"
         }
     }
 }
 
-/// Changes several entries at once: their project, adding and removing
-/// tags, or deleting them.
-struct EntriesEditor: View {
-    let model: AppModel
-    let entries: [ResolvedEntry]
-    @Environment(\.undoManager) private var undoManager
-
-    var body: some View {
-        let ids = entries.map(\.id)
-        let tags = Self.tags(in: entries)
-        Form {
-            Section {
-                LabeledContent("Selected", value: "\(entries.count) entries")
-                LabeledContent("Total", value: Format.duration(entries.reduce(0) { $0 + model.duration(of: $1) }))
-            }
-            Section {
-                ProjectChooserButton(ledger: model.ledger, title: "Set Project…") { projectID in
-                    model.updateEntries(ids, actionName: "Change Project", undoManager: undoManager) { $0.projectID = projectID }
-                }
-                LabeledContent("Add Tags") {
-                    TagField(tags: [], suggestions: model.ledger.allTags()) { added in
-                        guard !added.isEmpty else { return }
-                        model.updateEntries(ids, actionName: "Add Tags", undoManager: undoManager) { $0.tags += added }
-                    }
-                }
-                if !tags.isEmpty {
-                    Menu("Remove Tag") {
-                        ForEach(tags, id: \.self) { tag in
-                            Button(tag) {
-                                model.updateEntries(ids, actionName: "Remove Tag", undoManager: undoManager) { entry in
-                                    entry.tags.removeAll { Tags.same($0, tag) }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            Section {
-                Button("Delete \(entries.count) Entries", role: .destructive) {
-                    model.deleteEntries(ids, undoManager: undoManager)
-                }
-            }
-        }
-        .formStyle(.grouped)
-        .disabled(model.isReadOnly)
-    }
-
-    /// The tags on any of the entries, once each, ignoring case.
-    static func tags(in entries: [ResolvedEntry]) -> [String] {
-        var seen: Set<String> = []
-        var result: [String] = []
-        for entry in entries {
-            for tag in entry.entry.tags where seen.insert(tag.lowercased()).inserted {
-                result.append(tag)
-            }
-        }
-        return result.sorted { $0.lowercased() < $1.lowercased() }
-    }
+#if DEBUG
+#Preview("Entry") {
+    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Wireframe review, round 2"))
+        .frame(width: 300, height: 640)
 }
+
+#Preview("Overlap") {
+    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Call with Globex"))
+        .frame(width: 300, height: 640)
+}
+
+#Preview("Running Timer") {
+    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Landing page copy"))
+        .frame(width: 300, height: 640)
+}
+
+#Preview("Recorded in New York") {
+    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Client visit"))
+        .frame(width: 300, height: 640)
+}
+
+#Preview("No Selection") {
+    EntryInspector(model: PreviewData.model(), id: nil)
+        .frame(width: 300, height: 640)
+}
+#endif
 #endif

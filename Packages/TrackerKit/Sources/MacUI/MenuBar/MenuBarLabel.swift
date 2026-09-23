@@ -15,4 +15,16 @@ struct MenuBarLabel: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Running") {
+    MenuBarLabel(model: PreviewData.model())
+        .padding()
+}
+
+#Preview("Stopped") {
+    MenuBarLabel(model: PreviewData.model(PreviewData.stoppedLedger))
+        .padding()
+}
+#endif
 #endif

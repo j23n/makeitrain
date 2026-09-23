@@ -143,6 +143,28 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
         #expect(model.running?.entry.note == "Second")
     }
 
+    @Test func splitsAnEntryAndUndoesTheSplit() async throws {
+        let harness = Harness()
+        defer { harness.cleanUp() }
+        let model = harness.model()
+        await model.start()
+        let undo = UndoManager()
+        undo.groupsByEvent = false
+
+        let workshop = entry(note: "Workshop", at: "2026-09-22T09:00:00+02:00")
+        model.addEntry(workshop, undoManager: nil)
+        undo.beginUndoGrouping()
+        model.splitEntry(workshop.id, at: DateTimeFormat.parse("2026-09-22T09:20:00+02:00")!, undoManager: undo)
+        undo.endUndoGrouping()
+        #expect(undo.undoActionName == "Split Entry")
+        #expect(model.resolved.map(\.entry.note) == ["Workshop", "Workshop"])
+        #expect(model.resolved.map { $0.duration(now: model.now) } == [20 * 60000, 40 * 60000])
+
+        undo.undo()
+        #expect(model.resolved.map(\.id) == [workshop.id])
+        #expect(model.resolved.first?.end == workshop.end)
+    }
+
     @Test func firstLaunchWaitsForICloudBeforeWriting() async throws {
         let harness = Harness()
         defer { harness.cleanUp() }

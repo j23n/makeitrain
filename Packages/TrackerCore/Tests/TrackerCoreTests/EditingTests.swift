@@ -107,6 +107,56 @@ import Testing
         }
     }
 
+    @Test func splittingMakesTwoEntriesThatMeet() {
+        var ledger = Ledger(entries: [entry(1, project: uuid(10), tags: ["design"], note: "Wireframes")])
+        let changes = ledger.split(uuid(1), at: t("2026-09-23T09:20:00.600+02:00"), newID: uuid(2), now: noon)
+        let first = ledger.entries[uuid(1)]!
+        let second = ledger.entries[uuid(2)]!
+        #expect(first.start == morning)
+        #expect(first.end == t("2026-09-23T09:20:00+02:00"))
+        #expect(first.endUpdated == noon)
+        #expect(second.start == first.end)
+        #expect(second.end == t("2026-09-23T10:00:00+02:00"))
+        #expect(second.projectID == uuid(10))
+        #expect(second.tags == ["design"])
+        #expect(second.note == "Wireframes")
+        #expect(second.timeZone == "Europe/Berlin")
+        #expect(second.updated == noon)
+        #expect(changes == Changes(months: [MonthKey(year: 2026, month: 9)]))
+    }
+
+    @Test func splittingNeedsATimeInsideTheEntry() {
+        let original = Ledger(entries: [entry(1)])
+        for time in ["2026-09-23T08:00:00+02:00", "2026-09-23T09:00:00+02:00", "2026-09-23T10:00:00+02:00", "2026-09-23T11:00:00+02:00"] {
+            var ledger = original
+            let changes = ledger.split(uuid(1), at: t(time), newID: uuid(2), now: noon)
+            #expect(ledger == original)
+            #expect(changes.isEmpty)
+        }
+
+        var ledger = original
+        ledger.deleteEntry(uuid(1), now: noon)
+        let deleted = ledger
+        ledger.split(uuid(1), at: t("2026-09-23T09:30:00+02:00"), newID: uuid(2), now: noon)
+        #expect(ledger == deleted)
+    }
+
+    @Test func splittingTheRunningTimerKeepsTheSecondPartRunning() {
+        var ledger = Ledger()
+        ledger.startTimer(id: uuid(1), note: "Sync engine", timeZone: "Europe/Berlin", at: morning, now: morning)
+
+        // Not after now: the timer hasn't got there yet.
+        var copy = ledger
+        copy.split(uuid(1), at: noon.adding(seconds: 60), newID: uuid(2), now: noon)
+        #expect(copy == ledger)
+
+        ledger.split(uuid(1), at: t("2026-09-23T11:00:00+02:00"), newID: uuid(2), now: noon)
+        #expect(ledger.entries[uuid(1)]?.end == t("2026-09-23T11:00:00+02:00"))
+        #expect(ledger.entries[uuid(2)]?.start == t("2026-09-23T11:00:00+02:00"))
+        #expect(ledger.entries[uuid(2)]?.note == "Sync engine")
+        #expect(ledger.runningEntry?.id == uuid(2))
+    }
+
     @Test func renamingATagRenamesItEverywhere() {
         var ledger = Ledger(entries: [
             entry(1, tags: ["Design"]),

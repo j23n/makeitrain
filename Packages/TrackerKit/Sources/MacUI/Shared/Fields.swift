@@ -10,6 +10,9 @@ struct TagField: NSViewRepresentable {
     let tags: [String]
     let suggestions: [String]
     var placeholder = "Add tags"
+    /// Whether it looks like a text field. In a table cell it doesn't, and
+    /// keeps to one line.
+    var bordered = true
     let commit: ([String]) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -23,6 +26,14 @@ struct TagField: NSViewRepresentable {
         field.completionDelay = 0.1
         field.placeholderString = placeholder
         field.objectValue = tags
+        if !bordered {
+            field.isBezeled = false
+            field.isBordered = false
+            field.drawsBackground = false
+            field.maximumNumberOfLines = 1
+            field.cell?.wraps = false
+            field.cell?.isScrollable = true
+        }
         field.setContentHuggingPriority(.defaultLow, for: .horizontal)
         field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         return field
@@ -102,4 +113,27 @@ struct ProjectChooserButton: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Tag Field") {
+    Form {
+        LabeledContent("Tags") {
+            TagField(tags: ["design", "client-call"], suggestions: PreviewData.ledger.allTags()) { _ in }
+        }
+        LabeledContent("No tags") {
+            TagField(tags: [], suggestions: PreviewData.ledger.allTags()) { _ in }
+        }
+        LabeledContent("As in a table") {
+            TagField(tags: ["development"], suggestions: [], placeholder: "", bordered: false) { _ in }
+        }
+    }
+    .formStyle(.grouped)
+    .frame(width: 420)
+}
+
+#Preview("Project Chooser Button") {
+    ProjectChooserButton(ledger: PreviewData.ledger, title: "Set Project…") { _ in }
+        .padding(40)
+}
+#endif
 #endif

@@ -13,8 +13,9 @@ struct DayTimelineScreen: View {
     @State private var selection: UUID?
     @AppStorage("timeline.inspector") private var showInspector = true
 
-    init(model: AppModel, selection: UUID? = nil) {
+    init(model: AppModel, day: LocalDate? = nil, selection: UUID? = nil) {
         self.model = model
+        _day = State(initialValue: day)
         _selection = State(initialValue: selection)
     }
 
@@ -37,7 +38,7 @@ struct DayTimelineScreen: View {
             }
         }
         .inspector(isPresented: $showInspector) {
-            EntryInspector(model: model, ids: selection.map { Set([$0]) } ?? [])
+            EntryInspector(model: model, id: selection)
         }
     }
 
@@ -401,4 +402,35 @@ struct TimelineBlock: View {
         .contentShape(Rectangle())
     }
 }
+
+#if DEBUG
+#Preview("Today") {
+    DayTimelineScreen(model: PreviewData.model())
+        .frame(width: 1000, height: 700)
+}
+
+#Preview("Running Timer Selected") {
+    DayTimelineScreen(model: PreviewData.model(), selection: PreviewData.entry("Landing page copy"))
+        .frame(width: 1000, height: 700)
+}
+
+#Preview("Overlap") {
+    DayTimelineScreen(
+        model: PreviewData.model(),
+        day: LocalDate(year: 2026, month: 9, day: 22),
+        selection: PreviewData.entry("Call with Globex")
+    )
+    .frame(width: 1000, height: 700)
+}
+
+#Preview("Recorded in New York") {
+    DayTimelineScreen(model: PreviewData.model(), day: LocalDate(year: 2026, month: 9, day: 18))
+        .frame(width: 1000, height: 700)
+}
+
+#Preview("Empty Day") {
+    DayTimelineScreen(model: PreviewData.model(), day: LocalDate(year: 2026, month: 9, day: 20))
+        .frame(width: 1000, height: 700)
+}
+#endif
 #endif

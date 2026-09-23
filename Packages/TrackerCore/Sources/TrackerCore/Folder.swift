@@ -58,6 +58,11 @@ public struct FileIssue: Hashable, Sendable {
     /// The file's path in the data folder, such as "entries/2026-09.json".
     public var path: String
     public var problem: FileProblem
+
+    public init(path: String, problem: FileProblem) {
+        self.path = path
+        self.problem = problem
+    }
 }
 
 /// What loading the data folder found.

@@ -433,4 +433,26 @@ struct ProjectEditor: View {
         update(archived ? "Archive Project" : "Unarchive Project") { $0.archived = archived }
     }
 }
+
+#if DEBUG
+#Preview("Project") {
+    ProjectsView(model: PreviewData.model(), selection: .project(PreviewData.website))
+        .frame(width: 900, height: 600)
+}
+
+#Preview("Client") {
+    ProjectsView(model: PreviewData.model(), selection: .client(PreviewData.acme))
+        .frame(width: 900, height: 600)
+}
+
+#Preview("Nothing Selected") {
+    ProjectsView(model: PreviewData.model())
+        .frame(width: 900, height: 600)
+}
+
+#Preview("No Projects") {
+    ProjectsView(model: PreviewData.model(Ledger()))
+        .frame(width: 900, height: 600)
+}
+#endif
 #endif

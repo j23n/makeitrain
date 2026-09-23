@@ -85,3 +85,15 @@ public struct CommitField: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Labels and Fields") {
+    Form {
+        ProjectLabel(ledger: PreviewData.ledger, projectID: PreviewData.website)
+        ProjectLabel(ledger: PreviewData.ledger, projectID: PreviewData.internalWork)
+        ProjectLabel(ledger: PreviewData.ledger, projectID: nil)
+        TagList(tags: ["design", "client-call"])
+        CommitField(title: "Note", value: "Wireframe review, round 2") { _ in }
+    }
+}
+#endif

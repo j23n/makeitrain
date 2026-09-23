@@ -16,8 +16,15 @@ The rules the app follows, whichever screen or device an edit comes from. One ti
 
 - Overlaps are worked out when the data is displayed and never stored. Entries are scanned in order of start while tracking the latest end so far, and an entry overlaps if it starts before that end. That also catches an entry that overlaps an earlier, longer one with a shorter entry in between.
 - A running timer counts as ending now. Deleted entries and entries with no duration are ignored.
-- The entries table shows a warning icon and can show only overlapping entries. The timeline gives overlapping blocks an orange edge.
+- The entries table shows a warning icon and can show only overlapping entries; right-clicking an entry offers its fixes. The timeline gives overlapping blocks an orange edge.
 - Each overlap offers a one-click fix, never applied on its own. If the earlier entry ends inside the later one, the fix is "Trim Earlier Entry". If one entry contains the other, it's "Split Entry Around It", which cuts the outer entry into the parts before and after the inner one; that also covers a meeting added in the middle of a running timer. Entries that start at the same moment get no fix.
+
+## Editing entries
+
+- On the Mac, the entries table is edited in place: click a date to move the entry to another day at the same times, type over a start, end or duration, click the project to choose another, and type tags or a note. On the timeline, the selected entry is edited in the inspector.
+- Times can be typed as "9:15", "09.15", "915", "9" or "9:15 PM", and are read in the entry's own time zone. A new start stays on the entry's day and can't be after its end. An end earlier than the start is on the next day, shown as "+1". A new duration moves the end. What can't be read is refused with a beep.
+- Right-clicking entries offers "Split Entry…", the entry's overlap fixes, "Set Project…", "Add Tag", "Remove Tag" and "Delete". The last four change every selected entry at once.
+- "Split Entry…" cuts an entry in two at a time inside it, suggesting the middle, on five minutes. Both parts keep the project, tags and note. Splitting the running timer stops the first part there and keeps the second running.
 
 ## Clients and projects
 

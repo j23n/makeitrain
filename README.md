@@ -17,11 +17,13 @@ swift test --package-path Packages/TrackerCore
 swift test --package-path Packages/TrackerKit
 ```
 
-GitHub Actions runs both on macOS, runs TrackerCore on Linux too, and builds both apps. A screenshots job also draws the Mac screens with a week of sample data and uploads the images as the `mac-screenshots` artifact; to do the same locally, run:
+GitHub Actions runs both on macOS, runs TrackerCore on Linux too, and builds both apps.
 
-```sh
-SCREENSHOTS_DIR=/tmp/screenshots swift test --package-path Packages/TrackerKit --filter Screenshots
-```
+## Previews
+
+Every screen has SwiftUI previews, in Debug builds only. They show a week of sample data, `PreviewData` in TrackerKit: two clients, a running timer, an overlap, an unassigned entry, an entry recorded in New York and an archived project, with "now" fixed at Wednesday, September 23, 2026, 15:40 in Berlin. The previews read no files, and edits made in a live preview go to a temporary folder.
+
+To see them, open `TimeTracker.xcodeproj`, choose the `TimeTracker` scheme for the Mac screens or `TimeTrackerMobile` for iOS, open a view's file from the TrackerKit package, and show the canvas (Editor › Canvas, ⌥⌘↩).
 
 ## Layout
 

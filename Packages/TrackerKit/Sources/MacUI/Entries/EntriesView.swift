@@ -1,4 +1,5 @@
 #if os(macOS)
+import AppKit
 import SwiftUI
 import TrackerCore
 import TrackerKit
@@ -25,22 +26,19 @@ struct EntryRow: Identifiable {
     var tagsText: String { entry.entry.tags.joined(separator: ", ") }
     var note: String { entry.entry.note }
     var status: Int { flagged ? 2 : entry.isRunning ? 1 : 0 }
+    /// The zone the entry is shown and edited in.
+    var zone: String { entry.entry.timeZone }
 
-    /// The start in the entry's own zone, labeled with the zone when it
-    /// isn't the Mac's.
-    var startText: String {
-        let zone = entry.entry.timeZone
-        let text = Format.time(entry.start, zone: zone)
-        return Format.zoneLabel(zone, at: entry.start).map { "\(text) \($0)" } ?? text
+    /// The zone's short name, such as "EDT", when it isn't the Mac's.
+    var zoneLabel: String? {
+        Format.zoneLabel(zone, at: entry.start)
     }
 
-    /// The end, with "+1" when it's on a later day.
-    var endText: String {
-        guard let end = entry.end else { return "Running" }
-        let zone = entry.entry.timeZone
-        let text = Format.time(end, zone: zone)
-        let days = end.local(in: zone).date.daysSince1970 - day.daysSince1970
-        return days > 0 ? "\(text) +\(days)" : text
+    /// How many days after its start the entry ends, such as 1 for an
+    /// entry past midnight.
+    var endDays: Int {
+        guard let end = entry.end else { return 0 }
+        return end.local(in: zone).date.daysSince1970 - day.daysSince1970
     }
 
     func matches(_ search: String) -> Bool {
@@ -51,8 +49,9 @@ struct EntryRow: Identifiable {
     }
 }
 
-/// Every entry in a sortable table, with an inspector to edit the selected
-/// ones.
+/// Every entry in a sortable table, edited in place: click a value to
+/// change it. The context menu splits entries, fixes overlaps and changes
+/// several entries at once.
 struct EntriesView: View {
     let model: AppModel
     @Environment(\.undoManager) private var undoManager
@@ -60,7 +59,7 @@ struct EntriesView: View {
     @State private var sortOrder = [KeyPathComparator(\EntryRow.start, order: .reverse)]
     @State private var search = ""
     @State private var overlapsOnly = false
-    @AppStorage("entries.inspector") private var showInspector = true
+    @State private var sheet: EntriesSheet?
 
     init(model: AppModel, selection: Set<UUID> = []) {
         self.model = model
@@ -68,52 +67,53 @@ struct EntriesView: View {
     }
 
     var body: some View {
+        let allTags = model.ledger.allTags()
         Table(rows, selection: $selection, sortOrder: $sortOrder) {
             TableColumn("", value: \EntryRow.status) { row in
                 EntryStatusIcon(row: row)
             }
             .width(16)
             TableColumn("Date", value: \EntryRow.day) { row in
-                Text(row.day.year == model.today.year ? Format.day(row.day) : Format.longDay(row.day))
+                EntryDateCell(model: model, row: row)
             }
-            .width(min: 80, ideal: 95)
+            .width(min: 80, ideal: 100)
             TableColumn("Start", value: \EntryRow.start) { row in
-                Text(row.startText)
-                    .monospacedDigit()
+                EntryStartCell(model: model, row: row)
             }
-            .width(min: 56, ideal: 72)
+            .width(min: 60, ideal: 80)
             TableColumn("End", value: \EntryRow.endSort) { row in
-                Text(row.endText)
-                    .monospacedDigit()
+                EntryEndCell(model: model, row: row)
             }
-            .width(min: 56, ideal: 72)
+            .width(min: 60, ideal: 80)
             TableColumn("Duration", value: \EntryRow.duration) { row in
-                Text(Format.duration(row.duration))
-                    .monospacedDigit()
+                EntryDurationCell(model: model, row: row)
             }
-            .width(min: 44, ideal: 56)
+            .width(min: 50, ideal: 64)
             TableColumn("Project", value: \EntryRow.projectTitle) { row in
-                ProjectLabel(ledger: model.ledger, projectID: row.entry.entry.projectID)
+                EntryProjectCell(model: model, row: row)
             }
-            .width(min: 100, ideal: 160)
-            TableColumn("Tags", value: \EntryRow.tagsText)
-                .width(min: 50, ideal: 90)
-            TableColumn("Note", value: \EntryRow.note)
-                .width(min: 80, ideal: 160)
-        }
-        .contextMenu(forSelectionType: UUID.self) { ids in
-            if !ids.isEmpty {
-                Button(ids.count == 1 ? "Delete Entry" : "Delete \(ids.count) Entries", role: .destructive) {
-                    model.deleteEntries(ids, undoManager: undoManager)
+            .width(min: 100, ideal: 180)
+            TableColumn("Tags", value: \EntryRow.tagsText) { row in
+                TagField(tags: row.entry.entry.tags, suggestions: allTags, placeholder: "", bordered: false) { tags in
+                    model.updateEntries([row.id], actionName: "Change Tags", undoManager: undoManager) { $0.tags = tags }
                 }
                 .disabled(model.isReadOnly)
             }
-        } primaryAction: { ids in
-            selection = ids
-            showInspector = true
+            .width(min: 60, ideal: 130)
+            TableColumn("Note", value: \EntryRow.note) { row in
+                CommitField(title: "", value: row.note) { note in
+                    model.updateEntries([row.id], actionName: "Change Note", undoManager: undoManager) { $0.note = note }
+                }
+                .textFieldStyle(.plain)
+                .disabled(model.isReadOnly)
+            }
+            .width(min: 100, ideal: 240)
+        }
+        .contextMenu(forSelectionType: UUID.self) { ids in
+            EntriesMenu(model: model, ids: ids, allTags: allTags, undoManager: undoManager, sheet: $sheet)
         }
         .onDeleteCommand {
-            guard !selection.isEmpty else { return }
+            guard !selection.isEmpty, !model.isReadOnly else { return }
             model.deleteEntries(selection, undoManager: undoManager)
         }
         .overlay {
@@ -138,16 +138,10 @@ struct EntriesView: View {
                 .keyboardShortcut("n", modifiers: .command)
                 .help("Add an entry for the last hour")
                 .disabled(model.isReadOnly)
-                Button {
-                    showInspector.toggle()
-                } label: {
-                    Label("Inspector", systemImage: "sidebar.right")
-                }
-                .help("Show or hide the inspector")
             }
         }
-        .inspector(isPresented: $showInspector) {
-            EntryInspector(model: model, ids: selection)
+        .sheet(item: $sheet) { sheet in
+            EntriesSheetView(model: model, sheet: sheet, undoManager: undoManager)
         }
     }
 
@@ -166,7 +160,6 @@ struct EntriesView: View {
         let entry = TimeEntry(start: end.adding(seconds: -3600), end: end, timeZone: model.environment.timeZone(), updated: end)
         model.addEntry(entry, undoManager: undoManager)
         selection = [entry.id]
-        showInspector = true
     }
 }
 
@@ -179,7 +172,7 @@ struct EntryStatusIcon: View {
         if row.flagged {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(.orange)
-                .help("Overlaps another entry")
+                .help("Overlaps another entry. Right-click for a fix.")
         } else if row.entry.isRunning {
             Image(systemName: "record.circle")
                 .foregroundStyle(.red)
@@ -187,4 +180,201 @@ struct EntryStatusIcon: View {
         }
     }
 }
+
+// MARK: - Cells
+
+/// The entry's day, which opens a calendar to move the entry to another
+/// day at the same times.
+struct EntryDateCell: View {
+    let model: AppModel
+    let row: EntryRow
+    @Environment(\.undoManager) private var undoManager
+    @State private var choosing = false
+
+    var body: some View {
+        Button {
+            choosing = true
+        } label: {
+            Text(row.day.year == model.today.year ? Format.day(row.day) : Format.longDay(row.day))
+        }
+        .buttonStyle(.plain)
+        .help("Move to another day")
+        .disabled(model.isReadOnly)
+        .popover(isPresented: $choosing, arrowEdge: .bottom) {
+            DatePicker(
+                "Date",
+                selection: Binding(
+                    get: { row.day.pickerDate },
+                    set: { date in
+                        choosing = false
+                        move(to: LocalDate(pickerDate: date))
+                    }
+                ),
+                displayedComponents: .date
+            )
+            .datePickerStyle(.graphical)
+            .labelsHidden()
+            .padding(8)
+        }
+    }
+
+    /// Moves the entry to `day`, keeping its wall-clock start and its
+    /// duration. The running timer's start can't move past now.
+    private func move(to day: LocalDate) {
+        let entry = row.entry
+        guard day != row.day else { return }
+        let start = entry.startOn(day)
+        if entry.isRunning {
+            model.setRunningStart(start, undoManager: undoManager)
+        } else {
+            let shift = entry.start.distance(to: start)
+            model.updateEntries([entry.id], actionName: "Change Date", undoManager: undoManager) { changed in
+                changed.start = start
+                changed.end = changed.end?.adding(milliseconds: shift)
+            }
+        }
+    }
+}
+
+/// The start, as a time to type over in the entry's own time zone. A start
+/// after the end is refused.
+struct EntryStartCell: View {
+    let model: AppModel
+    let row: EntryRow
+    @Environment(\.undoManager) private var undoManager
+
+    var body: some View {
+        HStack(spacing: 4) {
+            CommitField(title: "", value: Format.time(row.start, zone: row.zone), commit: commit)
+            if let label = row.zoneLabel {
+                Text(label)
+                    .foregroundStyle(.secondary)
+                    .help("Recorded in \(row.zone)")
+            }
+        }
+        .textFieldStyle(.plain)
+        .monospacedDigit()
+        .disabled(model.isReadOnly)
+    }
+
+    private func commit(_ text: String) {
+        guard let second = Format.parseTime(text) else { return NSSound.beep() }
+        let start = row.entry.startAt(secondOfDay: second)
+        if row.entry.isRunning {
+            model.setRunningStart(start, undoManager: undoManager)
+        } else if let end = row.entry.end, start <= end {
+            model.updateEntries([row.id], actionName: "Change Start", undoManager: undoManager) { $0.start = start }
+        } else {
+            NSSound.beep()
+        }
+    }
+}
+
+/// The end, as a time to type over in the entry's own time zone. An end
+/// earlier than the start is on the next day, shown as "+1".
+struct EntryEndCell: View {
+    let model: AppModel
+    let row: EntryRow
+    @Environment(\.undoManager) private var undoManager
+
+    var body: some View {
+        if let end = row.entry.end {
+            HStack(spacing: 4) {
+                CommitField(title: "", value: Format.time(end, zone: row.zone), commit: commit)
+                if row.endDays > 0 {
+                    Text("+\(row.endDays)")
+                        .foregroundStyle(.secondary)
+                        .help("Ends on a later day")
+                }
+            }
+            .textFieldStyle(.plain)
+            .monospacedDigit()
+            .disabled(model.isReadOnly)
+        } else {
+            Text("Running")
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func commit(_ text: String) {
+        guard let second = Format.parseTime(text) else { return NSSound.beep() }
+        let end = row.entry.endAt(secondOfDay: second)
+        model.updateEntries([row.id], actionName: "Change End", undoManager: undoManager) { $0.end = end }
+    }
+}
+
+/// The duration, which moves the end when typed over. The running timer's
+/// just counts.
+struct EntryDurationCell: View {
+    let model: AppModel
+    let row: EntryRow
+    @Environment(\.undoManager) private var undoManager
+
+    var body: some View {
+        if row.entry.isRunning {
+            Text(Format.duration(row.duration))
+                .monospacedDigit()
+        } else {
+            CommitField(title: "", value: Format.duration(row.duration)) { text in
+                guard let duration = Format.parseDuration(text) else { return NSSound.beep() }
+                model.updateEntries([row.id], actionName: "Change Duration", undoManager: undoManager) {
+                    $0.end = $0.start.adding(milliseconds: duration)
+                }
+            }
+            .textFieldStyle(.plain)
+            .monospacedDigit()
+            .disabled(model.isReadOnly)
+        }
+    }
+}
+
+/// The project, which opens the searchable project list.
+struct EntryProjectCell: View {
+    let model: AppModel
+    let row: EntryRow
+    @Environment(\.undoManager) private var undoManager
+    @State private var choosing = false
+
+    var body: some View {
+        Button {
+            choosing = true
+        } label: {
+            ProjectLabel(ledger: model.ledger, projectID: row.entry.entry.projectID)
+        }
+        .buttonStyle(.plain)
+        .help("Choose a project; type to search clients and projects")
+        .disabled(model.isReadOnly)
+        .popover(isPresented: $choosing, arrowEdge: .bottom) {
+            ProjectChooser(ledger: model.ledger, current: ProjectChoice(row.entry.entry.projectID)) { projectID in
+                choosing = false
+                model.updateEntries([row.id], actionName: "Change Project", undoManager: undoManager) { $0.projectID = projectID }
+            } cancel: {
+                choosing = false
+            }
+            .frame(width: 320)
+        }
+    }
+}
+
+#if DEBUG
+#Preview("Entries") {
+    EntriesView(model: PreviewData.model())
+        .frame(width: 1100, height: 500)
+}
+
+#Preview("Overlap Selected") {
+    EntriesView(model: PreviewData.model(), selection: [PreviewData.entry("Call with Globex")])
+        .frame(width: 1100, height: 500)
+}
+
+#Preview("No Entries") {
+    EntriesView(model: PreviewData.model(Ledger()))
+        .frame(width: 1100, height: 500)
+}
+
+#Preview("Read-Only") {
+    EntriesView(model: PreviewData.model(state: .iCloudUnavailable))
+        .frame(width: 1100, height: 500)
+}
+#endif
 #endif

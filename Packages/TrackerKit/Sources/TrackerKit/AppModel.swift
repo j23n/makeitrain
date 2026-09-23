@@ -403,3 +403,23 @@ public final class AppModel {
         registerUndo(ledger.snapshot(since: before), actionName: actionName, undoManager: undoManager)
     }
 }
+
+#if DEBUG
+extension AppModel {
+    /// Shows `ledger` as if it had been read from the data folder, without
+    /// reading anything, for previews. The other values set up the notices.
+    public func showForPreview(
+        _ ledger: Ledger,
+        state: State = .ready,
+        issues: [FileIssue] = [],
+        missingFiles: Int = 0,
+        lastError: String? = nil
+    ) {
+        self.ledger = ledger
+        self.state = state
+        self.issues = issues
+        self.missingFiles = missingFiles
+        self.lastError = lastError
+    }
+}
+#endif

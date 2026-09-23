@@ -114,4 +114,41 @@ struct TimerControl: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Timeline") {
+    MainWindow(model: PreviewData.model(), screen: .timeline)
+        .frame(width: 1200, height: 720)
+}
+
+#Preview("Entries") {
+    MainWindow(model: PreviewData.model(), screen: .entries)
+        .frame(width: 1200, height: 720)
+}
+
+#Preview("Reports") {
+    MainWindow(model: PreviewData.model(), screen: .reports)
+        .frame(width: 1200, height: 720)
+}
+
+#Preview("Clients & Projects") {
+    MainWindow(model: PreviewData.model(), screen: .projects)
+        .frame(width: 1200, height: 720)
+}
+
+#Preview("Tags") {
+    MainWindow(model: PreviewData.model(), screen: .tags)
+        .frame(width: 1200, height: 720)
+}
+
+#Preview("No Data") {
+    MainWindow(model: PreviewData.model(Ledger()), screen: .entries)
+        .frame(width: 1200, height: 720)
+}
+
+#Preview("iCloud Unavailable") {
+    MainWindow(model: PreviewData.model(state: .iCloudUnavailable), screen: .entries)
+        .frame(width: 1200, height: 720)
+}
+#endif
 #endif

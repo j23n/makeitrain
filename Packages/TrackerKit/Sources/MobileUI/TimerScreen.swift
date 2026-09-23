@@ -169,4 +169,28 @@ struct AdjustTimeSheet: View {
         .presentationDetents([.medium])
     }
 }
+
+#if DEBUG
+#Preview("Running") {
+    TimerScreen(model: PreviewData.model())
+}
+
+#Preview("Stopped") {
+    TimerScreen(model: PreviewData.model(PreviewData.stoppedLedger))
+}
+
+#Preview("No Data") {
+    TimerScreen(model: PreviewData.model(Ledger()))
+}
+
+#Preview("Started Earlier") {
+    let model = PreviewData.model()
+    return AdjustTimeSheet(model: model, running: model.running!, adjustment: .start)
+}
+
+#Preview("Stop Earlier") {
+    let model = PreviewData.model()
+    return AdjustTimeSheet(model: model, running: model.running!, adjustment: .stop)
+}
+#endif
 #endif

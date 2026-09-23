@@ -65,6 +65,13 @@ extension AppModel {
         }
     }
 
+    /// Splits an entry in two at `time`, which has to fall inside it.
+    public func splitEntry(_ id: UUID, at time: Timestamp, undoManager: UndoManager?) {
+        edit("Split Entry", undoManager: undoManager) { ledger, now in
+            ledger.split(id, at: time, now: now)
+        }
+    }
+
     /// Applies a one-click overlap fix.
     public func apply(_ fix: OverlapFix, undoManager: UndoManager?) {
         let name: String

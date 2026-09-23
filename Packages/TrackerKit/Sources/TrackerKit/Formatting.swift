@@ -53,6 +53,50 @@ public enum Format {
         return Int64(minutes.rounded()) * 60000
     }
 
+    /// Reads a wall-clock time typed as "9:15", "09.15", "915", "9",
+    /// "9:15 PM" or "9pm", as seconds after midnight. "24:00" is the end of
+    /// the day. Nil if it can't be read.
+    public static func parseTime(_ text: String) -> Int? {
+        var typed = text.lowercased().filter { !$0.isWhitespace }
+        var afternoon: Bool? = nil
+        for (suffix, pm) in [("a.m.", false), ("p.m.", true), ("am", false), ("pm", true), ("a", false), ("p", true)]
+        where typed.hasSuffix(suffix) {
+            typed.removeLast(suffix.count)
+            afternoon = pm
+            break
+        }
+        guard !typed.isEmpty, typed.allSatisfy({ $0.isASCII && ($0.isNumber || $0 == ":" || $0 == ".") }) else {
+            return nil
+        }
+        let parts = typed.split(omittingEmptySubsequences: false) { $0 == ":" || $0 == "." }.map(String.init)
+        var numbers: [Int]
+        if parts.count == 1 {
+            // "9", "09", "915" or "0915".
+            let digits = parts[0]
+            switch digits.count {
+            case 1, 2: numbers = [Int(digits)!, 0]
+            case 3, 4: numbers = [Int(digits.dropLast(2))!, Int(digits.suffix(2))!]
+            default: return nil
+            }
+        } else {
+            guard parts.count <= 3, (1...2).contains(parts[0].count), parts.dropFirst().allSatisfy({ $0.count == 2 }) else {
+                return nil
+            }
+            numbers = parts.map { Int($0)! }
+        }
+        numbers += [0]
+        var hour = numbers[0]
+        let minute = numbers[1], second = numbers[2]
+        guard minute < 60, second < 60 else { return nil }
+        if let afternoon {
+            guard (1...12).contains(hour) else { return nil }
+            hour = hour % 12 + (afternoon ? 12 : 0)
+        } else {
+            guard hour < 24 || (hour == 24 && minute == 0 && second == 0) else { return nil }
+        }
+        return (hour * 60 + minute) * 60 + second
+    }
+
     /// Decimal hours, such as "2.42".
     public static func hours(_ milliseconds: Int64) -> String {
         String(format: "%.2f", Double(max(0, milliseconds)) / 3_600_000)
@@ -120,6 +164,30 @@ public enum Format {
     }
 
     private static let utc = TimeZone(identifier: "UTC")!
+}
+
+extension ResolvedEntry {
+    /// The start moved to a wall-clock time on the entry's day, in its own
+    /// time zone, as when a time is typed into the Start column.
+    public func startAt(secondOfDay second: Int) -> Timestamp {
+        Timestamp(date: entry.day, secondOfDay: second, zone: entry.timeZone)
+    }
+
+    /// The first moment after the start at a wall-clock time in the entry's
+    /// time zone, as when a time is typed into the End column: an end
+    /// earlier than the start is on the next day.
+    public func endAt(secondOfDay second: Int) -> Timestamp {
+        let sameDay = Timestamp(date: entry.day, secondOfDay: second, zone: entry.timeZone)
+        guard sameDay <= start else { return sameDay }
+        return Timestamp(date: entry.day.adding(days: 1), secondOfDay: second, zone: entry.timeZone)
+    }
+
+    /// The start moved to another day at the same wall-clock time, in the
+    /// entry's time zone.
+    public func startOn(_ day: LocalDate) -> Timestamp {
+        let local = start.local(in: entry.timeZone)
+        return Timestamp(date: day, secondOfDay: local.millisecondOfDay / 1000, zone: entry.timeZone)
+    }
 }
 
 extension LocalDate {
