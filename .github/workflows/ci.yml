@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  core-linux:
+    name: TrackerCore on Linux
+    runs-on: ubuntu-latest
+    container: swift:6.2
+    steps:
+      - uses: actions/checkout@v5
+      - run: swift test --package-path Packages/TrackerCore
+
+  packages-macos:
+    name: Packages on macOS
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+      - run: swift --version
+      - run: swift test --package-path Packages/TrackerCore
+      - run: swift test --package-path Packages/TrackerKit
+
+  apps:
+    name: Mac and iOS apps
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v5
+      - run: xcodebuild -version
+      - name: Build the Mac app
+        run: >
+          xcodebuild build -project TimeTracker.xcodeproj -scheme TimeTracker
+          -destination 'generic/platform=macOS' CODE_SIGNING_ALLOWED=NO
+      - name: Build the iOS app
+        run: >
+          xcodebuild build -project TimeTracker.xcodeproj -scheme TimeTrackerMobile
+          -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO

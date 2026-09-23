@@ -1,19 +1,32 @@
 # Time Tracker
 
-A native SwiftUI time tracker for the Mac, with iPhone and iPad later. It keeps
-everything in readable JSON files, in iCloud Drive or a local folder, and never
-touches the network. [PLAN.md](PLAN.md) has the design and the build order.
+A menu bar time tracker for the Mac, with an iPhone and iPad app. It keeps everything in readable JSON files, in iCloud Drive or a local folder, and never touches the network.
 
-## Layout
+## Building
 
-- `TrackerCore/` is a Swift package with the models, the file format, merging,
-  the two-timers rule, overlap detection and the file store. It has no UI code
-  and builds on macOS, iOS and Linux.
+You need Xcode 16 or later.
+
+1. Open `TimeTracker.xcodeproj`.
+2. For both targets, pick your team under Signing & Capabilities. The apps use the iCloud container `iCloud.com.j23n.TimeTracker`; change it in both entitlements files and both `Info.plist` files if you use a different one.
+3. Run the `TimeTracker` scheme for the Mac app, or `TimeTrackerMobile` for iPhone and iPad.
 
 ## Tests
 
 ```sh
-swift test --package-path TrackerCore
+swift test --package-path Packages/TrackerCore
+swift test --package-path Packages/TrackerKit
 ```
 
-GitHub Actions runs them on macOS and Linux for every push.
+GitHub Actions runs both on macOS, runs TrackerCore on Linux too, and builds both apps.
+
+## Layout
+
+- `Mac/` and `iOS/` are the app targets. They hold little more than the entry point, entitlements and assets.
+- `Packages/TrackerKit` has the app model, storage and iCloud sync (`TrackerKit`), and the screens (`MacUI`, `MobileUI`).
+- `Packages/TrackerCore` has the data model, file format, merging and rules. It builds on Linux as well.
+
+## Docs
+
+- [Architecture](docs/architecture.md): how the pieces fit together.
+- [Data format](docs/data-format.md): the JSON files and what's in them.
+- [Sync](docs/sync.md): merging, saving, iCloud and backups.
