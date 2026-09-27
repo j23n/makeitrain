@@ -3,21 +3,26 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 
-/// The entries table's context menu, for the entries right-clicked: split
-/// one, fix its overlaps, or change several at once.
+/// The context menu for entries, in the entries table and on the timeline:
+/// duplicate, split or delete them, fix an overlap, or change their project
+/// and tags.
 struct EntriesMenu: View {
     let model: AppModel
     let ids: Set<UUID>
-    /// Every tag in use, to add from.
-    let allTags: [String]
     /// The window's, since a menu may not see it.
     let undoManager: UndoManager?
     @Binding var sheet: EntriesSheet?
+    /// Selects the copies "Duplicate" makes.
+    let select: (Set<UUID>) -> Void
 
     var body: some View {
         let entries = model.resolved.filter { ids.contains($0.id) }
         if !entries.isEmpty {
             Group {
+                Button(entries.count == 1 ? "Duplicate Entry" : "Duplicate \(entries.count) Entries") {
+                    select(Set(model.duplicateEntries(entries.map(\.id), undoManager: undoManager)))
+                }
+                .disabled(entries.allSatisfy(\.isRunning))
                 if entries.count == 1, let entry = entries.first {
                     Button("Split Entry…") {
                         sheet = .split(entry.id)
@@ -37,12 +42,12 @@ struct EntriesMenu: View {
                             }
                         }
                     }
-                    Divider()
                 }
-
+                Divider()
                 Button("Set Project…") {
                     sheet = .project(ids)
                 }
+                let allTags = model.ledger.allTags()
                 Menu("Add Tag") {
                     ForEach(allTags, id: \.self) { tag in
                         Button(tag) {
@@ -311,9 +316,9 @@ struct NewTagSheet: View {
         EntriesMenu(
             model: PreviewData.model(),
             ids: [PreviewData.entry("Call with Globex")],
-            allTags: PreviewData.ledger.allTags(),
             undoManager: nil,
-            sheet: .constant(nil)
+            sheet: .constant(nil),
+            select: { _ in }
         )
     }
     .fixedSize()
@@ -325,9 +330,9 @@ struct NewTagSheet: View {
         EntriesMenu(
             model: PreviewData.model(),
             ids: [PreviewData.entry("Moodboard"), PreviewData.entry("Hero section"), PreviewData.entry("Offline mode")],
-            allTags: PreviewData.ledger.allTags(),
             undoManager: nil,
-            sheet: .constant(nil)
+            sheet: .constant(nil),
+            select: { _ in }
         )
     }
     .fixedSize()

@@ -37,6 +37,12 @@ public enum DateTimeFormat {
     /// milliseconds are dropped. Returns nil for anything else, including
     /// a missing offset.
     public static func parse(_ text: String) -> Timestamp? {
+        parseWithOffset(text)?.time
+    }
+
+    /// Parses a date-time as `parse(_:)` does, also giving its offset in
+    /// seconds east of UTC.
+    public static func parseWithOffset(_ text: String) -> (time: Timestamp, offsetSeconds: Int)? {
         let bytes = Array(text.utf8)
         guard bytes.count >= 20 else { return nil }
 
@@ -95,6 +101,7 @@ public enum DateTimeFormat {
 
         let days = Int64(LocalDate(year: year, month: month, day: day).daysSince1970)
         let millisecondOfDay = Int64(((hour * 60 + minute) * 60 + second) * 1000 + millisecond)
-        return Timestamp(milliseconds: days * 86_400_000 + millisecondOfDay - Int64(offsetSeconds) * 1000)
+        let time = Timestamp(milliseconds: days * 86_400_000 + millisecondOfDay - Int64(offsetSeconds) * 1000)
+        return (time, offsetSeconds)
     }
 }

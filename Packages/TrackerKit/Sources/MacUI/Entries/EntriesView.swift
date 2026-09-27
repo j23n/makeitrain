@@ -110,7 +110,9 @@ struct EntriesView: View {
             .width(min: 100, ideal: 240)
         }
         .contextMenu(forSelectionType: UUID.self) { ids in
-            EntriesMenu(model: model, ids: ids, allTags: allTags, undoManager: undoManager, sheet: $sheet)
+            EntriesMenu(model: model, ids: ids, undoManager: undoManager, sheet: $sheet) { copies in
+                selection = copies
+            }
         }
         .onDeleteCommand {
             guard !selection.isEmpty, !model.isReadOnly else { return }

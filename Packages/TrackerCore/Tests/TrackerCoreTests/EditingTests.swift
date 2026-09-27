@@ -157,6 +157,44 @@ import Testing
         #expect(ledger.runningEntry?.id == uuid(2))
     }
 
+    @Test func duplicatingPutsTheCopyRightAfterTheEntry() {
+        var ledger = Ledger(entries: [entry(1, project: uuid(10), tags: ["design"], note: "Wireframes")])
+        let changes = ledger.duplicate([uuid(1): uuid(2)], now: noon)
+        let copy = ledger.entries[uuid(2)]!
+        #expect(copy.start == t("2026-09-23T10:00:00+02:00"))
+        #expect(copy.end == t("2026-09-23T11:00:00+02:00"))
+        #expect(copy.projectID == uuid(10))
+        #expect(copy.tags == ["design"])
+        #expect(copy.note == "Wireframes")
+        #expect(copy.timeZone == "Europe/Berlin")
+        #expect(copy.updated == noon)
+        #expect(ledger.entries[uuid(1)] == entry(1, project: uuid(10), tags: ["design"], note: "Wireframes"))
+        #expect(changes == Changes(months: [MonthKey(year: 2026, month: 9)]))
+    }
+
+    @Test func duplicatingSeveralKeepsTheirOrder() {
+        var second = entry(2)
+        second.start = t("2026-09-23T10:00:00+02:00")
+        second.end = t("2026-09-23T10:30:00+02:00")
+        var ledger = Ledger(entries: [entry(1), second])
+        ledger.duplicate([uuid(1): uuid(11), uuid(2): uuid(12)], now: noon)
+        // The pair ran from 09:00 to 10:30, so the copies follow at 10:30.
+        #expect(ledger.entries[uuid(11)]?.start == t("2026-09-23T10:30:00+02:00"))
+        #expect(ledger.entries[uuid(11)]?.end == t("2026-09-23T11:30:00+02:00"))
+        #expect(ledger.entries[uuid(12)]?.start == t("2026-09-23T11:30:00+02:00"))
+        #expect(ledger.entries[uuid(12)]?.end == t("2026-09-23T12:00:00+02:00"))
+    }
+
+    @Test func duplicatingSkipsTheRunningTimerAndDeletedEntries() {
+        var ledger = Ledger(entries: [entry(1)])
+        ledger.deleteEntry(uuid(1), now: noon)
+        ledger.startTimer(id: uuid(2), timeZone: "Europe/Berlin", at: noon, now: noon)
+        let before = ledger
+        let changes = ledger.duplicate([uuid(1): uuid(11), uuid(2): uuid(12)], now: noon)
+        #expect(ledger == before)
+        #expect(changes.isEmpty)
+    }
+
     @Test func renamingATagRenamesItEverywhere() {
         var ledger = Ledger(entries: [
             entry(1, tags: ["Design"]),

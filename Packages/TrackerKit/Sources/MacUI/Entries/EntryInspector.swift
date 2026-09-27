@@ -7,11 +7,13 @@ import TrackerKit
 struct EntryInspector: View {
     let model: AppModel
     let id: UUID?
+    /// Selects another entry, such as a copy just made.
+    let select: (UUID) -> Void
 
     var body: some View {
         Group {
             if let entry = model.resolved.first(where: { $0.id == id }) {
-                EntryEditor(model: model, entry: entry)
+                EntryEditor(model: model, entry: entry, select: select)
                     .id(entry.id)
             } else {
                 ContentUnavailableView("No Selection", systemImage: "clock", description: Text("Select an entry to edit it."))
@@ -26,6 +28,8 @@ struct EntryInspector: View {
 struct EntryEditor: View {
     let model: AppModel
     let entry: ResolvedEntry
+    /// Selects another entry, such as the copy "Duplicate Entry" makes.
+    let select: (UUID) -> Void
     @Environment(\.undoManager) private var undoManager
     @State private var splitting = false
 
@@ -94,6 +98,12 @@ struct EntryEditor: View {
             OverlapSection(model: model, entry: entry)
 
             Section {
+                Button("Duplicate Entry") {
+                    if let copy = model.duplicateEntries([entry.id], undoManager: undoManager).first {
+                        select(copy)
+                    }
+                }
+                .disabled(entry.isRunning)
                 Button("Split Entry…") {
                     splitting = true
                 }
@@ -170,27 +180,27 @@ extension OverlapFix {
 
 #if DEBUG
 #Preview("Entry") {
-    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Wireframe review, round 2"))
+    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Wireframe review, round 2")) { _ in }
         .frame(width: 300, height: 640)
 }
 
 #Preview("Overlap") {
-    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Call with Globex"))
+    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Call with Globex")) { _ in }
         .frame(width: 300, height: 640)
 }
 
 #Preview("Running Timer") {
-    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Landing page copy"))
+    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Landing page copy")) { _ in }
         .frame(width: 300, height: 640)
 }
 
 #Preview("Recorded in New York") {
-    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Client visit"))
+    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Client visit")) { _ in }
         .frame(width: 300, height: 640)
 }
 
 #Preview("No Selection") {
-    EntryInspector(model: PreviewData.model(), id: nil)
+    EntryInspector(model: PreviewData.model(), id: nil) { _ in }
         .frame(width: 300, height: 640)
 }
 #endif

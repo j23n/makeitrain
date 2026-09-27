@@ -113,6 +113,16 @@ public enum Format {
         noon(of: day).formatted(Date.FormatStyle(timeZone: utc).weekday(.abbreviated).month(.abbreviated).day())
     }
 
+    /// A day's weekday, such as "Mon".
+    public static func weekday(_ day: LocalDate) -> String {
+        noon(of: day).formatted(Date.FormatStyle(timeZone: utc).weekday(.abbreviated))
+    }
+
+    /// A month and its year, such as "September 2026".
+    public static func month(_ day: LocalDate) -> String {
+        noon(of: day).formatted(Date.FormatStyle(timeZone: utc).month(.wide).year())
+    }
+
     /// A day with its year, such as "Sep 23, 2026".
     public static func longDay(_ day: LocalDate) -> String {
         noon(of: day).formatted(Date.FormatStyle(date: .abbreviated, time: .omitted, timeZone: utc))

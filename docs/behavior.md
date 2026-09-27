@@ -23,7 +23,9 @@ The rules the app follows, whichever screen or device an edit comes from. One ti
 
 - On the Mac, the entries table is edited in place: click a date to move the entry to another day at the same times, type over a start, end or duration, click the project to choose another, and type tags or a note. On the timeline, the selected entry is edited in the inspector.
 - Times can be typed as "9:15", "09.15", "915", "9" or "9:15 PM", and are read in the entry's own time zone. A new start stays on the entry's day and can't be after its end. An end earlier than the start is on the next day, shown as "+1". A new duration moves the end. What can't be read is refused with a beep.
-- Right-clicking entries offers "Split Entry…", the entry's overlap fixes, "Set Project…", "Add Tag", "Remove Tag" and "Delete". The last four change every selected entry at once.
+- The timeline shows a day or a week on an hour grid, or a month as a calendar. On the grid, drag a block to move it, in the week view to another day too; drag its top or bottom edge to change its start or end; double-click empty space to add an hour. Click a day's heading in the week view, or double-click a day in the month view, to see it on its own.
+- Right-clicking entries, in the table or on the timeline, offers "Duplicate", "Split Entry…", the entry's overlap fixes, "Set Project…", "Add Tag", "Remove Tag" and "Delete". All but splitting and the overlap fixes work on every selected entry at once.
+- "Duplicate" puts a copy right after the entry, with the same project, tags, note and length, so it doesn't overlap the original. Copies of several entries keep their order and follow the last one. The running timer isn't copied. The copy is selected, ready to move.
 - "Split Entry…" cuts an entry in two at a time inside it, suggesting the middle, on five minutes. Both parts keep the project, tags and note. Splitting the running timer stops the first part there and keeps the second running.
 
 ## Clients and projects

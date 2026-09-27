@@ -70,7 +70,7 @@ struct MainWindow: View {
     private var detail: some View {
         switch screen {
         case .timeline:
-            DayTimelineScreen(model: model)
+            TimelineScreen(model: model)
         case .entries:
             EntriesView(model: model)
         case .reports:

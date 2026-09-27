@@ -1,0 +1,217 @@
+#if os(macOS)
+import SwiftUI
+import TrackerCore
+import TrackerKit
+
+/// A month as a calendar: a row for each week, each day with its total and
+/// its entries. Click an entry to select it; double-click a day, or its
+/// "more", to show the day on the timeline.
+struct MonthCalendar: View {
+    let model: AppModel
+    /// Any day in the month shown.
+    let month: LocalDate
+    @Binding var selection: UUID?
+    @Binding var sheet: EntriesSheet?
+    let openDay: (LocalDate) -> Void
+    @Environment(\.undoManager) private var undoManager
+
+    static let lineHeight: CGFloat = 17
+
+    /// Every week with a day in the month, each starting on `firstWeekday`.
+    static func weeks(of month: LocalDate, firstWeekday: Int) -> [[LocalDate]] {
+        let days = ReportPeriod.month.range(containing: month, firstWeekday: firstWeekday)
+        var start = days.lowerBound.startOfWeek(firstWeekday: firstWeekday)
+        var weeks: [[LocalDate]] = []
+        while start <= days.upperBound {
+            weeks.append((0..<7).map { start.adding(days: $0) })
+            start = start.adding(days: 7)
+        }
+        return weeks
+    }
+
+    var body: some View {
+        let weeks = Self.weeks(of: month, firstWeekday: model.firstWeekday)
+        let monthDays = ReportPeriod.month.range(containing: month, firstWeekday: model.firstWeekday)
+        let shown = (weeks.first?.first ?? month)...(weeks.last?.last ?? month)
+        let byDay = Dictionary(grouping: model.resolved.filter { shown.contains($0.entry.day) }) { $0.entry.day }
+        let today = model.today
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                ForEach(weeks.first ?? [], id: \.self) { day in
+                    Text(Format.weekday(day))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .padding(.vertical, 6)
+            Divider()
+            GeometryReader { geometry in
+                let rowHeight = geometry.size.height / CGFloat(max(weeks.count, 1))
+                VStack(spacing: 0) {
+                    ForEach(weeks, id: \.self) { week in
+                        HStack(spacing: 0) {
+                            ForEach(week, id: \.self) { day in
+                                MonthDayCell(
+                                    model: model,
+                                    day: day,
+                                    entries: byDay[day] ?? [],
+                                    inMonth: monthDays.contains(day),
+                                    isToday: day == today,
+                                    height: rowHeight,
+                                    selection: $selection,
+                                    sheet: $sheet,
+                                    openDay: openDay
+                                )
+                                if day != week.last {
+                                    Divider()
+                                }
+                            }
+                        }
+                        .frame(height: rowHeight - 1)
+                        Divider()
+                    }
+                }
+            }
+        }
+        .focusable()
+        .focusEffectDisabled()
+        .onDeleteCommand {
+            guard let selection, !model.isReadOnly else { return }
+            model.deleteEntries([selection], undoManager: undoManager)
+        }
+    }
+}
+
+/// A day in the month calendar: its number, its total, and as many of its
+/// entries as fit.
+struct MonthDayCell: View {
+    let model: AppModel
+    let day: LocalDate
+    /// The day's entries, by start.
+    let entries: [ResolvedEntry]
+    let inMonth: Bool
+    let isToday: Bool
+    let height: CGFloat
+    @Binding var selection: UUID?
+    @Binding var sheet: EntriesSheet?
+    let openDay: (LocalDate) -> Void
+    @Environment(\.undoManager) private var undoManager
+
+    var body: some View {
+        let total = entries.reduce(Int64(0)) { $0 + model.duration(of: $1) }
+        // The lines under the day's number, one of them for "more" when not
+        // every entry fits.
+        let lines = max(0, Int((height - 30) / MonthCalendar.lineHeight))
+        let shownCount = entries.count > lines ? max(lines - 1, 0) : entries.count
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("\(day.day)")
+                    .font(.callout.weight(isToday ? .semibold : .regular))
+                    .foregroundStyle(isToday ? Color.white : inMonth ? Color.primary : Color.secondary)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1)
+                    .background {
+                        if isToday {
+                            Capsule().fill(Color.accentColor)
+                        }
+                    }
+                Spacer(minLength: 2)
+                if total > 0 {
+                    Text(Format.duration(total))
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.bottom, 3)
+            ForEach(entries.prefix(shownCount)) { entry in
+                MonthEntryRow(model: model, entry: entry, selected: selection == entry.id)
+                    .onTapGesture {
+                        selection = entry.id
+                    }
+                    .contextMenu {
+                        EntriesMenu(model: model, ids: [entry.id], undoManager: undoManager, sheet: $sheet) { copies in
+                            selection = copies.first
+                        }
+                    }
+            }
+            if shownCount < entries.count {
+                Button("\(entries.count - shownCount) more") {
+                    openDay(day)
+                }
+                .buttonStyle(.plain)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 3)
+                .help("Show \(Format.longDay(day))")
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(4)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(inMonth ? Color.clear : Color.primary.opacity(0.03))
+        .contentShape(Rectangle())
+        .onTapGesture(count: 2) {
+            openDay(day)
+        }
+    }
+}
+
+/// An entry in the month calendar: its project's color and title, and how
+/// long it ran.
+struct MonthEntryRow: View {
+    let model: AppModel
+    let entry: ResolvedEntry
+    let selected: Bool
+
+    var body: some View {
+        let zone = entry.entry.timeZone
+        let times = "\(Format.time(entry.start, zone: zone)) – \(entry.end.map { Format.time($0, zone: zone) } ?? "now")"
+        HStack(spacing: 4) {
+            Circle()
+                .fill(model.ledger.color(ofProject: entry.entry.projectID))
+                .frame(width: 7, height: 7)
+            Text(model.ledger.projectTitle(entry.entry.projectID))
+                .lineLimit(1)
+            Spacer(minLength: 2)
+            Text(Format.duration(model.duration(of: entry)))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+        }
+        .font(.caption)
+        .padding(.horizontal, 3)
+        .frame(height: MonthCalendar.lineHeight)
+        .background {
+            RoundedRectangle(cornerRadius: 4)
+                .fill(selected ? Color.accentColor.opacity(0.25) : Color.clear)
+        }
+        .contentShape(Rectangle())
+        .help(entry.entry.note.isEmpty ? times : "\(times)\n\(entry.entry.note)")
+    }
+}
+
+#if DEBUG
+#Preview("September") {
+    MonthCalendar(
+        model: PreviewData.model(),
+        month: LocalDate(year: 2026, month: 9, day: 23),
+        selection: .constant(PreviewData.entry("Call with Globex")),
+        sheet: .constant(nil),
+        openDay: { _ in }
+    )
+    .frame(width: 1000, height: 640)
+}
+
+#Preview("Small") {
+    MonthCalendar(
+        model: PreviewData.model(),
+        month: LocalDate(year: 2026, month: 9, day: 23),
+        selection: .constant(nil),
+        sheet: .constant(nil),
+        openDay: { _ in }
+    )
+    .frame(width: 640, height: 420)
+}
+#endif
+#endif

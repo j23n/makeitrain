@@ -217,6 +217,37 @@ extension Ledger {
         return changes
     }
 
+    /// Copies entries to right after them. `copies` maps each entry's id to
+    /// its copy's. A copy keeps its entry's project, tags, note, time zone
+    /// and length; all copies move by the time from the earliest start to
+    /// the latest end, so copies of entries in a row follow in the same
+    /// order. Running and deleted entries aren't copied.
+    @discardableResult
+    public mutating func duplicate(_ copies: [UUID: UUID], now: Timestamp) -> Changes {
+        var changes = settleOvertakenTimers(now: now)
+        let originals = copies.keys.compactMap { entries[$0] }.filter { !$0.isDeleted && $0.end != nil }
+        guard let first = originals.map(\.start).min(), let last = originals.compactMap(\.end).max() else {
+            return changes
+        }
+        let shift = first.distance(to: last)
+        for original in originals {
+            guard let id = copies[original.id], entries[id] == nil, let end = original.end else { continue }
+            let copy = TimeEntry(
+                id: id,
+                projectID: original.projectID,
+                start: original.start.adding(milliseconds: shift),
+                end: end.adding(milliseconds: shift),
+                timeZone: original.timeZone,
+                tags: original.tags,
+                note: original.note,
+                updated: now
+            )
+            entries[id] = copy
+            changes.months.insert(copy.month)
+        }
+        return changes
+    }
+
     /// Renames a tag, ignoring case, on every entry that has it. Renaming a
     /// tag to another tag's name merges the two.
     @discardableResult

@@ -36,7 +36,7 @@ Screens talk only to the app model; only the file store touches disk.
 The Mac app:
 
 - **Menu bar:** the stopwatch icon with the running timer's hours and minutes. Its popover starts, stops and switches timers, sets the start back or stops at an earlier time, starts from a note and project, and lists recent project and tag combinations to switch to.
-- **Main window:** a sidebar with the day **Timeline** (drag to move and resize, double-click to add), the **Entries** table, edited in place, **Reports** with a chart and CSV export, **Clients & Projects**, and **Tags**. The toolbar shows the running timer.
+- **Main window:** a sidebar with the **Timeline** by day, week or month (drag to move and resize, double-click to add), the **Entries** table, edited in place, **Reports** with a chart and CSV export, **Clients & Projects**, and **Tags**. The toolbar shows the running timer.
 - **Settings:** iCloud, the first day of the week, launch at login, and buttons that show the data and the backups in Finder.
 
 The iOS app has four tabs: **Timer**, **Entries** by day with a form to edit each, **Reports** with the CSV in the share sheet, and **Settings** with clients and projects.

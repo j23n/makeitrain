@@ -65,6 +65,17 @@ extension AppModel {
         }
     }
 
+    /// Copies entries to right after them, keeping their order, and returns
+    /// the copies' ids. The running timer isn't copied.
+    @discardableResult
+    public func duplicateEntries(_ ids: some Collection<UUID>, undoManager: UndoManager?) -> [UUID] {
+        let copies = Dictionary(ids.map { ($0, UUID()) }, uniquingKeysWith: { first, _ in first })
+        edit(copies.count == 1 ? "Duplicate Entry" : "Duplicate Entries", undoManager: undoManager) { ledger, now in
+            ledger.duplicate(copies, now: now)
+        }
+        return ids.compactMap { copies[$0] }.filter { ledger.entries[$0] != nil }
+    }
+
     /// Splits an entry in two at `time`, which has to fall inside it.
     public func splitEntry(_ id: UUID, at time: Timestamp, undoManager: UndoManager?) {
         edit("Split Entry", undoManager: undoManager) { ledger, now in
