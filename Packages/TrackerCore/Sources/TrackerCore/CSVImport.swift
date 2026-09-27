@@ -62,7 +62,7 @@ public enum CSVImport {
     }
 
     /// Why a file can't be imported at all.
-    public enum Failure: Error, Hashable, Sendable {
+    public enum Failure: LocalizedError, Hashable, Sendable {
         /// The file has no rows under its heading.
         case noRows
         /// No heading says when entries start, such as "start" or "date".
@@ -75,6 +75,10 @@ public enum CSVImport {
             case .noStartColumn:
                 "The file has no column for when entries start. Its first line should name the columns, such as \"start\", \"end\" and \"project\"."
             }
+        }
+
+        public var errorDescription: String? {
+            message
         }
     }
 

@@ -8,7 +8,7 @@ Time Tracker is a menu bar app for the Mac, with an iPhone and iPad app that sha
 | --- | --- |
 | `Mac/`, `iOS/` | The two app targets: entry point, Info.plist, entitlements and assets. They contain almost no code. |
 | `Packages/TrackerKit` | The app layer on Apple platforms. `TrackerKit` has the shared app model, storage, iCloud sync and the views both apps use; `MacUI` and `MobileUI` have each app's screens. Every screen has previews with the sample data in `PreviewData`. |
-| `Packages/TrackerCore` | The data model, file format, merging, the timer and overlap rules, reports, CSV and backups. Plain Swift that also builds and tests on Linux. |
+| `Packages/TrackerCore` | The data model, file format, merging, the timer and overlap rules, reports, CSV export and import, and backups. Plain Swift that also builds and tests on Linux. |
 | `TimeTracker.xcodeproj` | The Xcode project, with the `TimeTracker` (macOS) and `TimeTrackerMobile` (iOS) targets. |
 | `docs/` | These documents. |
 
@@ -36,16 +36,16 @@ Screens talk only to the app model; only the file store touches disk.
 The Mac app:
 
 - **Menu bar:** the stopwatch icon with the running timer's hours and minutes. Its popover starts, stops and switches timers, sets the start back or stops at an earlier time, starts from a note and project, and lists recent project and tag combinations to switch to.
-- **Main window:** a sidebar with the **Timeline** by day, week or month (drag to move and resize, double-click to add), the **Entries** table, edited in place, **Reports** with a chart and CSV export, **Clients & Projects**, and **Tags**. The toolbar shows the running timer.
+- **Main window:** a sidebar with the **Timeline** by day, week or month (drag to move and resize, double-click to add), the **Entries** table, edited in place, **Reports** with a chart and CSV export, **Clients & Projects**, and **Tags**. The toolbar shows the running timer. File › Import CSV… adds entries from a CSV file.
 - **Settings:** iCloud, the first day of the week, launch at login, and buttons that show the data and the backups in Finder.
 
-The iOS app has four tabs: **Timer**, **Entries** by day with a form to edit each, **Reports** with the CSV in the share sheet, and **Settings** with clients and projects.
+The iOS app has four tabs: **Timer**, **Entries** by day with a form to edit each, **Reports** with the CSV in the share sheet, and **Settings** with clients and projects and CSV import.
 
 Views both apps use live in `TrackerKit`: the report summary, chart and groups, the project label and picker, tag capsules, and a text field that commits on Return or when it loses focus, so typing doesn't make an undo step per keystroke.
 
 ## Permissions
 
-The Mac app has the App Sandbox, iCloud Documents for its own container, and read-write access to files the user picks, for CSV export. The iOS app has iCloud Documents. Nothing else, so the App Store privacy label can say "Data Not Collected".
+The Mac app has the App Sandbox, iCloud Documents for its own container, and read-write access to files the user picks, for CSV export and import. The iOS app has iCloud Documents. Nothing else, so the App Store privacy label can say "Data Not Collected".
 
 ## Choices
 

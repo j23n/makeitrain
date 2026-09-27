@@ -2,6 +2,7 @@
 import SwiftUI
 import TrackerCore
 import TrackerKit
+import UniformTypeIdentifiers
 
 /// The screens in the main window's sidebar.
 enum Screen: String, CaseIterable, Identifiable {
@@ -35,6 +36,10 @@ enum Screen: String, CaseIterable, Identifiable {
 struct MainWindow: View {
     let model: AppModel
     @SceneStorage private var screen: Screen
+    @Environment(\.undoManager) private var undoManager
+    @State private var importing = false
+    @State private var importRequest: ImportRequest?
+    @State private var importError: String?
 
     init(model: AppModel, screen: Screen = .timeline) {
         self.model = model
@@ -64,6 +69,25 @@ struct MainWindow: View {
         }
         .navigationTitle(screen.title)
         .frame(minWidth: 880, minHeight: 520)
+        .focusedSceneValue(\.importCSV, ImportAction { importing = true })
+        .fileImporter(isPresented: $importing, allowedContentTypes: [.commaSeparatedText, .tabSeparatedText, .plainText]) { result in
+            do {
+                importRequest = try model.importRequest(forFileAt: result.get())
+            } catch {
+                importError = error.localizedDescription
+            }
+        }
+        .sheet(item: $importRequest) { request in
+            ImportSheet(model: model, request: request, undoManager: undoManager)
+        }
+        .alert(
+            "Couldn't Import the File",
+            isPresented: Binding(get: { importError != nil }, set: { if !$0 { importError = nil } })
+        ) {
+            Button("OK") { importError = nil }
+        } message: {
+            Text(importError ?? "")
+        }
     }
 
     @ViewBuilder
@@ -72,7 +96,9 @@ struct MainWindow: View {
         case .timeline:
             TimelineScreen(model: model)
         case .entries:
-            EntriesView(model: model)
+            EntriesView(model: model) {
+                importing = true
+            }
         case .reports:
             ReportsView(model: model)
         case .projects:

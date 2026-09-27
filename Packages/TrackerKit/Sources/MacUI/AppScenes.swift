@@ -24,6 +24,9 @@ public struct AppScenes: Scene {
                 .dockIcon()
         }
         .defaultSize(width: 1200, height: 720)
+        .commands {
+            ImportCommands()
+        }
 
         Settings {
             SettingsView(model: model)

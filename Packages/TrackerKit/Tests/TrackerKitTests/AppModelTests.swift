@@ -188,6 +188,36 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
         #expect(model.resolved.map(\.id) == [workshop.id])
     }
 
+    @Test func importsACSVFileAsOneStep() async throws {
+        let harness = Harness()
+        defer { harness.cleanUp() }
+        let model = harness.model()
+        await model.start()
+        let undo = UndoManager()
+        undo.groupsByEvent = false
+
+        let csv = """
+        date,start,end,client,project,note
+        2026-09-22,09:00,10:00,Acme,Website,Review
+        2026-09-22,10:00,11:00,,Internal,Admin
+        """
+        let plan = try model.importPlan(for: Data(csv.utf8))
+        #expect(plan.entries.count == 2)
+        // Each new project gets its own color.
+        #expect(Set(plan.projects.map(\.color)).count == 2)
+
+        undo.beginUndoGrouping()
+        model.importEntries(plan, undoManager: undo)
+        undo.endUndoGrouping()
+        #expect(undo.undoActionName == "Import Entries")
+        #expect(model.resolved.map(\.entry.note) == ["Review", "Admin"])
+        #expect(model.ledger.projectTitle(model.resolved.first?.entry.projectID) == "Acme › Website")
+
+        undo.undo()
+        #expect(model.resolved.isEmpty)
+        #expect(model.ledger.liveClients().isEmpty)
+    }
+
     @Test func firstLaunchWaitsForICloudBeforeWriting() async throws {
         let harness = Harness()
         defer { harness.cleanUp() }

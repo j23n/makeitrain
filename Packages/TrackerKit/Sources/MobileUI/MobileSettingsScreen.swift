@@ -2,12 +2,17 @@
 import SwiftUI
 import TrackerCore
 import TrackerKit
+import UniformTypeIdentifiers
 
-/// iCloud, the first day of the week, and clients and projects.
+/// iCloud, the first day of the week, clients and projects, and importing
+/// entries from a CSV file.
 struct MobileSettingsScreen: View {
     @Bindable var model: AppModel
     @State private var switching = false
     @State private var switchError: String?
+    @State private var importing = false
+    @State private var importRequest: ImportRequest?
+    @State private var importError: String?
 
     var body: some View {
         NavigationStack {
@@ -32,12 +37,36 @@ struct MobileSettingsScreen: View {
                         }
                     }
                 }
+
+                Section {
+                    Button("Import CSV…") {
+                        importing = true
+                    }
+                    .disabled(model.isReadOnly)
+                } footer: {
+                    Text("Adds entries from a CSV file, such as one exported from this app or another time tracker.")
+                }
             }
             .navigationTitle("Settings")
             .alert("Couldn't Switch Storage", isPresented: Binding(get: { switchError != nil }, set: { if !$0 { switchError = nil } })) {
                 Button("OK") { switchError = nil }
             } message: {
                 Text(switchError ?? "")
+            }
+            .fileImporter(isPresented: $importing, allowedContentTypes: [.commaSeparatedText, .tabSeparatedText, .plainText]) { result in
+                do {
+                    importRequest = try model.importRequest(forFileAt: result.get())
+                } catch {
+                    importError = error.localizedDescription
+                }
+            }
+            .sheet(item: $importRequest) { request in
+                MobileImportSheet(model: model, request: request)
+            }
+            .alert("Couldn't Import the File", isPresented: Binding(get: { importError != nil }, set: { if !$0 { importError = nil } })) {
+                Button("OK") { importError = nil }
+            } message: {
+                Text(importError ?? "")
             }
         }
     }
@@ -67,6 +96,39 @@ struct MobileSettingsScreen: View {
             model.isICloudAvailable
                 ? "Your data stays on this device. Turning iCloud on merges it with any data already in iCloud Drive."
                 : "Your data stays on this device. Sign in to iCloud to sync it."
+        }
+    }
+}
+
+/// Shows what importing a CSV file adds, and adds it.
+struct MobileImportSheet: View {
+    let model: AppModel
+    let request: ImportRequest
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.undoManager) private var undoManager
+
+    var body: some View {
+        let count = request.plan.entries.count
+        NavigationStack {
+            Form {
+                ImportSummary(plan: request.plan, ledger: model.ledger)
+            }
+            .navigationTitle(request.fileName)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Import") {
+                        model.importEntries(request.plan, undoManager: undoManager)
+                        dismiss()
+                    }
+                    .disabled(count == 0 || model.isReadOnly)
+                }
+            }
         }
     }
 }
@@ -333,6 +395,18 @@ struct MobileProjectForm: View {
 }
 
 #if DEBUG
+#Preview("Import") {
+    let csv = """
+    Date,Client,Project,Notes,Hours
+    2026-09-24,Acme,Website redesign,Design review,1.5
+    2026-09-24,Initech,Consulting,Kickoff,2
+    2026-09-25,,Internal,,banana
+    """
+    let model = PreviewData.model()
+    let plan = try! model.importPlan(for: Data(csv.utf8))
+    return MobileImportSheet(model: model, request: ImportRequest(fileName: "harvest.csv", plan: plan))
+}
+
 #Preview("Settings") {
     MobileSettingsScreen(model: PreviewData.model())
 }

@@ -77,6 +77,18 @@ date,start,end,hours,client,project,tags,note
 - Tags are joined with `;`. A project without a client has an empty client cell; an unassigned entry has empty client and project cells.
 - On the Mac the file is saved through the save dialog, which gives the sandboxed app access to the chosen file. On iOS it goes to the share sheet.
 
+## CSV import
+
+File › Import CSV… on the Mac, also in the Entries toolbar, and Settings › Import CSV… on iOS add entries from a CSV file. A summary shows what the file adds before anything changes, and the whole import is one step to undo.
+
+- The app's own CSV reads back as it was exported. Detailed exports from other time trackers work too: columns are found by their headings, such as `start`, `end`, `start date`, `start time`, `end date`, `end time`, `date`, `duration`, `hours`, `client`, `project`, `tags`, and `note` or `description`. Commas, semicolons and tabs all separate fields.
+- Date-times with an offset keep their wall-clock time: an entry recorded in New York still shows at its New York time. Times without an offset are read in the device's time zone. An end time earlier than the start is on the next day, unless an end date says otherwise.
+- Dates can be written 2026-09-23, 23.09.2026, 09/23/2026 or 23/09/2026. With slashes, the day comes first if any date in the file needs it, as 23/09/2026 does.
+- Rows with a day and a duration but no times are placed one after another from 9:00.
+- Clients and projects are matched by name, ignoring case, and added when they're new. Tags are separated by `;` or `,` and take the spelling of existing tags.
+- A row with the same start, end, project and note as an entry that's already there is skipped, so importing a file twice adds its entries once.
+- Rows that can't be read are listed by line and left out; the rest can still be imported.
+
 ## Undo
 
 Every edit can be undone and redone from the Edit menu, or by shaking an iPhone. An undo is saved and synced like any other edit.

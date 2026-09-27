@@ -60,9 +60,12 @@ struct EntriesView: View {
     @State private var search = ""
     @State private var overlapsOnly = false
     @State private var sheet: EntriesSheet?
+    /// Opens the CSV import.
+    let importCSV: (() -> Void)?
 
-    init(model: AppModel, selection: Set<UUID> = []) {
+    init(model: AppModel, selection: Set<UUID> = [], importCSV: (() -> Void)? = nil) {
         self.model = model
+        self.importCSV = importCSV
         _selection = State(initialValue: selection)
     }
 
@@ -140,6 +143,13 @@ struct EntriesView: View {
                 .keyboardShortcut("n", modifiers: .command)
                 .help("Add an entry for the last hour")
                 .disabled(model.isReadOnly)
+                if let importCSV {
+                    Button(action: importCSV) {
+                        Label("Import CSV", systemImage: "square.and.arrow.down")
+                    }
+                    .help("Import entries from a CSV file")
+                    .disabled(model.isReadOnly)
+                }
             }
         }
         .sheet(item: $sheet) { sheet in

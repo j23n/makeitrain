@@ -95,6 +95,40 @@ extension AppModel {
         }
     }
 
+    // MARK: - Import
+
+    /// What importing a CSV file would add, without adding anything. New
+    /// projects get the palette's next colors.
+    public func importPlan(for data: Data) throws -> CSVImport.Plan {
+        var plan = try CSVImport.plan(data, into: ledger, timeZone: environment.timeZone(), now: environment.now())
+        var colored = ledger
+        for index in plan.projects.indices {
+            plan.projects[index].color = ProjectColors.next(in: colored)
+            colored.merge(plan.projects[index])
+        }
+        return plan
+    }
+
+    /// Reads a CSV file picked in a file importer, which may be outside the
+    /// app's sandbox.
+    public func importRequest(forFileAt url: URL) throws -> ImportRequest {
+        let accessing = url.startAccessingSecurityScopedResource()
+        defer {
+            if accessing {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        let data = try Data(contentsOf: url)
+        return ImportRequest(fileName: url.lastPathComponent, plan: try importPlan(for: data))
+    }
+
+    /// Adds what an import plan found, as one step to undo.
+    public func importEntries(_ plan: CSVImport.Plan, undoManager: UndoManager?) {
+        edit("Import Entries", undoManager: undoManager) { ledger, now in
+            ledger.add(plan, now: now)
+        }
+    }
+
     // MARK: - Clients and projects
 
     /// Adds a client and returns its id.
