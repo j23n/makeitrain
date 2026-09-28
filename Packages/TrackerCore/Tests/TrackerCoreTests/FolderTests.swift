@@ -100,19 +100,23 @@ import Testing
     }
 
     @Test func neverOverwritesAFileFromANewerVersion() throws {
-        let newer = Data(#"{"version": 2, "entries": [], "shifts": []}"#.utf8)
-        files.put("/data/entries/2026-09.json", newer)
-        files.put("/data/projects.json", newer)
+        let entriesVersion = FileFormat.entriesVersion + 1
+        let projectsVersion = FileFormat.projectsVersion + 1
+        let newerEntries = Data(#"{"version": \#(entriesVersion), "entries": [], "shifts": []}"#.utf8)
+        let newerProjects = Data(#"{"version": \#(projectsVersion), "projects": [], "shifts": []}"#.utf8)
+        files.put("/data/entries/2026-09.json", newerEntries)
+        files.put("/data/projects.json", newerProjects)
 
         let loaded = try folder.load()
-        #expect(Set(loaded.issues.map(\.problem)) == [.newerVersion(2)])
+        let problems: Set<FileProblem> = [.newerVersion(entriesVersion), .newerVersion(projectsVersion)]
+        #expect(Set(loaded.issues.map(\.problem)) == problems)
 
         var ledger = loaded.ledger
         var changes = ledger.addEntry(entry(1, on: "2026-09-23"), now: now)
         changes.formUnion(ledger.addClient(Client(name: "Acme", updated: now), now: now))
         let result = try folder.save(ledger, changes: changes)
-        #expect(files.contents("/data/entries/2026-09.json") == newer)
-        #expect(files.contents("/data/projects.json") == newer)
+        #expect(files.contents("/data/entries/2026-09.json") == newerEntries)
+        #expect(files.contents("/data/projects.json") == newerProjects)
         #expect(result.pending == changes)
     }
 
