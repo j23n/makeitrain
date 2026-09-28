@@ -97,6 +97,11 @@ import Testing
         ledger.restore(ledger.snapshot(since: beforeArchive), now: at("09:06:00"))
         #expect(ledger.projects[uuid(10)]?.archived == false)
 
+        let beforeRepositories = ledger
+        ledger.updateProject(uuid(10), now: at("09:06:30")) { $0.repositories = ["https://github.com/acme/web"] }
+        ledger.restore(ledger.snapshot(since: beforeRepositories), now: at("09:06:40"))
+        #expect(ledger.projects[uuid(10)]?.repositories.isEmpty == true)
+
         ledger.restore(added, now: at("09:07:00"))
         #expect(ledger.projects[uuid(10)]?.isDeleted == true)
     }

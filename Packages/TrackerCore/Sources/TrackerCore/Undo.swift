@@ -101,6 +101,7 @@ extension Ledger {
                 project.name = old.name
                 project.color = old.color
                 project.archived = old.archived
+                project.repositories = old.repositories
                 project.deleted = old.deleted
             })
         }
