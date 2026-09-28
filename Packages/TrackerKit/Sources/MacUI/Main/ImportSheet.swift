@@ -41,34 +41,41 @@ struct ImportSheet: View {
     }
 }
 
-/// Opens the CSV import, for the File menu.
-struct ImportAction {
-    let open: () -> Void
+/// Opens the imports, for the File menu and the Entries toolbar.
+struct ImportActions {
+    /// Picks a CSV file to import.
+    let csv: () -> Void
+    /// Imports events from linked calendars.
+    let calendar: () -> Void
 }
 
-struct ImportActionKey: FocusedValueKey {
-    typealias Value = ImportAction
+struct ImportActionsKey: FocusedValueKey {
+    typealias Value = ImportActions
 }
 
 extension FocusedValues {
-    /// Opens the CSV import in the focused main window.
-    var importCSV: ImportAction? {
-        get { self[ImportActionKey.self] }
-        set { self[ImportActionKey.self] = newValue }
+    /// Opens the imports in the focused main window.
+    var imports: ImportActions? {
+        get { self[ImportActionsKey.self] }
+        set { self[ImportActionsKey.self] = newValue }
     }
 }
 
-/// File › Import CSV….
+/// File › Import CSV… and File › Import Calendar Events….
 struct ImportCommands: Commands {
-    @FocusedValue(\.importCSV) private var importCSV
+    @FocusedValue(\.imports) private var imports
 
     var body: some Commands {
         CommandGroup(after: .importExport) {
             Button("Import CSV…") {
-                importCSV?.open()
+                imports?.csv()
             }
             .keyboardShortcut("i", modifiers: [.command, .shift])
-            .disabled(importCSV == nil)
+            .disabled(imports == nil)
+            Button("Import Calendar Events…") {
+                imports?.calendar()
+            }
+            .disabled(imports == nil)
         }
     }
 }

@@ -61,11 +61,11 @@ struct EntriesView: View {
     @State private var overlapsOnly = false
     @State private var sheet: EntriesSheet?
     /// Opens the CSV import.
-    let importCSV: (() -> Void)?
+    let imports: ImportActions?
 
-    init(model: AppModel, selection: Set<UUID> = [], importCSV: (() -> Void)? = nil) {
+    init(model: AppModel, selection: Set<UUID> = [], imports: ImportActions? = nil) {
         self.model = model
-        self.importCSV = importCSV
+        self.imports = imports
         _selection = State(initialValue: selection)
     }
 
@@ -143,11 +143,14 @@ struct EntriesView: View {
                 .keyboardShortcut("n", modifiers: .command)
                 .help("Add an entry for the last hour")
                 .disabled(model.isReadOnly)
-                if let importCSV {
-                    Button(action: importCSV) {
-                        Label("Import CSV", systemImage: "square.and.arrow.down")
+                if let imports {
+                    Menu {
+                        Button("CSV File…", action: imports.csv)
+                        Button("Calendar Events…", action: imports.calendar)
+                    } label: {
+                        Label("Import", systemImage: "square.and.arrow.down")
                     }
-                    .help("Import entries from a CSV file")
+                    .help("Import entries from a CSV file or from calendars")
                     .disabled(model.isReadOnly)
                 }
             }

@@ -4,7 +4,28 @@ import ServiceManagement
 import SwiftUI
 import TrackerKit
 
+/// Settings: storage, reports and login in General, and which calendars'
+/// events become entries in Calendars.
 struct SettingsView: View {
+    let model: AppModel
+
+    var body: some View {
+        TabView {
+            GeneralSettings(model: model)
+                .tabItem {
+                    Label("General", systemImage: "gearshape")
+                }
+            CalendarSettings(model: model)
+                .tabItem {
+                    Label("Calendars", systemImage: "calendar")
+                }
+        }
+        .frame(width: 500)
+    }
+}
+
+/// iCloud, the first day of the week, and opening at login.
+struct GeneralSettings: View {
     @Bindable var model: AppModel
     @State private var switching = false
     @State private var switchError: String?
@@ -46,7 +67,6 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 460)
         .alert("Couldn't Switch Storage", isPresented: Binding(get: { switchError != nil }, set: { if !$0 { switchError = nil } })) {
             Button("OK") { switchError = nil }
         } message: {
@@ -115,6 +135,11 @@ struct LaunchAtLoginToggle: View {
 #if DEBUG
 #Preview("Settings") {
     SettingsView(model: PreviewData.model())
+}
+
+#Preview("General") {
+    GeneralSettings(model: PreviewData.model())
+        .frame(width: 500)
 }
 #endif
 #endif

@@ -45,6 +45,16 @@ public final class AppModel {
         didSet { environment.defaults.set(firstWeekday, forKey: Keys.firstWeekday) }
     }
 
+    /// Whether the app may read this device's calendars.
+    public internal(set) var calendarAccess: CalendarAccess
+    /// This device's calendars, as of the last `refreshCalendars()`.
+    public internal(set) var calendars: [CalendarInfo] = []
+    /// The calendars on this device whose events become entries, and their
+    /// projects. Each device keeps its own.
+    public internal(set) var calendarLinks: [CalendarLink] {
+        didSet { CalendarLink.save(calendarLinks, to: environment.defaults) }
+    }
+
     public let environment: AppEnvironment
     @ObservationIgnored private var store: FileStore
     @ObservationIgnored private var pending = Changes()
@@ -65,9 +75,14 @@ public final class AppModel {
         let chosen = environment.defaults.string(forKey: Keys.storage).flatMap(StorageKind.init(rawValue:))
         storage = chosen ?? (environment.cloud?.isAvailable == true ? .iCloud : .local)
         firstWeekday = environment.defaults.object(forKey: Keys.firstWeekday) as? Int ?? Calendar.current.firstWeekday
+        calendarAccess = environment.calendars?.access ?? .notDetermined
+        calendarLinks = CalendarLink.load(from: environment.defaults)
         store = FileStore(folder: Folder(root: environment.localFolder))
         environment.cloud?.onAccountChange = { [weak self] in
             Task { await self?.accountChanged() }
+        }
+        environment.calendars?.onChange = { [weak self] in
+            Task { @MainActor in self?.refreshCalendars() }
         }
     }
 

@@ -5,7 +5,7 @@ import TrackerKit
 import UniformTypeIdentifiers
 
 /// iCloud, the first day of the week, clients and projects, and importing
-/// entries from a CSV file.
+/// entries from calendars and CSV files.
 struct MobileSettingsScreen: View {
     @Bindable var model: AppModel
     @State private var switching = false
@@ -13,6 +13,7 @@ struct MobileSettingsScreen: View {
     @State private var importing = false
     @State private var importRequest: ImportRequest?
     @State private var importError: String?
+    @State private var importingEvents = false
 
     var body: some View {
         NavigationStack {
@@ -39,6 +40,18 @@ struct MobileSettingsScreen: View {
                 }
 
                 Section {
+                    NavigationLink("Calendars") {
+                        MobileCalendarsScreen(model: model)
+                    }
+                    Button("Import Calendar Events…") {
+                        importingEvents = true
+                    }
+                    .disabled(model.isReadOnly)
+                } footer: {
+                    Text("Adds the events of each client's calendar as entries for the project it's linked to.")
+                }
+
+                Section {
                     Button("Import CSV…") {
                         importing = true
                     }
@@ -62,6 +75,9 @@ struct MobileSettingsScreen: View {
             }
             .sheet(item: $importRequest) { request in
                 MobileImportSheet(model: model, request: request)
+            }
+            .sheet(isPresented: $importingEvents) {
+                MobileCalendarImportSheet(model: model)
             }
             .alert("Couldn't Import the File", isPresented: Binding(get: { importError != nil }, set: { if !$0 { importError = nil } })) {
                 Button("OK") { importError = nil }

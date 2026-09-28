@@ -8,7 +8,8 @@ What's in place for submitting the Mac and iOS apps, and what's left to do by ha
 | --- | --- |
 | App icons | `Mac/Assets.xcassets/AppIcon.appiconset` (16 to 512 points at 1x and 2x) and `iOS/Assets.xcassets/AppIcon.appiconset` (1024 pixels) |
 | Privacy manifests | `Mac/PrivacyInfo.xcprivacy` and `iOS/PrivacyInfo.xcprivacy` |
-| Sandbox and iCloud | `Mac/TimeTracker.entitlements` and `iOS/TimeTracker.entitlements` |
+| Sandbox, iCloud and calendars | `Mac/TimeTracker.entitlements` and `iOS/TimeTracker.entitlements` |
+| Calendar access | `NSCalendarsFullAccessUsageDescription` in both `Info.plist` files, shown when the app first asks to read calendars |
 | iCloud Drive folder | `NSUbiquitousContainers` in both `Info.plist` files, so the data shows as "Time Tracker" in Finder and Files |
 | Category | Productivity (`LSApplicationCategoryType`, Mac) |
 | Encryption | `ITSAppUsesNonExemptEncryption` is `NO` in both apps, so App Store Connect doesn't ask about export compliance |
@@ -22,6 +23,7 @@ For App Store Connect's App Privacy section, answer that the app doesn't collect
 
 - The apps never use the network. The Mac app's sandbox has no outgoing-network entitlement, and iCloud Drive syncs the data folder on its own.
 - Entries, projects and backups stay on the device or in the user's own iCloud Drive, where the developer can't see them.
+- Calendars are read on the device, only those the user links to projects, and only to add their events as entries in the same data folder.
 - There's no analytics, crash reporting SDK, advertising or tracking.
 
 The privacy manifests say the same: no tracking, no tracking domains and no collected data. They declare one required-reason API: `UserDefaults`, with reason `CA92.1`, for settings only this app reads, such as where the data lives, the first day of the week and which panels are shown.
@@ -33,6 +35,8 @@ The privacy manifests say the same: no tracking, no tracking domains and no coll
 > No account is needed. Data is saved as JSON files in the user's iCloud Drive, in a "Time Tracker" folder, or on the device when iCloud is off. Reports can be exported as CSV through the save dialog on the Mac and the share sheet on iOS.
 >
 > Launch at login is off until the user turns it on in Settings.
+>
+> Calendar access is optional. In Settings › Calendars the user links a client's calendar to a project; File › Import Calendar Events… (Settings › Import Calendar Events… on iOS) then adds that calendar's events as time entries. Nothing leaves the device.
 
 ## Left to do
 

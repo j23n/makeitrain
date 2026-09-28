@@ -37,7 +37,7 @@ Each file in `entries/` holds the entries that started in that month:
 
 | Field | Meaning |
 | --- | --- |
-| `id` | The entry's UUID. |
+| `id` | The entry's UUID. An entry imported from a calendar event has a name-based UUID (version 5) of the event's id on its calendar server, so importing the event again finds it. |
 | `project` | The project's id. Missing for an unassigned entry, such as one started with just a note. |
 | `start` | When the entry started, in whole seconds. |
 | `end` | When it ended, in whole seconds. Missing while the timer runs. |

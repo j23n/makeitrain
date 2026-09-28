@@ -8,7 +8,7 @@ Time Tracker is a menu bar app for the Mac, with an iPhone and iPad app that sha
 | --- | --- |
 | `Mac/`, `iOS/` | The two app targets: entry point, Info.plist, entitlements and assets. They contain almost no code. |
 | `Packages/TrackerKit` | The app layer on Apple platforms. `TrackerKit` has the shared app model, storage, iCloud sync and the views both apps use; `MacUI` and `MobileUI` have each app's screens. Every screen has previews with the sample data in `PreviewData`. |
-| `Packages/TrackerCore` | The data model, file format, merging, the timer and overlap rules, reports, CSV export and import, and backups. Plain Swift that also builds and tests on Linux. |
+| `Packages/TrackerCore` | The data model, file format, merging, the timer and overlap rules, reports, CSV export and import, turning calendar events into entries, and backups. Plain Swift that also builds and tests on Linux. |
 | `TimeTracker.xcodeproj` | The Xcode project, with the `TimeTracker` (macOS) and `TimeTrackerMobile` (iOS) targets. |
 | `docs/` | These documents. |
 
@@ -30,22 +30,23 @@ Screens talk only to the app model; only the file store touches disk.
 - **FileStore** (`TrackerCore`) is an actor, so file work never blocks the main thread. It wraps `Folder`, which loads every file and saves each one as a read-merge-write.
 - **FileAccess** is the small protocol `Folder` uses to reach the disk: plain file access for the local folder and tests, and `NSFileCoordinator` for iCloud.
 - **Watcher** (`TrackerKit`) runs a metadata query on the iCloud folder, asks iCloud to download missing files, resolves conflicting versions, and tells the model to reload when another device changes something.
+- **Calendars** (`TrackerKit`) reads the Calendar app's calendars through EventKit, which has every account on the device, and hands their events to `CalendarImport` in TrackerCore. Which calendar goes to which project is a setting on each device, not part of the synced data.
 
 ## Screens
 
 The Mac app:
 
 - **Menu bar:** the stopwatch icon with the running timer's hours and minutes. Its popover starts, stops and switches timers, sets the start back or stops at an earlier time, starts from a note and project, and lists recent project and tag combinations to switch to. Rows at the bottom open the main window and quit; Settings is in the app menu while the main window is open.
-- **Main window:** a sidebar with the **Timeline** by day, week or month (drag to move and resize, double-click to add), the **Entries** table, edited in place, **Reports** with a chart and CSV export, **Clients & Projects**, and **Tags**. The toolbar shows the running timer. File › Import CSV… adds entries from a CSV file.
-- **Settings:** iCloud, the first day of the week, launch at login, and buttons that show the data and the backups in Finder.
+- **Main window:** a sidebar with the **Timeline** by day, week or month (drag to move and resize, double-click to add), the **Entries** table, edited in place, **Reports** with a chart and CSV export, **Clients & Projects**, and **Tags**. The toolbar shows the running timer. File › Import CSV… adds entries from a CSV file, and File › Import Calendar Events… adds the events of calendars linked to projects.
+- **Settings:** General has iCloud, the first day of the week, launch at login, and buttons that show the data and the backups in Finder. Calendars links each client's calendar to a project.
 
-The iOS app has four tabs: **Timer**, **Entries** by day with a form to edit each, **Reports** with the CSV in the share sheet, and **Settings** with clients and projects and CSV import.
+The iOS app has four tabs: **Timer**, **Entries** by day with a form to edit each, **Reports** with the CSV in the share sheet, and **Settings** with clients and projects, calendars, and calendar and CSV import.
 
 Views both apps use live in `TrackerKit`: the report summary, chart and groups, the project label and picker, tag capsules, and a text field that commits on Return or when it loses focus, so typing doesn't make an undo step per keystroke.
 
 ## Permissions
 
-The Mac app has the App Sandbox, iCloud Documents for its own container, and read-write access to files the user picks, for CSV export and import. The iOS app has iCloud Documents. Nothing else, so the App Store privacy label can say "Data Not Collected".
+The Mac app has the App Sandbox, iCloud Documents for its own container, read-write access to files the user picks, for CSV export and import, and calendars. The iOS app has iCloud Documents. Both ask for full access to calendars when the user allows it in Settings › Calendars, since EventKit can't give access to single calendars. Calendar data never leaves the device except as the entries imported, so the App Store privacy label can still say "Data Not Collected".
 
 ## Choices
 

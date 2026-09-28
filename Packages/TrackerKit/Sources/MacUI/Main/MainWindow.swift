@@ -40,6 +40,7 @@ struct MainWindow: View {
     @State private var importing = false
     @State private var importRequest: ImportRequest?
     @State private var importError: String?
+    @State private var importingEvents = false
 
     init(model: AppModel, screen: Screen = .timeline) {
         self.model = model
@@ -69,7 +70,7 @@ struct MainWindow: View {
         }
         .navigationTitle(screen.title)
         .frame(minWidth: 880, minHeight: 520)
-        .focusedSceneValue(\.importCSV, ImportAction { importing = true })
+        .focusedSceneValue(\.imports, imports)
         .fileImporter(isPresented: $importing, allowedContentTypes: [.commaSeparatedText, .tabSeparatedText, .plainText]) { result in
             do {
                 importRequest = try model.importRequest(forFileAt: result.get())
@@ -79,6 +80,9 @@ struct MainWindow: View {
         }
         .sheet(item: $importRequest) { request in
             ImportSheet(model: model, request: request, undoManager: undoManager)
+        }
+        .sheet(isPresented: $importingEvents) {
+            CalendarImportSheet(model: model, undoManager: undoManager)
         }
         .alert(
             "Couldn't Import the File",
@@ -90,15 +94,21 @@ struct MainWindow: View {
         }
     }
 
+    private var imports: ImportActions {
+        ImportActions {
+            importing = true
+        } calendar: {
+            importingEvents = true
+        }
+    }
+
     @ViewBuilder
     private var detail: some View {
         switch screen {
         case .timeline:
             TimelineScreen(model: model)
         case .entries:
-            EntriesView(model: model) {
-                importing = true
-            }
+            EntriesView(model: model, imports: imports)
         case .reports:
             ReportsView(model: model)
         case .projects:

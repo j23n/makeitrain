@@ -15,6 +15,8 @@ public struct AppEnvironment {
     public var timeZone: () -> String
     /// iCloud, or nil where it isn't available, as in tests.
     public var cloud: CloudProvider?
+    /// This device's calendars, or nil where there are none, as in tests.
+    public var calendars: CalendarProvider?
 
     public init(
         localFolder: URL,
@@ -22,7 +24,8 @@ public struct AppEnvironment {
         defaults: UserDefaults,
         now: @escaping () -> Timestamp = { .now },
         timeZone: @escaping () -> String = { TimeZone.current.identifier },
-        cloud: CloudProvider? = nil
+        cloud: CloudProvider? = nil,
+        calendars: CalendarProvider? = nil
     ) {
         self.localFolder = localFolder
         self.backupsFolder = backupsFolder
@@ -30,10 +33,12 @@ public struct AppEnvironment {
         self.now = now
         self.timeZone = timeZone
         self.cloud = cloud
+        self.calendars = calendars
     }
 
     /// The real thing: folders in the app's Application Support folder, which
-    /// is inside its sandbox, the standard settings, and iCloud.
+    /// is inside its sandbox, the standard settings, iCloud, and the
+    /// calendars in the Calendar app.
     @MainActor
     public static func live(containerIdentifier: String = "iCloud.com.j23n.TimeTracker") -> AppEnvironment {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -41,7 +46,8 @@ public struct AppEnvironment {
             localFolder: support.appendingPathComponent("Data", isDirectory: true),
             backupsFolder: support.appendingPathComponent("Backups", isDirectory: true),
             defaults: .standard,
-            cloud: ICloudProvider(containerIdentifier: containerIdentifier)
+            cloud: ICloudProvider(containerIdentifier: containerIdentifier),
+            calendars: EventKitCalendars()
         )
     }
 }

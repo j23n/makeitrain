@@ -95,6 +95,126 @@ public struct ImportSummary: View {
     }
 }
 
+/// What importing calendar events adds, as sections of a form: the entries,
+/// the days they're on and the time per project, the events left out and
+/// why, and a switch to bring back entries that were imported and deleted.
+public struct CalendarImportSummary: View {
+    let plan: CalendarImport.Plan
+    let ledger: Ledger
+    @Binding var includingDeleted: Bool
+
+    public init(plan: CalendarImport.Plan, ledger: Ledger, includingDeleted: Binding<Bool>) {
+        self.plan = plan
+        self.ledger = ledger
+        _includingDeleted = includingDeleted
+    }
+
+    public var body: some View {
+        Section {
+            LabeledContent("Entries", value: "\(plan.entries.count)")
+            if let days = plan.days {
+                LabeledContent("Days", value: Format.days(days))
+                LabeledContent("Time", value: Format.duration(projects.reduce(0) { $0 + $1.total }))
+            }
+        } footer: {
+            if !notes.isEmpty {
+                Text(notes.joined(separator: " "))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        if !projects.isEmpty {
+            Section("Projects") {
+                ForEach(projects) { project in
+                    LabeledContent {
+                        Text("\(project.count == 1 ? "1 entry" : "\(project.count) entries"), \(Format.duration(project.total))")
+                    } label: {
+                        ProjectLabel(ledger: ledger, projectID: project.id)
+                    }
+                }
+            }
+        }
+        if plan.deleted > 0 {
+            Section {
+                Toggle(plan.deleted == 1 ? "Import the deleted entry again" : "Import the \(plan.deleted) deleted entries again", isOn: $includingDeleted)
+            } footer: {
+                Text(plan.deleted == 1
+                    ? "An event was imported before, and its entry was deleted."
+                    : "\(plan.deleted) events were imported before, and their entries were deleted.")
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    /// Each project's new entries and their time.
+    struct ProjectTotal: Identifiable {
+        let id: UUID?
+        var count = 0
+        var total: Int64 = 0
+    }
+
+    private var projects: [ProjectTotal] {
+        var totals: [UUID?: ProjectTotal] = [:]
+        for entry in plan.entries {
+            totals[entry.projectID, default: ProjectTotal(id: entry.projectID)].count += 1
+            if let end = entry.end {
+                totals[entry.projectID, default: ProjectTotal(id: entry.projectID)].total += entry.start.distance(to: end)
+            }
+        }
+        return totals.values.sorted { ledger.projectTitle($0.id).lowercased() < ledger.projectTitle($1.id).lowercased() }
+    }
+
+    private var notes: [String] {
+        var notes: [String] = []
+        if plan.alreadyThere > 0 {
+            notes.append(plan.alreadyThere == 1 ? "1 event is already there." : "\(plan.alreadyThere) events are already there.")
+        }
+        for reason in CalendarImport.Skip.allCases {
+            if let count = plan.skipped[reason], count > 0 {
+                notes.append(Self.note(reason, count: count))
+            }
+        }
+        if plan.entries.isEmpty, notes.isEmpty, plan.deleted == 0 {
+            notes.append("Linked calendars have no events on these days.")
+        }
+        return notes
+    }
+
+    /// Why some events are left out, such as "2 all-day events are left out."
+    static func note(_ reason: CalendarImport.Skip, count: Int) -> String {
+        let one = count == 1
+        let events: String
+        switch reason {
+        case .allDay:
+            events = one ? "1 all-day event is" : "\(count) all-day events are"
+        case .cancelled:
+            events = one ? "1 cancelled event is" : "\(count) cancelled events are"
+        case .declined:
+            events = one ? "1 declined event is" : "\(count) declined events are"
+        case .free:
+            events = one ? "1 event shown as free or out of office is" : "\(count) events shown as free or out of office are"
+        case .noTime:
+            events = one ? "1 event that takes no time is" : "\(count) events that take no time are"
+        case .tooLong:
+            events = one ? "1 event longer than a day is" : "\(count) events longer than a day are"
+        case .notOver:
+            events = one ? "1 event that hasn't ended yet is" : "\(count) events that haven't ended yet are"
+        }
+        return events + " left out."
+    }
+}
+
+#if DEBUG
+#Preview("Calendar Import Summary") {
+    let model = PreviewData.model()
+    let plan = model.calendarImportPlan(from: LocalDate(year: 2026, month: 9, day: 21), through: LocalDate(year: 2026, month: 9, day: 23))
+    return Form {
+        CalendarImportSummary(plan: plan, ledger: model.ledger, includingDeleted: .constant(false))
+    }
+    .formStyle(.grouped)
+    .frame(width: 480, height: 460)
+}
+#endif
+
 #if DEBUG
 #Preview("Import Summary") {
     let csv = """

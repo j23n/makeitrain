@@ -89,6 +89,18 @@ File › Import CSV… on the Mac, also in the Entries toolbar, and Settings ›
 - A row with the same start, end, project and note as an entry that's already there is skipped, so importing a file twice adds its entries once.
 - Rows that can't be read are listed by line and left out; the rest can still be imported.
 
+## Calendar import
+
+Each client's calendar can be linked to one of their projects in Settings › Calendars, on the Mac and on iOS. File › Import Calendar Events… on the Mac, also in the Entries toolbar's Import menu, and Settings › Import Calendar Events… on iOS then add the events of linked calendars as entries. A summary shows what the import adds before anything changes, and the whole import is one step to undo.
+
+- The app reads the calendars the Mac or iPhone has: every account in Internet Accounts, such as iCloud, Google or Exchange, and calendars subscribed to by link. It reads only linked calendars, and only when importing or showing Settings.
+- Links are kept on each device, because each device identifies calendars differently and may have other accounts. A link follows its calendar when the calendar's id changes, as after its account is removed and added back, by the calendar's title and account.
+- The import takes the events that start on the days chosen, from the start of this week through today unless changed. Each becomes an entry for the calendar's project, with the event's title as the note and no tags, recorded in the device's time zone.
+- Events that aren't time spent working are left out, and the summary counts them by reason: all-day events, cancelled events, declined invitations, events shown as free or out of office, events that take no time or last more than a day, and events that haven't ended yet.
+- An imported entry's id comes from the event: its id on the calendar server and, for one occurrence of a repeating event, when that occurrence was first scheduled. Importing the same days again, or on another device, finds the entries already there. An entry with the same start, end, project and note also counts as already there.
+- Editing an imported entry keeps it as edited. Deleting one, or undoing the import, keeps it deleted when importing again, unless the summary's switch asks to import deleted entries again.
+- Exchange gives an event different ids on the Mac and on iOS, so an Exchange calendar is best linked on one device only.
+
 ## Undo
 
 Every edit can be undone and redone from the Edit menu, or by shaking an iPhone. An undo is saved and synced like any other edit.
