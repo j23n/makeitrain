@@ -57,7 +57,7 @@ struct EntriesMenu: View {
                 Button("Set Project…") {
                     sheet = .project(ids)
                 }
-                let projectTags = Self.projectTags(of: entries, in: model.ledger)
+                let projectTags = Self.projectTags(of: entries, in: model.projectTags)
                 Menu("Add Tag") {
                     ForEach(projectTags, id: \.self) { tag in
                         Button(tag) {
@@ -94,12 +94,13 @@ struct EntriesMenu: View {
     }
 
     /// The tags of the entries' projects, once each, ignoring case: the
-    /// tags to offer for adding.
-    static func projectTags(of entries: [ResolvedEntry], in ledger: Ledger) -> [String] {
+    /// tags to offer for adding. `tags` has each project's, as
+    /// `AppModel.projectTags` keeps them.
+    static func projectTags(of entries: [ResolvedEntry], in tags: [UUID?: [String]]) -> [String] {
         var seen: Set<String> = []
         var result: [String] = []
         for projectID in Set(entries.map(\.entry.projectID)) {
-            for tag in ledger.tags(ofProject: projectID) where seen.insert(tag.lowercased()).inserted {
+            for tag in tags[projectID] ?? [] where seen.insert(tag.lowercased()).inserted {
                 result.append(tag)
             }
         }
@@ -346,7 +347,7 @@ struct NewTagSheet: View {
         let added = tags
         guard !added.isEmpty else { return }
         // Reuse the spelling of a tag the entries' projects have.
-        let known = EntriesMenu.projectTags(of: model.resolved.filter { ids.contains($0.id) }, in: model.ledger)
+        let known = EntriesMenu.projectTags(of: model.resolved.filter { ids.contains($0.id) }, in: model.projectTags)
         let spelled = added.map { tag in known.first { Tags.same($0, tag) } ?? tag }
         model.updateEntries(ids, actionName: "Add Tags", undoManager: undoManager) { $0.tags += spelled }
         dismiss()

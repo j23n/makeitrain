@@ -24,13 +24,31 @@ public final class AppModel {
 
     /// Every record, including deleted ones.
     public private(set) var ledger = Ledger() {
-        didSet { resolved = ledger.resolvedEntries() }
+        didSet {
+            resolved = ledger.resolvedEntries()
+            projectTags = ledger.tagsByProject()
+        }
     }
     /// The entries that aren't deleted, sorted by start, with the two-timers
     /// rule applied.
-    public private(set) var resolved: [ResolvedEntry] = []
+    public private(set) var resolved: [ResolvedEntry] = [] {
+        didSet { refreshOverlaps() }
+    }
+    /// Each project's tags, as `Ledger.tagsByProject()` lists them, kept so
+    /// long lists don't work them out again for every row.
+    public private(set) var projectTags: [UUID?: [String]] = [:]
+    /// Overlaps among all entries, as of now. They're worked out again when
+    /// the entries change and, while a timer runs, as the clock moves; views
+    /// hear of it only when they actually change.
+    public private(set) var overlaps = OverlapAnalysis()
     /// The current time, updated whenever a running timer's minutes change.
-    public private(set) var now: Timestamp
+    public private(set) var now: Timestamp {
+        didSet {
+            if resolved.contains(where: \.isRunning) {
+                refreshOverlaps()
+            }
+        }
+    }
     public private(set) var state: State = .loading
     public private(set) var storage: StorageKind
     /// Files that couldn't be read or saved.
@@ -109,9 +127,11 @@ public final class AppModel {
         entry.duration(now: now)
     }
 
-    /// Overlaps among all entries, as of now.
-    public var overlaps: OverlapAnalysis {
-        Overlaps.analyze(resolved, now: now)
+    private func refreshOverlaps() {
+        let analysis = Overlaps.analyze(resolved, now: now)
+        if analysis != overlaps {
+            overlaps = analysis
+        }
     }
 
     // MARK: - Loading and saving

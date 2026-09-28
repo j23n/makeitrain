@@ -7,19 +7,16 @@ import TrackerKit
 /// An entry as a row in the entries table, with the values it sorts by.
 struct EntryRow: Identifiable {
     let entry: ResolvedEntry
-    let duration: Int64
     let projectTitle: String
     let flagged: Bool
 
-    init(_ entry: ResolvedEntry, ledger: Ledger, now: Timestamp, flagged: Bool) {
+    init(_ entry: ResolvedEntry, projectTitle: String, flagged: Bool) {
         self.entry = entry
-        duration = entry.duration(now: now)
-        projectTitle = ledger.projectTitle(entry.entry.projectID)
+        self.projectTitle = projectTitle
         self.flagged = flagged
     }
 
     var id: UUID { entry.id }
-    var day: LocalDate { entry.entry.day }
     var start: Timestamp { entry.start }
     /// A running timer sorts as ending in the far future.
     var endSort: Timestamp { entry.end ?? Timestamp(milliseconds: .max) }
@@ -34,13 +31,6 @@ struct EntryRow: Identifiable {
         Format.zoneLabel(zone, at: entry.start)
     }
 
-    /// How many days after its start the entry ends, such as 1 for an
-    /// entry past midnight.
-    var endDays: Int {
-        guard let end = entry.end else { return 0 }
-        return end.local(in: zone).date.daysSince1970 - day.daysSince1970
-    }
-
     func matches(_ search: String) -> Bool {
         search.isEmpty
             || note.localizedCaseInsensitiveContains(search)
@@ -49,14 +39,65 @@ struct EntryRow: Identifiable {
     }
 }
 
+/// The order of the entries table: by one of its columns, either way.
+///
+/// It compares the rows' values directly. Sorting with key paths, as
+/// `KeyPathComparator` does, looks each value up through its key path for
+/// every comparison, which adds up over thousands of entries.
+struct EntryOrder: SortComparator, Hashable {
+    enum Column: Hashable {
+        case status, start, end, project, tags, note
+    }
+
+    var column: Column
+    var order: SortOrder = .forward
+
+    func compare(_ a: EntryRow, _ b: EntryRow) -> ComparisonResult {
+        let result: ComparisonResult
+        switch column {
+        case .status: result = Self.ordering(a.status, b.status)
+        case .start: result = Self.ordering(a.start, b.start)
+        case .end: result = Self.ordering(a.endSort, b.endSort)
+        case .project: result = a.projectTitle.compare(b.projectTitle, options: [.caseInsensitive, .numeric])
+        case .tags: result = a.tagsText.compare(b.tagsText, options: [.caseInsensitive, .numeric])
+        case .note: result = a.note.compare(b.note, options: [.caseInsensitive, .numeric])
+        }
+        guard order == .reverse else { return result }
+        switch result {
+        case .orderedAscending: return .orderedDescending
+        case .orderedDescending: return .orderedAscending
+        case .orderedSame: return .orderedSame
+        }
+    }
+
+    private static func ordering<Value: Comparable>(_ a: Value, _ b: Value) -> ComparisonResult {
+        a < b ? .orderedAscending : a > b ? .orderedDescending : .orderedSame
+    }
+
+    /// `rows`, which are in the model's order, by start, in `order`. By
+    /// start, the newest first as the table opens, that's just the rows
+    /// reversed, with no sorting at all.
+    static func sort(_ rows: [EntryRow], by order: [EntryOrder]) -> [EntryRow] {
+        guard let first = order.first else { return rows }
+        if first.column == .start {
+            return first.order == .forward ? rows : Array(rows.reversed())
+        }
+        return rows.sorted(using: order)
+    }
+}
+
 /// Every entry in a sortable table, edited in place: click a value to
 /// change it. The context menu splits entries, fixes overlaps and changes
 /// several entries at once.
+///
+/// With thousands of entries, what each redraw costs matters: the rows are
+/// built in one pass from values the model keeps, and nothing here reads the
+/// clock, so the table isn't rebuilt as time passes.
 struct EntriesView: View {
     let model: AppModel
     @Environment(\.undoManager) private var undoManager
     @State private var selection: Set<UUID>
-    @State private var sortOrder = [KeyPathComparator(\EntryRow.start, order: .reverse)]
+    @State private var sortOrder = [EntryOrder(column: .start, order: .reverse)]
     @State private var search = ""
     @State private var overlapsOnly = false
     @State private var sheet: EntriesSheet?
@@ -70,40 +111,32 @@ struct EntriesView: View {
     }
 
     var body: some View {
-        let projectTags = model.ledger.tagsByProject()
+        let projectTags = model.projectTags
         Table(rows, selection: $selection, sortOrder: $sortOrder) {
-            TableColumn("", value: \EntryRow.status) { row in
+            TableColumn("", sortUsing: EntryOrder(column: .status)) { row in
                 EntryStatusIcon(row: row)
             }
             .width(16)
-            TableColumn("Date", value: \EntryRow.day) { row in
-                EntryDateCell(model: model, row: row)
-            }
-            .width(min: 80, ideal: 100)
-            TableColumn("Start", value: \EntryRow.start) { row in
+            TableColumn("Start", sortUsing: EntryOrder(column: .start)) { row in
                 EntryStartCell(model: model, row: row)
             }
-            .width(min: 60, ideal: 80)
-            TableColumn("End", value: \EntryRow.endSort) { row in
+            .width(min: 150, ideal: 170)
+            TableColumn("End", sortUsing: EntryOrder(column: .end)) { row in
                 EntryEndCell(model: model, row: row)
             }
-            .width(min: 60, ideal: 80)
-            TableColumn("Duration", value: \EntryRow.duration) { row in
-                EntryDurationCell(model: model, row: row)
-            }
-            .width(min: 50, ideal: 64)
-            TableColumn("Project", value: \EntryRow.projectTitle) { row in
+            .width(min: 150, ideal: 170)
+            TableColumn("Project", sortUsing: EntryOrder(column: .project)) { row in
                 EntryProjectCell(model: model, row: row)
             }
             .width(min: 100, ideal: 180)
-            TableColumn("Tags", value: \EntryRow.tagsText) { row in
+            TableColumn("Tags", sortUsing: EntryOrder(column: .tags)) { row in
                 TagField(tags: row.entry.entry.tags, suggestions: projectTags[row.entry.entry.projectID] ?? [], placeholder: "", bordered: false) { tags in
                     model.updateEntries([row.id], actionName: "Change Tags", undoManager: undoManager) { $0.tags = tags }
                 }
                 .disabled(model.isReadOnly)
             }
             .width(min: 60, ideal: 130)
-            TableColumn("Note", value: \EntryRow.note) { row in
+            TableColumn("Note", sortUsing: EntryOrder(column: .note)) { row in
                 CommitField(title: "", value: row.note) { note in
                     model.updateEntries([row.id], actionName: "Change Note", undoManager: undoManager) { $0.note = note }
                 }
@@ -160,14 +193,30 @@ struct EntriesView: View {
         }
     }
 
+    /// The rows shown, in one pass over the entries, with each project's
+    /// title worked out once.
     private var rows: [EntryRow] {
         let flagged = model.overlaps.flagged
-        return model.resolved
-            .lazy
-            .map { EntryRow($0, ledger: model.ledger, now: model.now, flagged: flagged.contains($0.id)) }
-            .filter { !overlapsOnly || $0.flagged }
-            .filter { $0.matches(search) }
-            .sorted(using: sortOrder)
+        let ledger = model.ledger
+        var titles: [UUID?: String] = [:]
+        var rows: [EntryRow] = []
+        for entry in model.resolved {
+            let isFlagged = flagged.contains(entry.id)
+            guard !overlapsOnly || isFlagged else { continue }
+            let projectID = entry.entry.projectID
+            let title: String
+            if let known = titles[projectID] {
+                title = known
+            } else {
+                title = ledger.projectTitle(projectID)
+                titles[projectID] = title
+            }
+            let row = EntryRow(entry, projectTitle: title, flagged: isFlagged)
+            if row.matches(search) {
+                rows.append(row)
+            }
+        }
+        return EntryOrder.sort(rows, by: sortOrder)
     }
 
     private func addEntry() {
@@ -198,61 +247,9 @@ struct EntryStatusIcon: View {
 
 // MARK: - Cells
 
-/// The entry's day, which opens a calendar to move the entry to another
-/// day at the same times.
-struct EntryDateCell: View {
-    let model: AppModel
-    let row: EntryRow
-    @Environment(\.undoManager) private var undoManager
-    @State private var choosing = false
-
-    var body: some View {
-        Button {
-            choosing = true
-        } label: {
-            Text(row.day.year == model.today.year ? Format.day(row.day) : Format.longDay(row.day))
-        }
-        .buttonStyle(.plain)
-        .help("Move to another day")
-        .disabled(model.isReadOnly)
-        .popover(isPresented: $choosing, arrowEdge: .bottom) {
-            DatePicker(
-                "Date",
-                selection: Binding(
-                    get: { row.day.pickerDate },
-                    set: { date in
-                        choosing = false
-                        move(to: LocalDate(pickerDate: date))
-                    }
-                ),
-                displayedComponents: .date
-            )
-            .datePickerStyle(.graphical)
-            .labelsHidden()
-            .padding(8)
-        }
-    }
-
-    /// Moves the entry to `day`, keeping its wall-clock start and its
-    /// duration. The running timer's start can't move past now.
-    private func move(to day: LocalDate) {
-        let entry = row.entry
-        guard day != row.day else { return }
-        let start = entry.startOn(day)
-        if entry.isRunning {
-            model.setRunningStart(start, undoManager: undoManager)
-        } else {
-            let shift = entry.start.distance(to: start)
-            model.updateEntries([entry.id], actionName: "Change Date", undoManager: undoManager) { changed in
-                changed.start = start
-                changed.end = changed.end?.adding(milliseconds: shift)
-            }
-        }
-    }
-}
-
-/// The start, as a time to type over in the entry's own time zone. A start
-/// after the end is refused.
+/// The start, as a date and time in the entry's own time zone, with the
+/// zone's name when it isn't the Mac's. It can't be after the end, or after
+/// now for the running timer.
 struct EntryStartCell: View {
     let model: AppModel
     let row: EntryRow
@@ -260,33 +257,39 @@ struct EntryStartCell: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            CommitField(title: "", value: Format.time(row.start, zone: row.zone), commit: commit)
+            DatePicker(
+                "Start",
+                selection: Binding(
+                    get: { row.start.date },
+                    set: { date in commit(Timestamp(date).wholeSeconds) }
+                ),
+                in: ...(row.entry.end ?? model.now).date,
+                displayedComponents: [.date, .hourAndMinute]
+            )
+            .labelsHidden()
+            .datePickerStyle(.compact)
+            .environment(\.timeZone, Zones.zone(row.zone))
             if let label = row.zoneLabel {
                 Text(label)
                     .foregroundStyle(.secondary)
                     .help("Recorded in \(row.zone)")
             }
         }
-        .textFieldStyle(.plain)
-        .monospacedDigit()
         .disabled(model.isReadOnly)
     }
 
-    private func commit(_ text: String) {
-        guard let second = Format.parseTime(text) else { return NSSound.beep() }
-        let start = row.entry.startAt(secondOfDay: second)
+    private func commit(_ start: Timestamp) {
+        guard start != row.start else { return }
         if row.entry.isRunning {
             model.setRunningStart(start, undoManager: undoManager)
-        } else if let end = row.entry.end, start <= end {
-            model.updateEntries([row.id], actionName: "Change Start", undoManager: undoManager) { $0.start = start }
         } else {
-            NSSound.beep()
+            model.updateEntries([row.id], actionName: "Change Start", undoManager: undoManager) { $0.start = start }
         }
     }
 }
 
-/// The end, as a time to type over in the entry's own time zone. An end
-/// earlier than the start is on the next day, shown as "+1".
+/// The end, as a date and time in the entry's own time zone, which can't be
+/// before the start. Its tooltip says how long the entry is.
 struct EntryEndCell: View {
     let model: AppModel
     let row: EntryRow
@@ -294,16 +297,19 @@ struct EntryEndCell: View {
 
     var body: some View {
         if let end = row.entry.end {
-            HStack(spacing: 4) {
-                CommitField(title: "", value: Format.time(end, zone: row.zone), commit: commit)
-                if row.endDays > 0 {
-                    Text("+\(row.endDays)")
-                        .foregroundStyle(.secondary)
-                        .help("Ends on a later day")
-                }
-            }
-            .textFieldStyle(.plain)
-            .monospacedDigit()
+            DatePicker(
+                "End",
+                selection: Binding(
+                    get: { end.date },
+                    set: { date in commit(Timestamp(date).wholeSeconds, replacing: end) }
+                ),
+                in: row.start.date...,
+                displayedComponents: [.date, .hourAndMinute]
+            )
+            .labelsHidden()
+            .datePickerStyle(.compact)
+            .environment(\.timeZone, Zones.zone(row.zone))
+            .help("Lasts \(Format.duration(row.start.distance(to: end)))")
             .disabled(model.isReadOnly)
         } else {
             Text("Running")
@@ -311,35 +317,9 @@ struct EntryEndCell: View {
         }
     }
 
-    private func commit(_ text: String) {
-        guard let second = Format.parseTime(text) else { return NSSound.beep() }
-        let end = row.entry.endAt(secondOfDay: second)
+    private func commit(_ end: Timestamp, replacing current: Timestamp) {
+        guard end != current else { return }
         model.updateEntries([row.id], actionName: "Change End", undoManager: undoManager) { $0.end = end }
-    }
-}
-
-/// The duration, which moves the end when typed over. The running timer's
-/// just counts.
-struct EntryDurationCell: View {
-    let model: AppModel
-    let row: EntryRow
-    @Environment(\.undoManager) private var undoManager
-
-    var body: some View {
-        if row.entry.isRunning {
-            Text(Format.duration(row.duration))
-                .monospacedDigit()
-        } else {
-            CommitField(title: "", value: Format.duration(row.duration)) { text in
-                guard let duration = Format.parseDuration(text) else { return NSSound.beep() }
-                model.updateEntries([row.id], actionName: "Change Duration", undoManager: undoManager) {
-                    $0.end = $0.start.adding(milliseconds: duration)
-                }
-            }
-            .textFieldStyle(.plain)
-            .monospacedDigit()
-            .disabled(model.isReadOnly)
-        }
     }
 }
 
@@ -380,6 +360,11 @@ struct EntryProjectCell: View {
 #Preview("Overlap Selected") {
     EntriesView(model: PreviewData.model(), selection: [PreviewData.entry("Call with Globex")])
         .frame(width: 1100, height: 500)
+}
+
+#Preview("Lots of Entries") {
+    EntriesView(model: PreviewData.model(PreviewData.largeLedger))
+        .frame(width: 1100, height: 700)
 }
 
 #Preview("No Entries") {

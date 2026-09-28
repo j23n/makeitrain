@@ -43,7 +43,7 @@ struct EntryEditor: View {
                     set: { projectID in update("Change Project") { $0.projectID = projectID } }
                 ))
                 LabeledContent("Tags") {
-                    TagField(tags: entry.entry.tags, suggestions: model.ledger.tags(ofProject: entry.entry.projectID)) { tags in
+                    TagField(tags: entry.entry.tags, suggestions: model.projectTags[entry.entry.projectID] ?? []) { tags in
                         update("Change Tags") { $0.tags = tags }
                     }
                 }

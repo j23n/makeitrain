@@ -42,6 +42,9 @@ public struct OverlapAnalysis: Hashable, Sendable {
     /// Runs of entries that overlap one another, each in start order, for
     /// laying their blocks out side by side.
     public var groups: [[UUID]] = []
+
+    /// No overlaps.
+    public init() {}
 }
 
 /// Finding overlapping entries. Overlaps are worked out when displaying and

@@ -13,7 +13,6 @@ struct EntriesScreen: View {
     struct Day: Identifiable {
         var day: LocalDate
         var entries: [ResolvedEntry]
-        var total: Int64
 
         var id: LocalDate { day }
     }
@@ -35,12 +34,7 @@ struct EntriesScreen: View {
                         }
                         .deleteDisabled(model.isReadOnly)
                     } header: {
-                        HStack {
-                            Text(day.day.year == model.today.year ? Format.day(day.day) : Format.longDay(day.day))
-                            Spacer()
-                            Text(Format.duration(day.total))
-                                .monospacedDigit()
-                        }
+                        MobileDayHeader(model: model, day: day.day, entries: day.entries)
                     }
                 }
             }
@@ -75,13 +69,7 @@ struct EntriesScreen: View {
             byDay[entry.entry.day, default: []].append(entry)
         }
         return byDay
-            .map { day, entries in
-                Day(
-                    day: day,
-                    entries: entries.reversed(),
-                    total: entries.reduce(0) { $0 + model.duration(of: $1) }
-                )
-            }
+            .map { day, entries in Day(day: day, entries: entries.reversed()) }
             .sorted { $0.day > $1.day }
     }
 
@@ -97,6 +85,24 @@ struct EntriesScreen: View {
         let entry = TimeEntry(start: end.adding(seconds: -3600), end: end, timeZone: model.environment.timeZone(), updated: end)
         model.addEntry(entry, undoManager: undoManager)
         path.append(entry.id)
+    }
+}
+
+/// A day's date and the time logged on it. It's a view of its own because
+/// a running timer's time grows with the clock: only the header follows the
+/// clock, not the whole list.
+struct MobileDayHeader: View {
+    let model: AppModel
+    let day: LocalDate
+    let entries: [ResolvedEntry]
+
+    var body: some View {
+        HStack {
+            Text(day.year == model.today.year ? Format.day(day) : Format.longDay(day))
+            Spacer()
+            Text(Format.duration(entries.reduce(0) { $0 + model.duration(of: $1) }))
+                .monospacedDigit()
+        }
     }
 }
 
@@ -116,7 +122,8 @@ struct MobileEntryRow: View {
                         .foregroundStyle(.orange)
                         .accessibilityLabel("Overlaps another entry")
                 }
-                Text(Format.duration(model.duration(of: entry)))
+                // Only the running timer's time follows the clock.
+                Text(Format.duration(entry.end.map { entry.start.distance(to: $0) } ?? model.duration(of: entry)))
                     .monospacedDigit()
             }
             Text(times)

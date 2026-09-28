@@ -219,6 +219,26 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
         #expect(model.ledger.liveClients().isEmpty)
     }
 
+    @Test func keepsOverlapsAndProjectTagsUpToDate() async throws {
+        let harness = Harness()
+        defer { harness.cleanUp() }
+        let model = harness.model()
+        await model.start()
+        var meeting = entry(note: "Meeting", at: "2026-09-23T08:30:00+02:00")
+        meeting.tags = ["client-call"]
+        model.addEntry(meeting, undoManager: nil)
+        #expect(model.projectTags[nil] == ["client-call"])
+        #expect(model.overlaps.flagged.isEmpty)
+
+        // A timer started at 9:00 runs into the meeting as the clock moves.
+        model.startTimer(undoManager: nil)
+        #expect(model.overlaps.flagged.isEmpty)
+        harness.clock.advance(seconds: 600)
+        model.refreshClock()
+        #expect(model.overlaps.flagged.contains(meeting.id))
+        #expect(model.overlaps.flagged.count == 2)
+    }
+
     @Test func firstLaunchWaitsForICloudBeforeWriting() async throws {
         let harness = Harness()
         defer { harness.cleanUp() }

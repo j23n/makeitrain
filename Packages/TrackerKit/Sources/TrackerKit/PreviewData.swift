@@ -90,6 +90,32 @@ public enum PreviewData {
         return Ledger(clients: clients, projects: projects, entries: entries)
     }()
 
+    /// Three years of weekdays with ten entries each, about 7,800 in all,
+    /// with the sample clients, projects and a few tags, for trying screens
+    /// with a lot of data.
+    public static let largeLedger: Ledger = {
+        let projects = [website, mobileApp, brand, internalWork]
+        let today = now.local(in: "Europe/Berlin").date
+        var entries: [TimeEntry] = []
+        for back in 1...(3 * 365) {
+            let day = today.adding(days: -back)
+            guard (2...6).contains(day.weekday) else { continue }
+            for slot in 0..<10 {
+                let start = Timestamp(date: day, secondOfDay: (8 * 60 + slot * 50) * 60, zone: "Europe/Berlin")
+                entries.append(TimeEntry(
+                    projectID: projects[(back + slot) % projects.count],
+                    start: start,
+                    end: start.adding(seconds: 45 * 60),
+                    timeZone: "Europe/Berlin",
+                    tags: slot % 3 == 0 ? ["#\(back % 90 + 1)"] : slot % 3 == 1 ? ["design"] : [],
+                    note: "Task \(slot + 1)",
+                    updated: start
+                ))
+            }
+        }
+        return Ledger(clients: Array(ledger.clients.values), projects: Array(ledger.projects.values), entries: entries)
+    }()
+
     /// The sample data with the timer stopped at 15:40.
     public static var stoppedLedger: Ledger {
         var stopped = PreviewData.ledger
