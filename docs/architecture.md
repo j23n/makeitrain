@@ -35,7 +35,7 @@ Screens talk only to the app model; only the file store touches disk.
 
 The Mac app:
 
-- **Menu bar:** the stopwatch icon with the running timer's hours and minutes. Its popover starts, stops and switches timers, sets the start back or stops at an earlier time, starts from a note and project, and lists recent project and tag combinations to switch to.
+- **Menu bar:** the stopwatch icon with the running timer's hours and minutes. Its popover starts, stops and switches timers, sets the start back or stops at an earlier time, starts from a note and project, and lists recent project and tag combinations to switch to. Rows at the bottom open the main window and quit; Settings is in the app menu while the main window is open.
 - **Main window:** a sidebar with the **Timeline** by day, week or month (drag to move and resize, double-click to add), the **Entries** table, edited in place, **Reports** with a chart and CSV export, **Clients & Projects**, and **Tags**. The toolbar shows the running timer. File › Import CSV… adds entries from a CSV file.
 - **Settings:** iCloud, the first day of the week, launch at login, and buttons that show the data and the backups in Finder.
 

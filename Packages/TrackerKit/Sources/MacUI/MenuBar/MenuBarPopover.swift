@@ -205,22 +205,28 @@ struct MenuBarPopover: View {
 
     // MARK: Footer
 
+    /// Opening the main window and quitting, as rows like a menu's.
+    /// Settings is in the app menu while the main window is open.
     private var footer: some View {
-        HStack {
+        VStack(spacing: 0) {
             Button("Open Time Tracker") {
                 openWindow(id: WindowID.main)
                 NSApp.activate()
             }
-            Spacer()
-            SettingsLink {
-                Text("Settings…")
-            }
-            Button("Quit") {
+            Button {
                 NSApp.terminate(nil)
+            } label: {
+                HStack {
+                    Text("Quit")
+                    Spacer()
+                    Text("⌘Q")
+                        .foregroundStyle(.secondary)
+                }
             }
+            .keyboardShortcut("q")
         }
-        .buttonStyle(.borderless)
-        .padding(12)
+        .buttonStyle(RowButtonStyle())
+        .padding(.vertical, 6)
     }
 }
 
