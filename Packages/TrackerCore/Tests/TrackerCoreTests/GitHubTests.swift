@@ -63,6 +63,75 @@ import Testing
         #expect(url("team/tools#9", ["https://github.acme.example/web/site"]) == "https://github.acme.example/team/tools/issues/9")
     }
 
+    @Test func tagsKeepTheirIssueWhenRepositoriesChange() {
+        let now = t("2026-09-24T09:00:00Z")
+        let web = "https://github.com/acme/web"
+        let api = "https://github.com/acme/api"
+        func entry(_ number: Int, project: UUID, tags: [String]) -> TimeEntry {
+            TimeEntry(
+                id: uuid(number), projectID: project,
+                start: t("2026-09-23T09:00:00+02:00"), end: t("2026-09-23T10:00:00+02:00"),
+                timeZone: "Europe/Berlin", tags: tags, updated: t("2026-09-23T10:00:00+02:00")
+            )
+        }
+        var ledger = Ledger(
+            projects: [
+                Project(id: uuid(10), name: "Website", repositories: [web], updated: now),
+                Project(id: uuid(11), name: "Other", repositories: [web], updated: now),
+            ],
+            entries: [
+                entry(1, project: uuid(10), tags: ["#12", "design", "api#3"]),
+                entry(2, project: uuid(11), tags: ["#12"]),
+            ]
+        )
+        func tags(_ number: Int) -> [String] {
+            ledger.entries[uuid(number)]?.tags ?? []
+        }
+
+        // A second repository changes nothing, and gives "api#3" its link.
+        ledger.setRepositories([web, api], ofProject: uuid(10), now: now)
+        #expect(tags(1) == ["#12", "design", "api#3"])
+        #expect(ledger.issueURL(forTag: "api#3", projectID: uuid(10))?.absoluteString == "https://github.com/acme/api/issues/3")
+
+        // Making another repository the first names the one "#12" meant.
+        let changes = ledger.setRepositories([api, web], ofProject: uuid(10), now: now)
+        #expect(tags(1) == ["web#12", "design", "api#3"])
+        #expect(ledger.issueURL(forTag: "web#12", projectID: uuid(10))?.absoluteString == "https://github.com/acme/web/issues/12")
+        let september: Set<MonthKey> = [MonthKey(year: 2026, month: 9)]
+        #expect(changes.projects)
+        #expect(changes.months == september)
+        // Other projects keep their tags.
+        #expect(tags(2) == ["#12"])
+
+        // Removing a repository keeps its owner in the tags, which still open it.
+        ledger.updateEntry(uuid(1), now: now) { $0.tags.append("#7") }
+        ledger.setRepositories([web], ofProject: uuid(10), now: now)
+        #expect(tags(1) == ["web#12", "design", "acme/api#3", "acme/api#7"])
+        #expect(ledger.issueURL(forTag: "acme/api#7", projectID: uuid(10))?.absoluteString == "https://github.com/acme/api/issues/7")
+
+        // Removing the last one leaves the tags for the next repository.
+        ledger.setRepositories([], ofProject: uuid(11), now: now)
+        #expect(tags(2) == ["#12"])
+    }
+
+    @Test func tagsKeepTheirRepositoryAmongNamesakes() {
+        let now = t("2026-09-24T09:00:00Z")
+        let ours = "https://github.com/acme/api"
+        let theirs = "https://github.com/other/api"
+        var ledger = Ledger(
+            projects: [Project(id: uuid(10), name: "App", repositories: [ours, theirs], updated: now)],
+            entries: [
+                TimeEntry(
+                    id: uuid(1), projectID: uuid(10),
+                    start: t("2026-09-23T09:00:00+02:00"), end: t("2026-09-23T10:00:00+02:00"),
+                    timeZone: "Europe/Berlin", tags: ["api#1", "#2"], updated: t("2026-09-23T10:00:00+02:00")
+                ),
+            ]
+        )
+        ledger.setRepositories([theirs, ours], ofProject: uuid(10), now: now)
+        #expect(ledger.entries[uuid(1)]?.tags == ["acme/api#1", "acme/api#2"])
+    }
+
     @Test func findsTheLinksOfAnEntrysTags() {
         let ledger = Ledger(projects: [
             Project(id: uuid(10), name: "Website", repositories: ["https://github.com/acme/web"], updated: t("2026-09-23T09:00:00Z")),

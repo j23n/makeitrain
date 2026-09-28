@@ -212,27 +212,34 @@ extension AppModel {
     @discardableResult
     public func addRepository(_ text: String, toProject projectID: UUID, undoManager: UndoManager?) -> Bool {
         guard let repository = GitHub.Repository(text) else { return false }
-        updateProject(projectID, actionName: "Add Repository", undoManager: undoManager) { project in
-            let known = project.repositories.compactMap { GitHub.Repository($0) }
-            if !known.contains(where: { $0.address.lowercased() == repository.address.lowercased() }) {
-                project.repositories.append(repository.address)
-            }
-        }
+        guard let project = ledger.projects[projectID] else { return true }
+        let known = project.repositories.compactMap { GitHub.Repository($0) }
+        guard !known.contains(where: { $0.address.lowercased() == repository.address.lowercased() }) else { return true }
+        setRepositories(project.repositories + [repository.address], ofProject: projectID, actionName: "Add Repository", undoManager: undoManager)
         return true
     }
 
+    /// Removes a repository. If it was the first of several, the project's
+    /// tags like "#123" are rewritten to keep referring to it.
     public func removeRepository(_ address: String, fromProject projectID: UUID, undoManager: UndoManager?) {
-        updateProject(projectID, actionName: "Remove Repository", undoManager: undoManager) { project in
-            project.repositories.removeAll { $0 == address }
-        }
+        guard let project = ledger.projects[projectID] else { return }
+        setRepositories(project.repositories.filter { $0 != address }, ofProject: projectID, actionName: "Remove Repository", undoManager: undoManager)
     }
 
-    /// Moves a repository to the front, so "#123" refers to its issues.
+    /// Moves a repository to the front, so "#123" refers to its issues. The
+    /// project's tags that referred to the previous first repository are
+    /// rewritten to name it, as in "web#123", so they keep their issues.
     public func makeFirstRepository(_ address: String, ofProject projectID: UUID, undoManager: UndoManager?) {
-        updateProject(projectID, actionName: "Change First Repository", undoManager: undoManager) { project in
-            guard project.repositories.contains(address) else { return }
-            project.repositories.removeAll { $0 == address }
-            project.repositories.insert(address, at: 0)
+        guard let project = ledger.projects[projectID], project.repositories.contains(address) else { return }
+        let reordered = [address] + project.repositories.filter { $0 != address }
+        setRepositories(reordered, ofProject: projectID, actionName: "Change First Repository", undoManager: undoManager)
+    }
+
+    /// Changes a project's repositories and the tags that follow from that,
+    /// as one step to undo.
+    private func setRepositories(_ repositories: [String], ofProject projectID: UUID, actionName: String, undoManager: UndoManager?) {
+        edit(actionName, undoManager: undoManager) { ledger, now in
+            ledger.setRepositories(repositories, ofProject: projectID, now: now)
         }
     }
 }

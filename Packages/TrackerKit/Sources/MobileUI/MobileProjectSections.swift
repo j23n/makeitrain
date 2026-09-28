@@ -67,6 +67,30 @@ struct MobileRepositoriesSection: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
+                    .swipeActions(edge: .leading) {
+                        if item.index > 0 {
+                            Button {
+                                makeFirst(item)
+                            } label: {
+                                Label("Use for #123", systemImage: "arrow.up")
+                            }
+                            .tint(.accentColor)
+                        }
+                    }
+                    .contextMenu {
+                        if item.index > 0 {
+                            Button {
+                                makeFirst(item)
+                            } label: {
+                                Label("Use for Tags Like #123", systemImage: "arrow.up")
+                            }
+                        }
+                        Button(role: .destructive) {
+                            model.removeRepository(item.address, fromProject: project.id, undoManager: undoManager)
+                        } label: {
+                            Label("Remove", systemImage: "trash")
+                        }
+                    }
                 }
             }
             .onDelete { offsets in
@@ -95,9 +119,13 @@ struct MobileRepositoriesSection: View {
             Text("GitHub")
         } footer: {
             Text(repositories.count > 1
-                ? "A tag like #123 opens issue or pull request 123 in the first repository. For another one, write its name first, like \(repositories[1].repository.name)#123."
+                ? "A tag like #123 opens issue or pull request 123 in the first repository; for another one, write its name first, like \(repositories[1].repository.name)#123. Swipe right on a repository to make it the first: the project's tags like #123 are rewritten so they keep their issues."
                 : "A tag like #123 opens issue or pull request 123 in this repository.")
         }
+    }
+
+    private func makeFirst(_ item: Item) {
+        model.makeFirstRepository(item.address, ofProject: project.id, undoManager: undoManager)
     }
 
     private func add() {

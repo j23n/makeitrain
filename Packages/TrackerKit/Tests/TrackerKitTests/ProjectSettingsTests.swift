@@ -21,12 +21,21 @@ import TrackerCore
         #expect(model.ledger.projects[project]?.repositories == ["https://github.com/acme/web", "https://github.com/acme/api"])
         #expect(model.ledger.issueURL(forTag: "#7", projectID: project)?.absoluteString == "https://github.com/acme/web/issues/7")
 
+        var tagged = entry(note: "Hero", at: "2026-09-22T09:00:00+02:00")
+        tagged.projectID = project
+        tagged.tags = ["#7"]
+        model.addEntry(tagged, undoManager: nil)
+
         undo.beginUndoGrouping()
         model.makeFirstRepository("https://github.com/acme/api", ofProject: project, undoManager: undo)
         undo.endUndoGrouping()
         #expect(model.ledger.issueURL(forTag: "#7", projectID: project)?.absoluteString == "https://github.com/acme/api/issues/7")
+        // The entry's "#7" meant the web repository, and still does.
+        #expect(model.ledger.entries[tagged.id]?.tags == ["web#7"])
+        // Undo puts back both the order and the tag.
         undo.undo()
         #expect(model.ledger.projects[project]?.repositories.first == "https://github.com/acme/web")
+        #expect(model.ledger.entries[tagged.id]?.tags == ["#7"])
 
         model.removeRepository("https://github.com/acme/web", fromProject: project, undoManager: nil)
         #expect(model.ledger.projects[project]?.repositories == ["https://github.com/acme/api"])

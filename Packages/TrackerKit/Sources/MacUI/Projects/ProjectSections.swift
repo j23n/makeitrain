@@ -109,7 +109,7 @@ struct RepositoriesSection: View {
             Text("GitHub")
         } footer: {
             Text(repositories.count > 1
-                ? "A tag like #123 opens issue or pull request 123 in the first repository. For another one, write its name first, like \(repositories[1].repository.name)#123."
+                ? "A tag like #123 opens issue or pull request 123 in the first repository; for another one, write its name first, like \(repositories[1].repository.name)#123. Right-click a repository to make it the first: the project's tags like #123 are rewritten so they keep their issues."
                 : "A tag like #123 opens issue or pull request 123 in this repository.")
                 .foregroundStyle(.secondary)
         }

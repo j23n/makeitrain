@@ -106,6 +106,12 @@ public enum GitHub {
     /// project's repositories, or nil when the tag isn't a reference or
     /// names a repository the project doesn't have.
     public static func url(forTag tag: String, repositories: [String]) -> URL? {
+        target(ofTag: tag, repositories: repositories).flatMap { URL(string: "\($0.repository.address)/issues/\($0.number)") }
+    }
+
+    /// The repository and number `tag` refers to, given a project's
+    /// repositories, or nil.
+    static func target(ofTag tag: String, repositories: [String]) -> (repository: Repository, number: Int)? {
         guard let reference = Reference(tag: tag) else { return nil }
         let known = repositories.compactMap { Repository($0) }
         let repository: Repository?
@@ -120,7 +126,18 @@ public enum GitHub {
         } else {
             repository = known.first
         }
-        return repository.flatMap { URL(string: "\($0.address)/issues/\(reference.number)") }
+        return repository.map { (repository: $0, number: reference.number) }
+    }
+
+    /// How a tag names `repository` given a project's repositories: by its
+    /// name alone, as in "web#123", when it's one of them and the only one
+    /// with that name, and otherwise by its owner and name, as in
+    /// "acme/web#123", which refers to it whatever the project has.
+    static func prefix(for repository: Repository, among repositories: [String]) -> String {
+        let known = repositories.compactMap { Repository($0) }
+        let listed = known.contains { same($0.address, repository.address) }
+        let namesakes = known.filter { same($0.name, repository.name) }.count
+        return listed && namesakes == 1 ? repository.name : "\(repository.owner)/\(repository.name)"
     }
 
     private static func same(_ a: String, _ b: String) -> Bool {
@@ -129,6 +146,35 @@ public enum GitHub {
 }
 
 extension Ledger {
+    /// Sets a project's GitHub repositories.
+    ///
+    /// What a tag refers to depends on the repositories: "#123" on the
+    /// first, "web#123" on there being one named "web". So when a change
+    /// would send a tag on the project's entries to another issue, or to
+    /// none, the tag is rewritten to name the repository it meant, such as
+    /// "web#123", or "acme/web#123" once that's removed, and keeps opening
+    /// the same issue. Removing the last repository leaves the tags as they
+    /// are, for the next one added.
+    @discardableResult
+    public mutating func setRepositories(_ repositories: [String], ofProject projectID: UUID, now: Timestamp) -> Changes {
+        guard let project = projects[projectID] else { return Changes() }
+        let before = project.repositories
+        var changes = updateProject(projectID, now: now) { $0.repositories = repositories }
+        guard repositories.contains(where: { GitHub.Repository($0) != nil }) else { return changes }
+        func kept(_ tag: String) -> String {
+            guard let meant = GitHub.target(ofTag: tag, repositories: before) else { return tag }
+            let current = GitHub.target(ofTag: tag, repositories: repositories)
+            guard current?.repository.address.lowercased() != meant.repository.address.lowercased() else { return tag }
+            return "\(GitHub.prefix(for: meant.repository, among: repositories))#\(meant.number)"
+        }
+        for entry in entries.values where entry.projectID == projectID && !entry.isDeleted {
+            let tags = entry.tags.map(kept)
+            guard tags != entry.tags else { continue }
+            changes.formUnion(updateEntry(entry.id, now: now) { $0.tags = tags })
+        }
+        return changes
+    }
+
     /// The web address of the issue or pull request `tag` refers to, in the
     /// repositories of the entry's project, or nil.
     public func issueURL(forTag tag: String, projectID: UUID?) -> URL? {
