@@ -70,7 +70,7 @@ struct EntriesView: View {
     }
 
     var body: some View {
-        let allTags = model.ledger.allTags()
+        let projectTags = model.ledger.tagsByProject()
         Table(rows, selection: $selection, sortOrder: $sortOrder) {
             TableColumn("", value: \EntryRow.status) { row in
                 EntryStatusIcon(row: row)
@@ -97,7 +97,7 @@ struct EntriesView: View {
             }
             .width(min: 100, ideal: 180)
             TableColumn("Tags", value: \EntryRow.tagsText) { row in
-                TagField(tags: row.entry.entry.tags, suggestions: allTags, placeholder: "", bordered: false) { tags in
+                TagField(tags: row.entry.entry.tags, suggestions: projectTags[row.entry.entry.projectID] ?? [], placeholder: "", bordered: false) { tags in
                     model.updateEntries([row.id], actionName: "Change Tags", undoManager: undoManager) { $0.tags = tags }
                 }
                 .disabled(model.isReadOnly)

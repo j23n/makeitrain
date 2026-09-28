@@ -23,8 +23,8 @@ The rules the app follows, whichever screen or device an edit comes from. One ti
 
 - On the Mac, the entries table is edited in place: click a date to move the entry to another day at the same times, type over a start, end or duration, click the project to choose another, and type tags or a note. On the timeline, the selected entry is edited in the inspector.
 - Times can be typed as "9:15", "09.15", "915", "9" or "9:15 PM", and are read in the entry's own time zone. A new start stays on the entry's day and can't be after its end. An end earlier than the start is on the next day, shown as "+1". A new duration moves the end. What can't be read is refused with a beep.
-- The timeline shows a day or a week on an hour grid, or a month as a calendar. On the grid, drag a block to move it, in the week view to another day too; drag its top or bottom edge to change its start or end; double-click empty space to add an hour. Click a day's heading in the week view, or double-click a day in the month view, to see it on its own.
-- Right-clicking entries, in the table or on the timeline, offers "Duplicate", "Split Entry…", the entry's overlap fixes, "Set Project…", "Add Tag", "Remove Tag" and "Delete". All but splitting and the overlap fixes work on every selected entry at once.
+- The timeline shows a day or a week on an hour grid, or a month as a calendar. The grid opens at 7:00, or at the hour of an earlier entry on the days shown. Blocks show the project, times and note, and the tags when the block has room for them. On the grid, drag a block to move it, in the week view to another day too; drag its top or bottom edge to change its start or end; double-click empty space to add an hour. Click a day's heading in the week view, or double-click a day in the month view, to see it on its own.
+- Right-clicking entries, in the table or on the timeline, offers "Open #123 on GitHub" for tags that refer to issues, "Duplicate", "Split Entry…", the entry's overlap fixes, "Set Project…", "Add Tag", "Remove Tag" and "Delete". All but splitting and the overlap fixes work on every selected entry at once.
 - "Duplicate" puts a copy right after the entry, with the same project, tags, note and length, so it doesn't overlap the original. Copies of several entries keep their order and follow the last one. The running timer isn't copied. The copy is selected, ready to move.
 - "Split Entry…" cuts an entry in two at a time inside it, suggesting the middle, on five minutes. Both parts keep the project, tags and note. Splitting the running timer stops the first part there and keeps the second running.
 
@@ -38,12 +38,21 @@ The rules the app follows, whichever screen or device an edit comes from. One ti
 - Another device may still log time to a project deleted here. An entry pointing at a deleted project shows that project as archived, and so does a project whose client was deleted.
 - "Merge Into…" moves every entry of one project to another, or every project of one client to another, and deletes the first. It's for when two devices each added "Acme".
 - Entries point at the project, not the client, so moving a project to another client moves its history too, including in past reports.
+- A project's settings, in the inspector under Clients & Projects on the Mac and in the project's form on iOS, show its tags, its GitHub repositories and the calendar its events come from on this device.
 
 ## Tags
 
-- Tags are free text on each entry. Extra spaces are trimmed, matching ignores case, and typing suggests existing tags with their existing spelling.
-- `;` separates tags in the CSV, so the tag field drops it.
-- Renaming a tag changes it on every entry. Renaming it to another tag's name merges the two. A tag can also be removed from every entry.
+- Tags are free text on each entry. Extra spaces are trimmed, matching ignores case, and `;` is dropped, because it separates tags in the CSV.
+- Each project has its own tags: the ones on its entries, and for entries without a project, theirs. Typing a tag suggests the entry's project's tags with their existing spelling, and "Add Tag" offers them. An entry moved to another project takes its tags along.
+- The Tags screen lists each project's tags under the project. Renaming a tag changes it on that project's entries only, and renaming it to another of the project's tags merges the two. A tag can also be removed from the project's entries.
+- Reports filter and group by tag name across projects.
+
+## GitHub
+
+- A project can have GitHub repositories, added as "owner/name" or by pasting an address, including clone addresses and GitHub Enterprise servers.
+- A tag like `#123` refers to issue or pull request 123 in the project's first repository. `api#123` refers to #123 in the project's repository named `api`, and `owner/repo#123` to #123 in any repository, as GitHub writes references. Any other tag is a plain tag.
+- Tags that refer to issues are tinted. Clicking one in the menu bar, in the timeline's inspector, in a project's or tag's settings, or on iOS opens it in the browser. Right-clicking an entry offers "Open #123 on GitHub". The address is the issue's, which GitHub opens as the pull request when the number is one.
+- The app doesn't talk to GitHub itself, so it needs no account or token, and private repositories open with the browser's GitHub sign-in.
 
 ## Time zones
 
@@ -91,9 +100,9 @@ File › Import CSV… on the Mac, also in the Entries toolbar, and Settings ›
 
 ## Calendar import
 
-Each client's calendar can be linked to one of their projects in Settings › Calendars, on the Mac and on iOS. File › Import Calendar Events… on the Mac, also in the Entries toolbar's Import menu, and Settings › Import Calendar Events… on iOS then add the events of linked calendars as entries. A summary shows what the import adds before anything changes, and the whole import is one step to undo.
+Each project can have a calendar on each device, chosen in the project's settings under Clients & Projects, on the Mac and on iOS; one calendar per client. File › Import Calendar Events… on the Mac, also in the Entries toolbar's Import menu, and Settings › Import Calendar Events… on iOS then add the events of linked calendars as entries. A summary shows what the import adds before anything changes, and the whole import is one step to undo.
 
-- The app reads the calendars the Mac or iPhone has: every account in Internet Accounts, such as iCloud, Google or Exchange, and calendars subscribed to by link. It reads only linked calendars, and only when importing or showing Settings.
+- The app reads the calendars the Mac or iPhone has: every account in Internet Accounts, such as iCloud, Google or Exchange, and calendars subscribed to by link. It reads only linked calendars, and only when importing or showing a project's settings.
 - Links are kept on each device, because each device identifies calendars differently and may have other accounts. A link follows its calendar when the calendar's id changes, as after its account is removed and added back, by the calendar's title and account.
 - The import takes the events that start on the days chosen, from the start of this week through today unless changed. Each becomes an entry for the calendar's project, with the event's title as the note and no tags, recorded in the device's time zone.
 - Events that aren't time spent working are left out, and the summary counts them by reason: all-day events, cancelled events, declined invitations, events shown as free or out of office, events that take no time or last more than a day, and events that haven't ended yet.

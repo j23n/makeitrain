@@ -61,10 +61,30 @@ import Testing
               "updated": "2026-09-23T09:00:00.500Z"
             }
           ],
-          "version": 1
+          "version": 2
         }
 
         """)
+    }
+
+    @Test func keepsProjectsRepositories() throws {
+        let project = Project(
+            id: uuid(2),
+            name: "Website redesign",
+            repositories: ["https://github.com/acme/web", "https://github.com/acme/api"],
+            updated: t("2026-09-23T09:00:00Z")
+        )
+        let data = FileFormat.encode(clients: [], projects: [project])
+        #expect(String(decoding: data, as: UTF8.self).contains(#""repositories": ["https://github.com/acme/web", "https://github.com/acme/api"]"#))
+        #expect(try FileFormat.decodeProjects(from: data).projects == [project])
+
+        // Version 1 files have no repositories.
+        let old = #"{"version": 1, "projects": [{"id": "00000000-0000-0000-0000-000000000002", "name": "Old", "updated": "2026-09-23T09:00:00Z"}]}"#
+        #expect(try FileFormat.decodeProjects(from: Data(old.utf8)).projects.first?.repositories.isEmpty == true)
+        // A newer projects file is left alone.
+        #expect(throws: FileProblem.newerVersion(3)) {
+            try FileFormat.decodeProjects(from: Data(#"{"version": 3, "projects": []}"#.utf8))
+        }
     }
 
     @Test func writesEmptyFilesCompactly() {

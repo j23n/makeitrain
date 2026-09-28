@@ -55,6 +55,12 @@ public enum Tags {
     public static func same(_ a: String, _ b: String) -> Bool {
         a.lowercased() == b.lowercased()
     }
+
+    /// The order tags are listed in: ignoring case, with numbers in order,
+    /// so "#9" comes before "#12".
+    public static func order(_ a: String, _ b: String) -> Bool {
+        a.compare(b, options: [.caseInsensitive, .numeric]) == .orderedAscending
+    }
 }
 
 // Every edit stamps what it changed, using `Timestamp.stamp(after:now:)`, and
@@ -252,8 +258,21 @@ extension Ledger {
     /// tag to another tag's name merges the two.
     @discardableResult
     public mutating func renameTag(_ tag: String, to newName: String, now: Timestamp) -> Changes {
+        renameTag(tag, to: newName, now: now) { _ in true }
+    }
+
+    /// Renames a tag on the entries of one project, or on unassigned entries
+    /// for nil, leaving other projects' tags of the same name alone.
+    /// Renaming to a tag the project has already merges the two; renaming to
+    /// nothing removes the tag.
+    @discardableResult
+    public mutating func renameTag(_ tag: String, to newName: String, inProject projectID: UUID?, now: Timestamp) -> Changes {
+        renameTag(tag, to: newName, now: now) { $0.projectID == projectID }
+    }
+
+    private mutating func renameTag(_ tag: String, to newName: String, now: Timestamp, where included: (TimeEntry) -> Bool) -> Changes {
         var changes = settleOvertakenTimers(now: now)
-        for entry in entries.values where !entry.isDeleted && entry.tags.contains(where: { Tags.same($0, tag) }) {
+        for entry in entries.values where !entry.isDeleted && included(entry) && entry.tags.contains(where: { Tags.same($0, tag) }) {
             changes.formUnion(edit(entry.id, now: now) { entry in
                 entry.tags = entry.tags.map { Tags.same($0, tag) ? newName : $0 }
             })

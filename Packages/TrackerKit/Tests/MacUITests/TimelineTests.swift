@@ -20,6 +20,12 @@ import TrackerCore
         return parts[0] * 3600 + parts[1] * 60
     }
 
+    @Test func startsAtSevenUnlessAnEntryStartsEarlier() {
+        #expect(TimeGrid.firstHour([]) == TimeGrid.morning)
+        #expect(TimeGrid.firstHour([[block("09:00", "10:00")]]) == 7)
+        #expect(TimeGrid.firstHour([[block("09:00", "10:00")], [block("06:30", "08:00")]]) == 6)
+    }
+
     @Test func movingSnapsToFiveMinutesAndKeepsTheLength() {
         let (start, end) = TimeGrid.adjusted(block("09:00", "10:00"), kind: .move, by: 7 * 60)
         #expect(start == second("09:05"))

@@ -1,23 +1,21 @@
-#if os(macOS)
+#if os(iOS)
 import SwiftUI
 import TrackerCore
 import TrackerKit
 
 /// Imports the events of linked calendars that start on some days, after
 /// showing what that adds.
-struct CalendarImportSheet: View {
+struct MobileCalendarImportSheet: View {
     let model: AppModel
-    /// The main window's, so the import undoes there.
-    let undoManager: UndoManager?
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.undoManager) private var undoManager
     @State private var first: LocalDate
     @State private var last: LocalDate
     @State private var includingDeleted = false
 
     /// Starts with this week up to today.
-    init(model: AppModel, undoManager: UndoManager?) {
+    init(model: AppModel) {
         self.model = model
-        self.undoManager = undoManager
         let today = model.today
         _first = State(initialValue: today.startOfWeek(firstWeekday: model.firstWeekday))
         _last = State(initialValue: today)
@@ -25,12 +23,7 @@ struct CalendarImportSheet: View {
 
     var body: some View {
         let plan = model.calendarImportPlan(from: first, through: last, includingDeleted: includingDeleted)
-        let count = plan.entries.count
-        VStack(spacing: 0) {
-            Text("Import Calendar Events")
-                .font(.headline)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding([.top, .horizontal], 20)
+        NavigationStack {
             Form {
                 Section {
                     DatePicker("From", selection: pickerDate($first), in: ...last.pickerDate, displayedComponents: .date)
@@ -40,28 +33,31 @@ struct CalendarImportSheet: View {
                     CalendarImportSummary(plan: plan, ledger: model.ledger, includingDeleted: $includingDeleted)
                 } else {
                     Section {
-                        Text("No project has a calendar yet. Select a project under Clients & Projects and choose its calendar.")
-                            .foregroundStyle(.secondary)
+                        NavigationLink("Clients & Projects") {
+                            MobileProjectsScreen(model: model)
+                        }
+                    } footer: {
+                        Text("No project has a calendar yet. Choose one in a project's settings.")
                     }
                 }
             }
-            .formStyle(.grouped)
-            HStack {
-                Spacer()
-                Button("Cancel", role: .cancel) {
-                    dismiss()
+            .navigationTitle("Import Events")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
                 }
-                .keyboardShortcut(.cancelAction)
-                Button(count == 1 ? "Import 1 Entry" : "Import \(count) Entries") {
-                    model.importEvents(plan, undoManager: undoManager)
-                    dismiss()
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Import") {
+                        model.importEvents(plan, undoManager: undoManager)
+                        dismiss()
+                    }
+                    .disabled(plan.entries.isEmpty || model.isReadOnly)
                 }
-                .keyboardShortcut(.defaultAction)
-                .disabled(count == 0 || model.isReadOnly)
             }
-            .padding([.bottom, .horizontal], 20)
         }
-        .frame(width: 540, height: 540)
         .onAppear {
             model.refreshCalendars()
         }
@@ -77,11 +73,7 @@ struct CalendarImportSheet: View {
 
 #if DEBUG
 #Preview("Import Events") {
-    CalendarImportSheet(model: PreviewData.model(), undoManager: nil)
-}
-
-#Preview("Nothing Linked") {
-    CalendarImportSheet(model: PreviewData.model(calendarLinks: []), undoManager: nil)
+    MobileCalendarImportSheet(model: PreviewData.model())
 }
 #endif
 #endif

@@ -58,11 +58,11 @@ struct TimeGrid: View {
                 }
             }
             .onAppear {
-                proxy.scrollTo(Self.firstHour(columns), anchor: .top)
+                scroll(proxy, to: Self.firstHour(columns))
             }
             .onChange(of: days) { _, newDays in
                 let blocks = newDays.map { DayLayout.blocks(on: $0, entries: model.resolved, now: model.now) }
-                proxy.scrollTo(Self.firstHour(blocks), anchor: .top)
+                scroll(proxy, to: Self.firstHour(blocks))
             }
         }
         .focusable()
@@ -197,9 +197,21 @@ struct TimeGrid: View {
         max((width - gutter - trailing) / CGFloat(max(days, 1)), 40)
     }
 
-    /// The hour to scroll to: just before the first entry, or 8 AM.
+    /// The hour shown at the top unless an entry starts earlier.
+    static let morning = 7
+
+    /// The hour to scroll to: 7:00, or the hour of an entry that starts
+    /// earlier.
     static func firstHour(_ columns: [[DayBlock]]) -> Int {
-        columns.joined().map(\.startSecond).min().map { max(0, $0 / 3600 - 1) } ?? 8
+        min(columns.joined().map { $0.startSecond / 3600 }.min() ?? morning, morning)
+    }
+
+    /// Scrolls so `hour` is at the top. Scrolling while the grid is first
+    /// laid out does nothing, so it waits for that to finish.
+    private func scroll(_ proxy: ScrollViewProxy, to hour: Int) {
+        Task {
+            proxy.scrollTo(hour, anchor: .top)
+        }
     }
 
     private func y(_ second: Int) -> CGFloat {
@@ -218,6 +230,8 @@ struct TimeGrid: View {
         return TimelineBlock(
             title: model.ledger.projectTitle(resolved.entry.projectID),
             detail: detail(resolved, startSecond: startSecond, endSecond: endSecond, dragging: preview != nil),
+            tags: resolved.entry.tags,
+            links: model.ledger.issueLinks(tags: resolved.entry.tags, projectID: resolved.entry.projectID),
             color: model.ledger.color(ofProject: resolved.entry.projectID),
             flagged: flagged,
             selected: selection == block.id,
@@ -381,35 +395,24 @@ struct ResizeHandle: View {
     }
 }
 
-/// One entry's block: its project, times and note, in the project's color,
-/// with an orange edge when it overlaps another entry.
+/// One entry's block: its project, times, note and tags, in the project's
+/// color, with an orange edge when it overlaps another entry. Tags show when
+/// the block has room for them; ones that refer to issues are tinted.
 struct TimelineBlock: View {
     let title: String
     let detail: String
+    var tags: [String] = []
+    var links: [String: URL] = [:]
     let color: Color
     let flagged: Bool
     let selected: Bool
     let running: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            HStack(spacing: 4) {
-                if flagged {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                        .help("Overlaps another entry")
-                }
-                if running {
-                    Image(systemName: "record.circle")
-                        .foregroundStyle(.red)
-                }
-                Text(title)
-                    .fontWeight(.medium)
-                    .lineLimit(1)
-            }
-            Text(detail)
-                .foregroundStyle(.secondary)
-                .lineLimit(3)
+        ViewThatFits(in: .vertical) {
+            content(detailLines: 3, showsTags: true)
+            content(detailLines: 1, showsTags: true)
+            content(detailLines: 3, showsTags: false)
         }
         .font(.caption)
         .padding(.leading, 8)
@@ -428,6 +431,32 @@ struct TimelineBlock: View {
                 .strokeBorder(selected ? color : Color.clear, lineWidth: 1.5)
         }
         .contentShape(Rectangle())
+    }
+
+    private func content(detailLines: Int, showsTags: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            HStack(spacing: 4) {
+                if flagged {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                        .help("Overlaps another entry")
+                }
+                if running {
+                    Image(systemName: "record.circle")
+                        .foregroundStyle(.red)
+                }
+                Text(title)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+            }
+            Text(detail)
+                .foregroundStyle(.secondary)
+                .lineLimit(detailLines)
+            if showsTags, !tags.isEmpty {
+                TagList(tags: tags, links: links, interactive: false, wraps: true)
+                    .padding(.top, 2)
+            }
+        }
     }
 }
 

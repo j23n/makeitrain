@@ -1,4 +1,5 @@
 #if os(macOS)
+import AppKit
 import SwiftUI
 import TrackerCore
 import TrackerKit
@@ -18,6 +19,15 @@ struct EntriesMenu: View {
     var body: some View {
         let entries = model.resolved.filter { ids.contains($0.id) }
         if !entries.isEmpty {
+            let issues = Self.issues(of: entries, in: model.ledger)
+            if !issues.isEmpty {
+                ForEach(issues, id: \.self) { issue in
+                    Button("Open \(issue.tag) on GitHub") {
+                        NSWorkspace.shared.open(issue.url)
+                    }
+                }
+                Divider()
+            }
             Group {
                 Button(entries.count == 1 ? "Duplicate Entry" : "Duplicate \(entries.count) Entries") {
                     select(Set(model.duplicateEntries(entries.map(\.id), undoManager: undoManager)))
@@ -47,14 +57,14 @@ struct EntriesMenu: View {
                 Button("Set Project…") {
                     sheet = .project(ids)
                 }
-                let allTags = model.ledger.allTags()
+                let projectTags = Self.projectTags(of: entries, in: model.ledger)
                 Menu("Add Tag") {
-                    ForEach(allTags, id: \.self) { tag in
+                    ForEach(projectTags, id: \.self) { tag in
                         Button(tag) {
                             model.updateEntries(ids, actionName: "Add Tag", undoManager: undoManager) { $0.tags.append(tag) }
                         }
                     }
-                    if !allTags.isEmpty {
+                    if !projectTags.isEmpty {
                         Divider()
                     }
                     Button("New Tag…") {
@@ -81,6 +91,40 @@ struct EntriesMenu: View {
             }
             .disabled(model.isReadOnly)
         }
+    }
+
+    /// The tags of the entries' projects, once each, ignoring case: the
+    /// tags to offer for adding.
+    static func projectTags(of entries: [ResolvedEntry], in ledger: Ledger) -> [String] {
+        var seen: Set<String> = []
+        var result: [String] = []
+        for projectID in Set(entries.map(\.entry.projectID)) {
+            for tag in ledger.tags(ofProject: projectID) where seen.insert(tag.lowercased()).inserted {
+                result.append(tag)
+            }
+        }
+        return result.sorted(by: Tags.order)
+    }
+
+    /// A tag that refers to an issue or pull request, and its address.
+    struct Issue: Hashable {
+        let tag: String
+        let url: URL
+    }
+
+    /// The issues and pull requests the entries' tags refer to, once each,
+    /// at most ten.
+    static func issues(of entries: [ResolvedEntry], in ledger: Ledger) -> [Issue] {
+        var seen: Set<URL> = []
+        var result: [Issue] = []
+        for entry in entries {
+            for tag in entry.entry.tags {
+                if let url = ledger.issueURL(forTag: tag, projectID: entry.entry.projectID), seen.insert(url).inserted {
+                    result.append(Issue(tag: tag, url: url))
+                }
+            }
+        }
+        return Array(result.sorted { Tags.order($0.tag, $1.tag) }.prefix(10))
     }
 
     /// The tags on any of the entries, once each, ignoring case.
@@ -301,8 +345,8 @@ struct NewTagSheet: View {
     private func add() {
         let added = tags
         guard !added.isEmpty else { return }
-        // Reuse an existing tag's spelling.
-        let known = model.ledger.allTags()
+        // Reuse the spelling of a tag the entries' projects have.
+        let known = EntriesMenu.projectTags(of: model.resolved.filter { ids.contains($0.id) }, in: model.ledger)
         let spelled = added.map { tag in known.first { Tags.same($0, tag) } ?? tag }
         model.updateEntries(ids, actionName: "Add Tags", undoManager: undoManager) { $0.tags += spelled }
         dismiss()

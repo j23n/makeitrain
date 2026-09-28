@@ -65,6 +65,23 @@ import Testing
         #expect(ledger.allTags() == ["Call", "Design"])
     }
 
+    @Test func listsEachProjectsOwnTags() {
+        var ledger = ledger
+        ledger.merge(entry(1, project: uuid(10), tags: ["design", "#12"], at: "20T09:00:00"))
+        ledger.merge(entry(2, project: uuid(10), tags: ["#9"], at: "21T09:00:00"))
+        ledger.merge(entry(3, project: uuid(11), tags: ["admin", "Design"], at: "21T10:00:00"))
+        ledger.merge(entry(4, project: nil, tags: ["email"], at: "22T09:00:00"))
+        #expect(ledger.tags(ofProject: uuid(10)) == ["#9", "#12", "design"])
+        #expect(ledger.tags(ofProject: uuid(11)) == ["admin", "Design"])
+        #expect(ledger.tags(ofProject: nil) == ["email"])
+        #expect(ledger.tags(ofProject: uuid(13)).isEmpty)
+        let byProject = ledger.tagsByProject()
+        #expect(byProject[uuid(10)] == ledger.tags(ofProject: uuid(10)))
+        #expect(byProject[uuid(11)] == ledger.tags(ofProject: uuid(11)))
+        #expect(byProject[nil] == ["email"])
+        #expect(byProject.count == 3)
+    }
+
     @Test func offersRecentCombinationsNewestFirst() {
         var ledger = ledger
         ledger.merge(entry(1, project: uuid(10), tags: ["design"], at: "20T09:00:00"))

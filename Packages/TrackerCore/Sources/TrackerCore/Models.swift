@@ -32,6 +32,10 @@ public struct Project: Identifiable, Hashable, Sendable {
     /// A hex color, such as "#4F7CAC".
     public var color: String
     public var archived: Bool
+    /// The project's GitHub repositories, as web addresses such as
+    /// "https://github.com/j23n/makeitrain". Tags like "#123" refer to issues
+    /// and pull requests in the first one; see `GitHub`.
+    public var repositories: [String]
     /// When the project last changed.
     public var updated: Timestamp
     /// Set when the project is deleted. The record keeps its name, color and
@@ -44,6 +48,7 @@ public struct Project: Identifiable, Hashable, Sendable {
         name: String,
         color: String = "#4F7CAC",
         archived: Bool = false,
+        repositories: [String] = [],
         updated: Timestamp,
         deleted: Timestamp? = nil
     ) {
@@ -52,6 +57,7 @@ public struct Project: Identifiable, Hashable, Sendable {
         self.name = name
         self.color = color
         self.archived = archived
+        self.repositories = repositories
         self.updated = updated
         self.deleted = deleted
     }

@@ -19,18 +19,22 @@ extension FileProblem {
 }
 
 /// Reading and writing the data files: `projects.json` and one file per month.
+///
+/// Each kind of file has a version: the one this app writes and the newest
+/// it reads. Decoding ignores fields it doesn't know, so adding a field needs
+/// a new version. Otherwise an older copy of the app would silently drop the
+/// field when it saves.
 public enum FileFormat {
-    /// The version this app writes and the newest it reads.
-    ///
-    /// Decoding ignores fields it doesn't know, so adding a field needs a new
-    /// version. Otherwise an older copy of the app would silently drop the
-    /// field when it saves.
-    public static let version = 1
+    /// The version of month files.
+    public static let entriesVersion = 1
+    /// The version of `projects.json`. Version 2 added projects'
+    /// `repositories`.
+    public static let projectsVersion = 2
 
     public static func encode(entries: [TimeEntry]) -> Data {
         JSONWriter.data(.object([
             "entries": .array(entries.sorted(by: TimeEntry.fileOrder).map(\.json)),
-            "version": .number(version),
+            "version": .number(entriesVersion),
         ]))
     }
 
@@ -38,22 +42,22 @@ public enum FileFormat {
         JSONWriter.data(.object([
             "clients": .array(clients.sorted(by: Client.fileOrder).map(\.json)),
             "projects": .array(projects.sorted(by: Project.fileOrder).map(\.json)),
-            "version": .number(version),
+            "version": .number(projectsVersion),
         ]))
     }
 
     /// Decodes a month file. Throws `FileProblem`.
     public static func decodeEntries(from data: Data) throws -> [TimeEntry] {
-        try decode(MonthContents.self, from: data).entries ?? []
+        try decode(MonthContents.self, from: data, newest: entriesVersion).entries ?? []
     }
 
     /// Decodes `projects.json`. Throws `FileProblem`.
     public static func decodeProjects(from data: Data) throws -> (clients: [Client], projects: [Project]) {
-        let contents = try decode(ProjectsContents.self, from: data)
+        let contents = try decode(ProjectsContents.self, from: data, newest: projectsVersion)
         return (contents.clients ?? [], contents.projects ?? [])
     }
 
-    private static func decode<Contents: Decodable>(_ type: Contents.Type, from data: Data) throws -> Contents {
+    private static func decode<Contents: Decodable>(_ type: Contents.Type, from data: Data, newest: Int) throws -> Contents {
         let decoder = JSONDecoder()
         let header: VersionHeader
         do {
@@ -61,7 +65,7 @@ public enum FileFormat {
         } catch {
             throw FileProblem.unreadable(describe(error))
         }
-        guard header.version <= version else {
+        guard header.version <= newest else {
             throw FileProblem.newerVersion(header.version)
         }
         guard header.version >= 1 else {
@@ -204,7 +208,7 @@ extension Client: Decodable {
 
 extension Project: Decodable {
     private enum Key: String, CodingKey {
-        case id, client, name, color, archived, updated, deleted
+        case id, client, name, color, archived, repositories, updated, deleted
     }
 
     public init(from decoder: any Decoder) throws {
@@ -215,6 +219,7 @@ extension Project: Decodable {
             name: try container.decode(String.self, forKey: .name),
             color: try container.decodeIfPresent(String.self, forKey: .color) ?? "#4F7CAC",
             archived: try container.decodeIfPresent(Bool.self, forKey: .archived) ?? false,
+            repositories: try container.decodeIfPresent([String].self, forKey: .repositories) ?? [],
             updated: try container.time(.updated),
             deleted: try container.timeIfPresent(.deleted)
         )
@@ -230,6 +235,9 @@ extension Project: Decodable {
         ]
         if let clientID {
             members["client"] = .string(clientID.uuidString)
+        }
+        if !repositories.isEmpty {
+            members["repositories"] = .array(repositories.map { .string($0) })
         }
         if let deleted {
             members["deleted"] = .string(DateTimeFormat.formatUTC(deleted))

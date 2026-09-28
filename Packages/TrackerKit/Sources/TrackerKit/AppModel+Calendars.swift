@@ -42,6 +42,23 @@ extension AppModel {
         calendarLinks = links
     }
 
+    /// The calendar on this device whose events become entries for a
+    /// project, if there is one.
+    public func linkedCalendar(ofProject projectID: UUID) -> CalendarInfo? {
+        let linked = Set(calendarLinks.filter { $0.projectID == projectID }.map(\.calendarID))
+        return calendars.first { linked.contains($0.id) }
+    }
+
+    /// Links a calendar on this device to a project in place of the
+    /// project's other calendars, or unlinks the project's calendars.
+    public func setCalendar(_ calendarID: String?, forProject projectID: UUID) {
+        var links = calendarLinks.filter { $0.projectID != projectID && $0.calendarID != calendarID }
+        if let calendarID, let calendar = calendars.first(where: { $0.id == calendarID }) {
+            links.append(CalendarLink(calendarID: calendar.id, title: calendar.title, account: calendar.account, projectID: projectID))
+        }
+        calendarLinks = links
+    }
+
     /// Whether a calendar on this device is linked to a project.
     public var hasLinkedCalendars: Bool {
         calendars.contains { linkedProject(of: $0.id) != nil }

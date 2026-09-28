@@ -128,7 +128,11 @@ struct MobileEntryRow: View {
                     .lineLimit(2)
             }
             if !entry.entry.tags.isEmpty {
-                TagList(tags: entry.entry.tags)
+                TagList(
+                    tags: entry.entry.tags,
+                    links: model.ledger.issueLinks(tags: entry.entry.tags, projectID: entry.entry.projectID),
+                    interactive: false
+                )
             }
         }
     }
@@ -174,7 +178,9 @@ struct EntryForm: View {
                 CommitField(title: "Tags, separated by commas", value: entry.entry.tags.joined(separator: ", ")) { text in
                     update("Change Tags") { $0.tags = text.split(separator: ",").map(String.init) }
                 }
-                let unused = model.ledger.allTags().filter { tag in !entry.entry.tags.contains { Tags.same($0, tag) } }
+                let unused = model.ledger.tags(ofProject: entry.entry.projectID).filter { tag in
+                    !entry.entry.tags.contains { Tags.same($0, tag) }
+                }
                 if !unused.isEmpty {
                     Menu("Add a Tag") {
                         ForEach(unused, id: \.self) { tag in
@@ -186,6 +192,19 @@ struct EntryForm: View {
                 }
             } header: {
                 Text("Tags")
+            }
+
+            let links = model.ledger.issueLinks(tags: entry.entry.tags, projectID: entry.entry.projectID)
+            if !links.isEmpty {
+                Section("GitHub") {
+                    ForEach(entry.entry.tags.filter { links[$0] != nil }, id: \.self) { tag in
+                        if let url = links[tag] {
+                            Link(destination: url) {
+                                Label("Open \(tag)", systemImage: "arrow.up.right.square")
+                            }
+                        }
+                    }
+                }
             }
 
             Section {

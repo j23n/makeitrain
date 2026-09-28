@@ -212,8 +212,26 @@ import Testing
         #expect(ledger.entries[uuid(3)]?.tags == ["ux"])
     }
 
+    @Test func renamingATagInAProjectLeavesOtherProjectsAlone() {
+        var ledger = Ledger(entries: [
+            entry(1, project: uuid(10), tags: ["design", "#12"]),
+            entry(2, project: uuid(11), tags: ["Design"]),
+            entry(3, tags: ["design"]),
+        ])
+        ledger.renameTag("DESIGN", to: "UX", inProject: uuid(10), now: noon)
+        #expect(ledger.entries[uuid(1)]?.tags == ["UX", "#12"])
+        #expect(ledger.entries[uuid(2)]?.tags == ["Design"])
+        #expect(ledger.entries[uuid(3)]?.tags == ["design"])
+
+        // Nil means the unassigned entries, and renaming to nothing removes.
+        ledger.renameTag("design", to: "", inProject: nil, now: noon)
+        #expect(ledger.entries[uuid(3)]?.tags.isEmpty == true)
+        #expect(ledger.entries[uuid(2)]?.tags == ["Design"])
+    }
+
     @Test func cleansUpTags() {
         #expect(Tags.normalize(["  design ", "Design", "client;call", "", " ", "a \n b"]) == ["design", "clientcall", "a b"])
         #expect(Tags.same("Design", "dESIGN"))
+        #expect(["#12", "design", "#9", "Call"].sorted(by: Tags.order) == ["#9", "#12", "Call", "design"])
     }
 }

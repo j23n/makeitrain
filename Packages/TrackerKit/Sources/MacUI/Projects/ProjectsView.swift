@@ -320,8 +320,9 @@ struct ClientEditor: View {
     }
 }
 
-/// A project's name, client, color and archived state, merging it into
-/// another project, and deleting it.
+/// A project's settings: its name, client, color and archived state, its
+/// tags, its GitHub repositories and the calendar its events come from, and
+/// merging it into another project or deleting it.
 struct ProjectEditor: View {
     let model: AppModel
     let project: Project
@@ -383,6 +384,9 @@ struct ProjectEditor: View {
                 LabeledContent("Entries", value: "\(entries.count)")
                 LabeledContent("Time Logged", value: Format.duration(entries.reduce(0) { $0 + model.duration(of: $1) }))
             }
+            ProjectTagsSection(model: model, project: project)
+            RepositoriesSection(model: model, project: project)
+            ProjectCalendarSection(model: model, project: project)
             Section {
                 ProjectChooserButton(ledger: model.ledger, title: "Merge Into…", offersNoProject: false, excluding: project.id) { projectID in
                     mergeTarget = projectID.flatMap { model.ledger.projects[$0] }

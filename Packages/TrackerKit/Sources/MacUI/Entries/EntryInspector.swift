@@ -43,8 +43,14 @@ struct EntryEditor: View {
                     set: { projectID in update("Change Project") { $0.projectID = projectID } }
                 ))
                 LabeledContent("Tags") {
-                    TagField(tags: entry.entry.tags, suggestions: model.ledger.allTags()) { tags in
+                    TagField(tags: entry.entry.tags, suggestions: model.ledger.tags(ofProject: entry.entry.projectID)) { tags in
                         update("Change Tags") { $0.tags = tags }
+                    }
+                }
+                let links = model.ledger.issueLinks(tags: entry.entry.tags, projectID: entry.entry.projectID)
+                if !links.isEmpty {
+                    LabeledContent("GitHub") {
+                        TagList(tags: entry.entry.tags.filter { links[$0] != nil }, links: links, wraps: true)
                     }
                 }
                 CommitField(title: "Note", value: entry.entry.note, axis: .vertical) { note in

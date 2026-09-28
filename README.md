@@ -34,7 +34,7 @@ To see them, open `TimeTracker.xcodeproj`, choose the `TimeTracker` scheme for t
 ## Docs
 
 - [Architecture](docs/architecture.md): how the pieces fit together.
-- [Behavior](docs/behavior.md): the timer, overlaps, projects, tags, time zones, reports, CSV and calendar import.
+- [Behavior](docs/behavior.md): the timer, overlaps, projects, tags and GitHub links, time zones, reports, CSV and calendar import.
 - [Data format](docs/data-format.md): the JSON files and what's in them.
 - [Sync](docs/sync.md): merging, saving, iCloud and backups.
 - [App Store](docs/app-store.md): privacy, review notes, and what's left before submitting.

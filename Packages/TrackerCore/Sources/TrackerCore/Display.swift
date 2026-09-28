@@ -53,15 +53,41 @@ extension Ledger {
     /// Every tag on an entry that isn't deleted, once each, ignoring case,
     /// sorted. The spelling used most recently wins.
     public func allTags() -> [String] {
-        var spelling: [String: (tag: String, start: Timestamp)] = [:]
+        tags { _ in true }
+    }
+
+    /// A project's tags: the tags on its entries that aren't deleted, or on
+    /// unassigned entries for nil, once each, ignoring case, sorted. The
+    /// spelling used most recently wins.
+    public func tags(ofProject projectID: UUID?) -> [String] {
+        tags { $0.projectID == projectID }
+    }
+
+    /// Every project's tags at once, as `tags(ofProject:)` lists them, by
+    /// project id, with nil for unassigned entries. Projects without tags
+    /// are left out.
+    public func tagsByProject() -> [UUID?: [String]] {
+        var spelling: [UUID?: [String: (tag: String, start: Timestamp)]] = [:]
         for entry in entries.values where !entry.isDeleted {
+            for tag in entry.tags {
+                let key = tag.lowercased()
+                if let known = spelling[entry.projectID]?[key], known.start >= entry.start { continue }
+                spelling[entry.projectID, default: [:]][key] = (tag, entry.start)
+            }
+        }
+        return spelling.mapValues { $0.values.map(\.tag).sorted(by: Tags.order) }
+    }
+
+    private func tags(where included: (TimeEntry) -> Bool) -> [String] {
+        var spelling: [String: (tag: String, start: Timestamp)] = [:]
+        for entry in entries.values where !entry.isDeleted && included(entry) {
             for tag in entry.tags {
                 let key = tag.lowercased()
                 if let known = spelling[key], known.start >= entry.start { continue }
                 spelling[key] = (tag, entry.start)
             }
         }
-        return spelling.values.map(\.tag).sorted { $0.lowercased() < $1.lowercased() }
+        return spelling.values.map(\.tag).sorted(by: Tags.order)
     }
 }
 

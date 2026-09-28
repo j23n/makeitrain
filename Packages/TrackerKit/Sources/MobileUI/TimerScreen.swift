@@ -51,7 +51,7 @@ struct TimerScreen: View {
                             .foregroundStyle(.secondary)
                     }
                     if !running.entry.tags.isEmpty {
-                        TagList(tags: running.entry.tags)
+                        TagList(tags: running.entry.tags, links: model.ledger.issueLinks(tags: running.entry.tags, projectID: running.entry.projectID))
                     }
                     Text("Started \(Format.time(running.start, zone: running.entry.timeZone))")
                         .font(.callout)
@@ -101,7 +101,11 @@ struct TimerScreen: View {
                     } label: {
                         HStack {
                             ProjectLabel(ledger: model.ledger, projectID: combination.projectID)
-                            TagList(tags: combination.tags)
+                            TagList(
+                                tags: combination.tags,
+                                links: model.ledger.issueLinks(tags: combination.tags, projectID: combination.projectID),
+                                interactive: false
+                            )
                             Spacer()
                         }
                         .foregroundStyle(.primary)

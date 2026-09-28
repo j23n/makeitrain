@@ -25,25 +25,119 @@ public struct ProjectLabel: View {
     }
 }
 
-/// Tags as small capsules.
+/// Tags as small capsules. Tags that refer to a GitHub issue or pull
+/// request are tinted and open it when clicked, unless the list isn't
+/// interactive, as on the timeline, where clicks select and drag.
 public struct TagList: View {
     let tags: [String]
+    let links: [String: URL]
+    let interactive: Bool
+    let wraps: Bool
 
-    public init(tags: [String]) {
+    /// `links` has the web address of each tag that refers to an issue, as
+    /// `Ledger.issueLinks(tags:projectID:)` gives them. A list that `wraps`
+    /// breaks into lines instead of staying on one.
+    public init(tags: [String], links: [String: URL] = [:], interactive: Bool = true, wraps: Bool = false) {
         self.tags = tags
+        self.links = links
+        self.interactive = interactive
+        self.wraps = wraps
     }
 
     public var body: some View {
-        HStack(spacing: 4) {
-            ForEach(tags, id: \.self) { tag in
-                Text(tag)
-                    .font(.caption)
-                    .lineLimit(1)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .background(Capsule().fill(.quaternary))
+        if wraps {
+            FlowLayout(spacing: 4) {
+                capsules
+            }
+        } else {
+            HStack(spacing: 4) {
+                capsules
             }
         }
+    }
+
+    private var capsules: some View {
+        ForEach(tags, id: \.self) { tag in
+            if let url = links[tag], interactive {
+                Link(destination: url) {
+                    TagCapsule(tag: tag, linked: true)
+                }
+                .buttonStyle(.plain)
+                .help("Open \(tag) on GitHub")
+            } else {
+                TagCapsule(tag: tag, linked: links[tag] != nil)
+            }
+        }
+    }
+}
+
+/// One tag, in a capsule. A tag linked to an issue is tinted.
+struct TagCapsule: View {
+    let tag: String
+    let linked: Bool
+
+    var body: some View {
+        Text(tag)
+            .font(.caption)
+            .lineLimit(1)
+            .foregroundStyle(linked ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(Capsule().fill(linked ? AnyShapeStyle(Color.accentColor.opacity(0.15)) : AnyShapeStyle(.quaternary)))
+    }
+}
+
+/// Lays its views out in rows, starting a new row when one is full.
+public struct FlowLayout: Layout {
+    var spacing: CGFloat
+
+    public init(spacing: CGFloat = 4) {
+        self.spacing = spacing
+    }
+
+    public func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = rows(for: subviews, width: proposal.width ?? .infinity)
+        let width = rows.map(\.width).max() ?? 0
+        let height = rows.map(\.height).reduce(0, +) + spacing * CGFloat(max(rows.count - 1, 0))
+        return CGSize(width: width, height: height)
+    }
+
+    public func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for row in rows(for: subviews, width: bounds.width) {
+            var x = bounds.minX
+            for index in row.indices {
+                let size = subviews[index].sizeThatFits(.unspecified)
+                subviews[index].place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+                x += size.width + spacing
+            }
+            y += row.height + spacing
+        }
+    }
+
+    private struct Row {
+        var indices: [Int] = []
+        var width: CGFloat = 0
+        var height: CGFloat = 0
+    }
+
+    private func rows(for subviews: Subviews, width: CGFloat) -> [Row] {
+        var rows: [Row] = []
+        var row = Row()
+        for index in subviews.indices {
+            let size = subviews[index].sizeThatFits(.unspecified)
+            if !row.indices.isEmpty, row.width + spacing + size.width > width {
+                rows.append(row)
+                row = Row()
+            }
+            row.width += (row.indices.isEmpty ? 0 : spacing) + size.width
+            row.height = max(row.height, size.height)
+            row.indices.append(index)
+        }
+        if !row.indices.isEmpty {
+            rows.append(row)
+        }
+        return rows
     }
 }
 
@@ -93,6 +187,9 @@ public struct CommitField: View {
         ProjectLabel(ledger: PreviewData.ledger, projectID: PreviewData.internalWork)
         ProjectLabel(ledger: PreviewData.ledger, projectID: nil)
         TagList(tags: ["design", "client-call"])
+        TagList(tags: ["design", "#42"], links: ["#42": URL(string: "https://github.com/acme/website/issues/42")!])
+        TagList(tags: ["design", "client-call", "#42", "#57", "research", "workshop", "follow-up"], wraps: true)
+            .frame(width: 200, alignment: .leading)
         CommitField(title: "Note", value: "Wireframe review, round 2") { _ in }
     }
 }

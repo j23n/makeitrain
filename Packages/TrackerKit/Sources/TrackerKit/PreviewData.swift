@@ -4,7 +4,8 @@ import TrackerCore
 
 /// Sample data for SwiftUI previews: a week of work for a designer with two
 /// clients, with a running timer, an overlap, an unassigned entry, one
-/// recorded in New York and an archived project. "Now" is Wednesday,
+/// recorded in New York, an archived project, and tags that refer to issues
+/// in Acme's GitHub repositories. "Now" is Wednesday,
 /// September 23, 2026, at 15:40 in Berlin.
 public enum PreviewData {
     public static let now = time("23T15:40")
@@ -24,8 +25,22 @@ public enum PreviewData {
             Client(id: globex, name: "Globex", updated: now),
         ]
         let projects = [
-            Project(id: website, clientID: acme, name: "Website redesign", color: "#4F7CAC", updated: now),
-            Project(id: mobileApp, clientID: acme, name: "Mobile app", color: "#C0504D", updated: now),
+            Project(
+                id: website,
+                clientID: acme,
+                name: "Website redesign",
+                color: "#4F7CAC",
+                repositories: ["https://github.com/acme/website"],
+                updated: now
+            ),
+            Project(
+                id: mobileApp,
+                clientID: acme,
+                name: "Mobile app",
+                color: "#C0504D",
+                repositories: ["https://github.com/acme/mobile", "https://github.com/acme/api"],
+                updated: now
+            ),
             Project(id: brand, clientID: globex, name: "Brand refresh", color: "#9BBB59", updated: now),
             Project(id: internalWork, name: "Internal", color: "#8064A2", updated: now),
             Project(id: admin, name: "Admin", color: "#7F7F7F", archived: true, updated: now),
@@ -59,18 +74,18 @@ public enum PreviewData {
 
             make(website, "21T09:00", "21T11:30", "Wireframe review, round 2", ["design", "client-call"]),
             make(internalWork, "21T11:30", "21T12:15", "Planning"),
-            make(mobileApp, "21T13:00", "21T17:00", "Sync engine", ["development"]),
+            make(mobileApp, "21T13:00", "21T17:00", "Sync engine", ["development", "#118"]),
 
             make(brand, "22T08:45", "22T10:00", "Moodboard", ["design"]),
-            make(website, "22T10:00", "22T12:30", "Hero section", ["design"]),
-            make(mobileApp, "22T13:30", "22T16:00", "Offline mode", ["development"]),
+            make(website, "22T10:00", "22T12:30", "Hero section", ["design", "#42"]),
+            make(mobileApp, "22T13:30", "22T16:00", "Offline mode", ["development", "api#57"]),
             make(brand, "22T15:30", "22T16:30", "Call with Globex", ["client-call"]),
 
             make(website, "23T09:00", "23T10:30", "Kickoff with the new team", ["client-call"]),
             make(internalWork, "23T10:30", "23T12:00", "Invoices"),
             make(nil, "23T12:00", "23T12:20", "Email"),
             make(mobileApp, "23T13:00", "23T14:30", "Code review", ["development"]),
-            make(website, "23T14:45", nil, "Landing page copy", ["design"]),
+            make(website, "23T14:45", nil, "Landing page copy", ["design", "#44"]),
         ]
         return Ledger(clients: clients, projects: projects, entries: entries)
     }()

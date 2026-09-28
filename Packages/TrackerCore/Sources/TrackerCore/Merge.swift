@@ -89,6 +89,7 @@ extension Project {
             Order.compareIDs(clientID, other.clientID),
             Order.compareText(color, other.color),
             Order.compareFlags(archived, other.archived),
+            Order.compareText(repositories.joined(separator: "\n"), other.repositories.joined(separator: "\n")),
         ])
         return order >= 0 ? self : other
     }

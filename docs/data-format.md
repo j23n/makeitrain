@@ -69,14 +69,17 @@ An entry belongs to the month and the day of its start, in its own time zone, so
       "color": "#4F7CAC",
       "id": "8B41D7A0-5C2E-4F13-B6A9-0D7E3C1F2A54",
       "name": "Website redesign",
+      "repositories": ["https://github.com/acme/website"],
       "updated": "2026-09-01T07:00:00Z"
     }
   ],
-  "version": 1
+  "version": 2
 }
 ```
 
-A project without `client` belongs to no client. `color` is a hex color. Both kinds of record have `updated` and, once deleted, `deleted`.
+A project without `client` belongs to no client. `color` is a hex color. `repositories` lists the project's GitHub repositories as web addresses, the first being the one tags like `#123` refer to; it's missing when there are none. Both kinds of record have `updated` and, once deleted, `deleted`.
+
+Tags aren't listed here: a project's tags are the ones on its entries. Which calendar a project's events come from isn't either, because each device identifies its calendars differently; that's a setting on each device.
 
 ## Times
 
@@ -91,7 +94,7 @@ The app writes JSON with its own small writer: keys sorted, two-space indents, s
 
 ## Versions
 
-Every file has a `version`. This app writes and reads version 1.
+Every file has a `version`. This app writes month files as version 1 and `projects.json` as version 2, which added `repositories`. It reads both versions of `projects.json`.
 
 - A file with a newer version is never written; the app says the file needs a newer version of the app.
 - Decoding ignores fields it doesn't know. Adding a field therefore needs a new version, or an older copy of the app would drop the field when it saves.

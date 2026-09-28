@@ -191,15 +191,48 @@ extension AppModel {
         }
     }
 
-    /// Renames a tag on every entry; renaming to an existing tag merges them.
-    public func renameTag(_ tag: String, to newName: String, undoManager: UndoManager?) {
+    /// Renames a tag on a project's entries, or on unassigned entries for
+    /// nil; renaming to a tag the project has already merges them.
+    public func renameTag(_ tag: String, to newName: String, inProject projectID: UUID?, undoManager: UndoManager?) {
         edit(Tags.normalize([newName]).isEmpty ? "Remove Tag" : "Rename Tag", undoManager: undoManager) { ledger, now in
-            ledger.renameTag(tag, to: newName, now: now)
+            ledger.renameTag(tag, to: newName, inProject: projectID, now: now)
         }
     }
 
-    /// Takes a tag off every entry.
-    public func removeTag(_ tag: String, undoManager: UndoManager?) {
-        renameTag(tag, to: "", undoManager: undoManager)
+    /// Takes a tag off a project's entries, or off unassigned entries for nil.
+    public func removeTag(_ tag: String, fromProject projectID: UUID?, undoManager: UndoManager?) {
+        renameTag(tag, to: "", inProject: projectID, undoManager: undoManager)
+    }
+
+    // MARK: - GitHub
+
+    /// Adds a GitHub repository to a project, written as "owner/name" or as
+    /// its address. Returns false if that isn't a repository; adding one
+    /// the project has already changes nothing.
+    @discardableResult
+    public func addRepository(_ text: String, toProject projectID: UUID, undoManager: UndoManager?) -> Bool {
+        guard let repository = GitHub.Repository(text) else { return false }
+        updateProject(projectID, actionName: "Add Repository", undoManager: undoManager) { project in
+            let known = project.repositories.compactMap { GitHub.Repository($0) }
+            if !known.contains(where: { $0.address.lowercased() == repository.address.lowercased() }) {
+                project.repositories.append(repository.address)
+            }
+        }
+        return true
+    }
+
+    public func removeRepository(_ address: String, fromProject projectID: UUID, undoManager: UndoManager?) {
+        updateProject(projectID, actionName: "Remove Repository", undoManager: undoManager) { project in
+            project.repositories.removeAll { $0 == address }
+        }
+    }
+
+    /// Moves a repository to the front, so "#123" refers to its issues.
+    public func makeFirstRepository(_ address: String, ofProject projectID: UUID, undoManager: UndoManager?) {
+        updateProject(projectID, actionName: "Change First Repository", undoManager: undoManager) { project in
+            guard project.repositories.contains(address) else { return }
+            project.repositories.removeAll { $0 == address }
+            project.repositories.insert(address, at: 0)
+        }
     }
 }

@@ -36,7 +36,9 @@ The privacy manifests say the same: no tracking, no tracking domains and no coll
 >
 > Launch at login is off until the user turns it on in Settings.
 >
-> Calendar access is optional. In Settings › Calendars the user links a client's calendar to a project; File › Import Calendar Events… (Settings › Import Calendar Events… on iOS) then adds that calendar's events as time entries. Nothing leaves the device.
+> Calendar access is optional. In a project's settings under Clients & Projects, the user picks the client's calendar; File › Import Calendar Events… (Settings › Import Calendar Events… on iOS) then adds that calendar's events as time entries. Nothing leaves the device.
+>
+> Projects can list GitHub repositories. Tags like #123 then open that issue on github.com in the browser; the app itself makes no network requests.
 
 ## Left to do
 

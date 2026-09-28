@@ -40,15 +40,12 @@ struct MobileSettingsScreen: View {
                 }
 
                 Section {
-                    NavigationLink("Calendars") {
-                        MobileCalendarsScreen(model: model)
-                    }
                     Button("Import Calendar Events…") {
                         importingEvents = true
                     }
                     .disabled(model.isReadOnly)
                 } footer: {
-                    Text("Adds the events of each client's calendar as entries for the project it's linked to.")
+                    Text("Adds the events of each project's calendar as its entries. Choose a project's calendar under Clients & Projects.")
                 }
 
                 Section {
@@ -371,6 +368,9 @@ struct MobileProjectForm: View {
                         }
                     }
                 }
+                MobileProjectTagsSection(model: model, project: project)
+                MobileRepositoriesSection(model: model, project: project)
+                MobileProjectCalendarSection(model: model, project: project)
                 Section {
                     Button("Delete Project", role: .destructive) {
                         confirmingDelete = true

@@ -52,7 +52,7 @@ struct MenuBarPopover: View {
                         .lineLimit(2)
                 }
                 if !running.entry.tags.isEmpty {
-                    TagList(tags: running.entry.tags)
+                    TagList(tags: running.entry.tags, links: model.ledger.issueLinks(tags: running.entry.tags, projectID: running.entry.projectID))
                 }
                 if let adjusting {
                     adjustmentRow(adjusting, running: running)
@@ -181,7 +181,11 @@ struct MenuBarPopover: View {
                     } label: {
                         HStack {
                             ProjectLabel(ledger: model.ledger, projectID: combination.projectID)
-                            TagList(tags: combination.tags)
+                            TagList(
+                                tags: combination.tags,
+                                links: model.ledger.issueLinks(tags: combination.tags, projectID: combination.projectID),
+                                interactive: false
+                            )
                             Spacer()
                             if isRunning(combination) {
                                 Image(systemName: "record.circle")
