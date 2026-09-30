@@ -394,6 +394,14 @@ struct EntryProjectCell: View {
     @State private var choosing = false
 
     var body: some View {
+        EditOnHover(enabled: !model.isReadOnly) {
+            ProjectLabel(ledger: model.ledger, projectID: row.entry.entry.projectID)
+        } editor: {
+            chooser
+        }
+    }
+
+    private var chooser: some View {
         Button {
             choosing = true
         } label: {
