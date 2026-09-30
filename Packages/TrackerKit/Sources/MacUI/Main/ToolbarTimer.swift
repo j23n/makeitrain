@@ -240,15 +240,16 @@ extension View {
     }
 }
 
-/// The screen's title, where the toolbar shows the window's title.
+/// The screen's title, where and as the toolbar shows the window's title.
 private struct ToolbarTitle: View {
     let title: String
 
     var body: some View {
         Text(title)
-            .font(.system(size: 15, weight: .bold))
+            .font(.system(size: 15, weight: .semibold))
             .lineLimit(1)
             .fixedSize()
+            .padding(.leading, 10)
     }
 }
 
