@@ -116,9 +116,19 @@ private final class GapReaderView: NSView {
     /// When it last reported, to stop if the toolbar keeps moving the timer.
     private var reports: [Date] = []
     private var paused = false
-    /// When it reported a padding the timer hasn't been drawn with yet.
-    /// Measuring before then would see it where it was.
-    private var waitingSince: Date?
+    /// What it last measured. It acts only on what holds still from one
+    /// measurement to the next, since the toolbar lays the item out again
+    /// a moment after the timer changes size.
+    private var last: Layout?
+    /// What it measured before its last change, and when it made it: until
+    /// the layout shows the change, or a moment has passed, it waits.
+    private var beforeChange: (layout: Layout, time: Date)?
+
+    private struct Layout: Equatable {
+        var item: CGRect
+        var timer: CGRect
+        var space: ClosedRange<CGFloat>?
+    }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
         nil
@@ -145,25 +155,41 @@ private final class GapReaderView: NSView {
     }
 
     func redrawn() {
-        waitingSince = nil
         scheduleMeasuring()
     }
 
-    /// Measures once the toolbar has laid out what's changed, on the next
-    /// turn of the run loop, also while the window is being resized.
+    /// Measures on the next turn of the run loop, also while the window is
+    /// being resized.
     @objc func scheduleMeasuring() {
+        measure(after: 0)
+    }
+
+    private func measure(after delay: TimeInterval) {
         NSObject.cancelPreviousPerformRequests(withTarget: self, selector: #selector(measure), object: nil)
-        perform(#selector(measure), with: nil, afterDelay: 0, inModes: [.common])
+        perform(#selector(measure), with: nil, afterDelay: delay, inModes: [.common])
     }
 
     @objc private func measure() {
         guard !paused, let window else { return }
-        if let waitingSince {
-            guard Date().timeIntervalSince(waitingSince) > 0.5 else { return }
+        let found = window.title.isEmpty ? nil : place(title: window.title)
+        let item = found?.item ?? self
+        let layout = Layout(
+            item: item.convert(item.bounds, to: nil).integral,
+            timer: convert(bounds, to: nil).integral,
+            space: found.flatMap { space(in: window, around: $0) }.map { $0.lowerBound.rounded()...$0.upperBound.rounded() }
+        )
+        if let beforeChange, layout == beforeChange.layout, Date().timeIntervalSince(beforeChange.time) < 0.3 {
+            measure(after: 0.05)
+            return
         }
-        waitingSince = nil
-        let frame = convert(bounds, to: nil)
-        guard let padding = centering.update(center: frame.midX, width: frame.width, space: space(in: window)) else {
+        guard layout == last else {
+            last = layout
+            measure(after: 0.05)
+            return
+        }
+        beforeChange = nil
+        let timer = convert(bounds, to: nil)
+        guard let padding = centering.update(center: timer.midX, width: timer.width, space: layout.space) else {
             return
         }
         let now = Date()
@@ -172,14 +198,14 @@ private final class GapReaderView: NSView {
             // Something keeps moving it; leave it until the window changes.
             paused = true
         }
-        waitingSince = now
+        beforeChange = (layout, now)
+        last = nil
         report?(padding)
     }
 
     /// The space the timer has: from the title, or a pane's edge, to the
     /// next item, or a pane's edge, or the end of the row.
-    private func space(in window: NSWindow) -> ClosedRange<CGFloat>? {
-        guard !window.title.isEmpty, let found = place(title: window.title) else { return nil }
+    private func space(in window: NSWindow, around found: Place) -> ClosedRange<CGFloat>? {
         let itemFrame = found.item.convert(found.item.bounds, to: nil)
         guard itemFrame.width < window.frame.width * 0.7 else { return nil }
         var left: CGFloat?

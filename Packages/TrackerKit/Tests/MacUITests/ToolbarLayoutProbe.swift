@@ -69,6 +69,14 @@ struct ToolbarLayoutProbe {
             .filter { band.contains($0.midY) && $0.minX >= capsuleFrame.maxX - 1 && $0.width >= 12 }
             .map(\.minX)
             .min()
+        let paneEdges = splits.flatMap { split in
+            split.arrangedSubviews.filter { !$0.isHidden }.flatMap { pane -> [CGFloat] in
+                let frame = pane.convert(pane.bounds, to: nil)
+                return [frame.minX, frame.maxX]
+            }
+        }
+        .filter { $0 > 1 && $0 < window.frame.width - 1 && $0 >= capsuleFrame.maxX - 1 }
+        let next = ([next].compactMap { $0 } + paneEdges).min()
         let nextText = next.map { "\(Int($0))" } ?? "none"
         let gaps = next.map { "left \(Int(capsuleFrame.minX - titleEnd)), right \(Int($0 - capsuleFrame.maxX))" } ?? ""
         print("PROBE \(name): window \(Int(window.frame.width)), title ends \(Int(titleEnd)), capsule \(Int(capsuleFrame.minX))...\(Int(capsuleFrame.maxX)) h \(Int(capsuleFrame.height)), next item \(nextText); \(gaps)")
