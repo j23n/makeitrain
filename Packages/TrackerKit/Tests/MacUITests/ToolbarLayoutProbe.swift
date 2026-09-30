@@ -69,16 +69,21 @@ struct ToolbarLayoutProbe {
             .filter { band.contains($0.midY) && $0.minX >= capsuleFrame.maxX - 1 && $0.width >= 12 }
             .map(\.minX)
             .min()
-        let paneEdges = splits.flatMap { split in
-            split.arrangedSubviews.filter { !$0.isHidden }.flatMap { pane -> [CGFloat] in
+        var ends: [CGFloat] = []
+        if let next {
+            ends.append(next)
+        }
+        for split in splits {
+            for pane in split.arrangedSubviews where !pane.isHidden {
                 let frame = pane.convert(pane.bounds, to: nil)
-                return [frame.minX, frame.maxX]
+                for edge in [frame.minX, frame.maxX] where edge > 1 && edge < window.frame.width - 1 && edge >= capsuleFrame.maxX - 1 {
+                    ends.append(edge)
+                }
             }
         }
-        .filter { $0 > 1 && $0 < window.frame.width - 1 && $0 >= capsuleFrame.maxX - 1 }
-        let next = ([next].compactMap { $0 } + paneEdges).min()
-        let nextText = next.map { "\(Int($0))" } ?? "none"
-        let gaps = next.map { "left \(Int(capsuleFrame.minX - titleEnd)), right \(Int($0 - capsuleFrame.maxX))" } ?? ""
+        let end: CGFloat? = ends.min()
+        let nextText = end.map { "\(Int($0))" } ?? "none"
+        let gaps = end.map { "left \(Int(capsuleFrame.minX - titleEnd)), right \(Int($0 - capsuleFrame.maxX))" } ?? ""
         print("PROBE \(name): window \(Int(window.frame.width)), title ends \(Int(titleEnd)), capsule \(Int(capsuleFrame.minX))...\(Int(capsuleFrame.maxX)) h \(Int(capsuleFrame.height)), next item \(nextText); \(gaps)")
         window.orderOut(nil)
         window.contentViewController = nil
