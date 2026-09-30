@@ -194,20 +194,35 @@ extension View {
             }
     }
 
-    /// The timer as the toolbar's principal item, which macOS centers in the
-    /// part of the toolbar beside the sidebar. From macOS 26 the timer draws
-    /// its own glass, tinted with the project's color, so the toolbar's glass
-    /// behind the item is off.
+    /// The screen's title and the timer in the toolbar, with the same space
+    /// on either side of the timer, up to the screen's items.
+    ///
+    /// From macOS 26, a flexible spacer on either side of the timer shares
+    /// the free space. The window's own title would take all of it, so it's
+    /// taken out of the toolbar and shown as an item instead; the window
+    /// keeps it for the Window menu. The timer draws its own glass, tinted
+    /// with the project's color, so the toolbar's glass behind it is off.
+    ///
+    /// Before macOS 26, which has no toolbar spacers, the timer is the
+    /// principal item, which macOS centers in the part of the toolbar beside
+    /// the sidebar.
     @ViewBuilder
-    func timerToolbar(_ timer: some View) -> some View {
+    func timerToolbar(title: String, timer: some View) -> some View {
         #if compiler(>=6.2)
         if #available(macOS 26.0, *) {
-            toolbar {
-                ToolbarItem(placement: .principal) {
-                    timer
+            toolbar(removing: .title)
+                .toolbar {
+                    ToolbarItem(placement: .navigation) {
+                        ToolbarTitle(title: title)
+                    }
+                    .sharedBackgroundVisibility(.hidden)
+                    ToolbarSpacer(.flexible)
+                    ToolbarItem {
+                        timer
+                    }
+                    .sharedBackgroundVisibility(.hidden)
+                    ToolbarSpacer(.flexible)
                 }
-                .sharedBackgroundVisibility(.hidden)
-            }
         } else {
             toolbar {
                 ToolbarItem(placement: .principal) {
@@ -222,6 +237,18 @@ extension View {
             }
         }
         #endif
+    }
+}
+
+/// The screen's title, where the toolbar shows the window's title.
+private struct ToolbarTitle: View {
+    let title: String
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: 15, weight: .bold))
+            .lineLimit(1)
+            .fixedSize()
     }
 }
 

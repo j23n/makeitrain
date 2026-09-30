@@ -38,3 +38,5 @@ jobs:
         run: >
           xcodebuild build -project TimeTracker.xcodeproj -scheme TimeTrackerMobile
           -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
+      - name: Probe the toolbar layout on macOS 26
+        run: swift test --package-path Packages/TrackerKit --filter ToolbarLayoutProbe

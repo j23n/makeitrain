@@ -61,7 +61,7 @@ struct MainWindow: View {
             }
         } detail: {
             detail
-                .timerToolbar(TimerCapsule(model: model).fixedSize())
+                .timerToolbar(title: screen.title, timer: TimerCapsule(model: model).fixedSize())
         }
         .navigationTitle(screen.title)
         .frame(minWidth: 880, minHeight: 520)
