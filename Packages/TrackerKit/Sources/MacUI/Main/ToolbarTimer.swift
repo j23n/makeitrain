@@ -161,10 +161,10 @@ private final class GapReaderView: NSView {
     /// Measures on the next turn of the run loop, also while the window is
     /// being resized.
     @objc func scheduleMeasuring() {
-        measure(after: 0)
+        measureAgain(after: 0)
     }
 
-    private func measure(after delay: TimeInterval) {
+    private func measureAgain(after delay: TimeInterval) {
         NSObject.cancelPreviousPerformRequests(withTarget: self, selector: #selector(measure), object: nil)
         perform(#selector(measure), with: nil, afterDelay: delay, inModes: [.common])
     }
@@ -179,12 +179,12 @@ private final class GapReaderView: NSView {
             space: found.flatMap { space(in: window, around: $0) }.map { $0.lowerBound.rounded()...$0.upperBound.rounded() }
         )
         if let beforeChange, layout == beforeChange.layout, Date().timeIntervalSince(beforeChange.time) < 0.3 {
-            measure(after: 0.05)
+            measureAgain(after: 0.05)
             return
         }
         guard layout == last else {
             last = layout
-            measure(after: 0.05)
+            measureAgain(after: 0.05)
             return
         }
         beforeChange = nil
