@@ -5,7 +5,8 @@ The rules the app follows, whichever screen or device an edit comes from. One ti
 ## Timer
 
 - Starting a timer stops the running one at the same instant, so switching tasks leaves no gap and no overlap.
-- A quick start needs only a note. The entry shows as "Unassigned" until it gets a project.
+- A quick start needs only a note. The entry shows as "Unassigned" until it gets a project. The menu bar's quick start also takes a project and tags, offering the project's tags as you type.
+- The main window's toolbar has the timer in a capsule over the middle of the detail column: a round button to start a timer without a project, or the running timer's project, note (or tags) and time with a round button to stop it. Its menu starts, or switches to, a recent project and tags. The toolbar would center it in the window; while the sidebar shows, it moves over the detail column as far as the title leaves room.
 - "Started Earlier…" moves the running timer's start back, for work that began before the timer did. This can create an overlap.
 - "Stop at an Earlier Time…" stops the running timer in the past, for a timer left running. There's no idle detection.
 - A stopped entry never runs again; continuing work starts a new entry. That's what lets a stop win over edits made to an out-of-date copy on another device. Undoing a stop is the one exception: it resumes the timer.
@@ -16,11 +17,12 @@ The rules the app follows, whichever screen or device an edit comes from. One ti
 
 - Overlaps are worked out when the data is displayed and never stored. Entries are scanned in order of start while tracking the latest end so far, and an entry overlaps if it starts before that end. That also catches an entry that overlaps an earlier, longer one with a shorter entry in between.
 - A running timer counts as ending now. Deleted entries and entries with no duration are ignored.
-- The entries table shows a warning icon and can show only overlapping entries; right-clicking an entry offers its fixes. The timeline gives overlapping blocks an orange edge.
+- The entries table shows a warning icon, and its "Overlaps" filter shows only overlapping entries; right-clicking an entry offers its fixes. The timeline gives overlapping blocks an orange edge.
 - Each overlap offers a one-click fix, never applied on its own. If the earlier entry ends inside the later one, the fix is "Trim Earlier Entry". If one entry contains the other, it's "Split Entry Around It", which cuts the outer entry into the parts before and after the inner one; that also covers a meeting added in the middle of a running timer. Entries that start at the same moment get no fix.
 
 ## Editing entries
 
+- On the Mac, the bar over the entries table narrows it to a period (today, this or last week or month, this year, or days of your choice), to clients and projects, to entries with any of some tags, and to overlaps, and shows how many entries that leaves and their total time. The tags offered are those of the projects chosen, or of all projects. "Today" and the other periods move on as the days pass; days of your choice stay. An entry is on the day it starts, in its own time zone, as in reports. The search field in the toolbar narrows it further, by note, project or tag.
 - On the Mac, the entries table is edited in place. Start and end are date and time pickers in the entry's own time zone, with the zone's name next to the start when it isn't the Mac's; clicking the date opens a calendar. The end's tooltip says how long the entry is. Click the project to choose another, and type tags or a note. On the timeline, the selected entry is edited in the inspector, which also takes a duration.
 - A start can't be after the end, nor the running timer's after now, and an end can't be before the start.
 - The timeline shows a day or a week on an hour grid, or a month as a calendar. The grid opens at 7:00, or at the hour of an earlier entry on the days shown. Blocks show the project, times and note, and the tags when the block has room for them. On the grid, drag a block to move it, in the week view to another day too; drag its top or bottom edge to change its start or end; double-click empty space to add an hour. Click a day's heading in the week view, or double-click a day in the month view, to see it on its own.

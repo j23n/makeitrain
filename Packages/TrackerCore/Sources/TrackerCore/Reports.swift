@@ -99,7 +99,7 @@ public struct Report: Hashable, Sendable {
     /// keeps them.
     public init(_ request: ReportRequest, ledger: Ledger, resolved: [ResolvedEntry], now: Timestamp) {
         self.request = request
-        let matching = resolved.filter { Report.matches($0, request, ledger) }
+        let matching = resolved.filter(request.filter.matcher(in: ledger))
         entries = matching.filter { !$0.isRunning }
         running = matching.first { $0.isRunning }
         total = entries.reduce(0) { $0 + $1.duration(now: now) }
@@ -119,21 +119,6 @@ public struct Report: Hashable, Sendable {
             day = day.adding(days: 1)
         }
         self.days = days
-    }
-
-    private static func matches(_ entry: ResolvedEntry, _ request: ReportRequest, _ ledger: Ledger) -> Bool {
-        guard request.range.contains(entry.entry.day) else { return false }
-        if let projects = request.projects, !projects.contains(entry.entry.projectID) {
-            return false
-        }
-        if let clients = request.clients, !clients.contains(ledger.client(forProject: entry.entry.projectID)?.id) {
-            return false
-        }
-        if let tags = request.tags, !tags.isEmpty {
-            let wanted = Set(tags.map { $0.lowercased() })
-            guard entry.entry.tags.contains(where: { wanted.contains($0.lowercased()) }) else { return false }
-        }
-        return true
     }
 
     private static func groups(_ entries: [ResolvedEntry], _ grouping: ReportRequest.Grouping, _ ledger: Ledger, _ now: Timestamp) -> [ReportGroup] {

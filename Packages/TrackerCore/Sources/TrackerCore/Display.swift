@@ -100,6 +100,13 @@ public struct Combination: Hashable, Sendable {
         self.projectID = projectID
         self.tags = tags
     }
+
+    /// Whether an entry has this project and these tags, in any order and
+    /// case.
+    public func matches(_ entry: TimeEntry) -> Bool {
+        entry.projectID == projectID
+            && Set(entry.tags.map { $0.lowercased() }) == Set(tags.map { $0.lowercased() })
+    }
 }
 
 extension Ledger {

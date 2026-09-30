@@ -98,4 +98,12 @@ import Testing
         ])
         #expect(ledger.recentCombinations(limit: 1).count == 1)
     }
+
+    @Test func matchesEntriesWithTheSameProjectAndTags() {
+        let combination = Combination(projectID: uuid(10), tags: ["design", "#12"])
+        #expect(combination.matches(entry(1, project: uuid(10), tags: ["#12", "Design"], at: "22T09:00:00")))
+        #expect(!combination.matches(entry(2, project: uuid(10), tags: ["design"], at: "22T09:00:00")))
+        #expect(!combination.matches(entry(3, project: uuid(11), tags: ["design", "#12"], at: "22T09:00:00")))
+        #expect(Combination(projectID: nil, tags: []).matches(entry(4, project: nil, at: "22T09:00:00")))
+    }
 }

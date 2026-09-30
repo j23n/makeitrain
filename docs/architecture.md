@@ -8,7 +8,7 @@ Time Tracker is a menu bar app for the Mac, with an iPhone and iPad app that sha
 | --- | --- |
 | `Mac/`, `iOS/` | The two app targets: entry point, Info.plist, entitlements and assets. They contain almost no code. |
 | `Packages/TrackerKit` | The app layer on Apple platforms. `TrackerKit` has the shared app model, storage, iCloud sync and the views both apps use; `MacUI` and `MobileUI` have each app's screens. Every screen has previews with the sample data in `PreviewData`. |
-| `Packages/TrackerCore` | The data model, file format, merging, the timer and overlap rules, reports, CSV export and import, turning calendar events into entries, and backups. Plain Swift that also builds and tests on Linux. |
+| `Packages/TrackerCore` | The data model, file format, merging, the timer and overlap rules, reports and the entry filter they share with the entries table, CSV export and import, turning calendar events into entries, and backups. Plain Swift that also builds and tests on Linux. |
 | `TimeTracker.xcodeproj` | The Xcode project, with the `TimeTracker` (macOS) and `TimeTrackerMobile` (iOS) targets. |
 | `docs/` | These documents. |
 
@@ -36,8 +36,8 @@ Screens talk only to the app model; only the file store touches disk.
 
 The Mac app:
 
-- **Menu bar:** the stopwatch icon with the running timer's hours and minutes. Its popover starts, stops and switches timers, sets the start back or stops at an earlier time, starts from a note and project, and lists recent project and tag combinations to switch to. Rows at the bottom open the main window and quit; Settings is in the app menu while the main window is open.
-- **Main window:** a sidebar with the **Timeline** by day, week or month (drag to move and resize, double-click to add), the **Entries** table, edited in place, **Reports** with a chart and CSV export, **Clients & Projects**, where each project's inspector has its tags, GitHub repositories and calendar, and **Tags** by project. The toolbar shows the running timer. File › Import CSV… adds entries from a CSV file, and File › Import Calendar Events… adds the events of calendars linked to projects.
+- **Menu bar:** the stopwatch icon with the running timer's hours and minutes. Its popover starts, stops and switches timers, sets the start back or stops at an earlier time, starts from a note, project and tags, and lists recent project and tag combinations to switch to. Rows at the bottom open the main window and quit; Settings is in the app menu while the main window is open.
+- **Main window:** a sidebar with the **Timeline** by day, week or month (drag to move and resize, double-click to add), the **Entries** table, edited in place and filtered by period, client, project, tag and overlaps, **Reports** with a chart and CSV export, **Clients & Projects**, where each project's inspector has its tags, GitHub repositories and calendar, and **Tags** by project. The toolbar has the timer, to start, stop or switch it, centered over the detail column. File › Import CSV… adds entries from a CSV file, and File › Import Calendar Events… adds the events of calendars linked to projects.
 - **Settings:** iCloud, the first day of the week, launch at login, and buttons that show the data and the backups in Finder.
 
 The iOS app has four tabs: **Timer**, **Entries** by day with a form to edit each, **Reports** with the CSV in the share sheet, and **Settings** with clients and projects, each with its tags, GitHub repositories and calendar, and calendar and CSV import.

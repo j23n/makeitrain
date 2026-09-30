@@ -31,12 +31,13 @@ enum Screen: String, CaseIterable, Identifiable {
     }
 }
 
-/// The main window: the screens in a sidebar, and the running timer in the
-/// toolbar.
+/// The main window: the screens in a sidebar, and the timer in the toolbar,
+/// over the middle of the detail column.
 struct MainWindow: View {
     let model: AppModel
     @SceneStorage private var screen: Screen
     @Environment(\.undoManager) private var undoManager
+    @State private var detailColumn = DetailColumn()
     @State private var importing = false
     @State private var importRequest: ImportRequest?
     @State private var importError: String?
@@ -62,11 +63,12 @@ struct MainWindow: View {
             }
         } detail: {
             detail
-                .toolbar {
-                    ToolbarItem(placement: .principal) {
-                        TimerControl(model: model)
-                    }
+                .onGeometryChange(for: CGRect.self) { proxy in
+                    proxy.frame(in: .global)
+                } action: { frame in
+                    detailColumn.frame = frame
                 }
+                .timerToolbar(ToolbarTimer(model: model, detail: detailColumn))
         }
         .navigationTitle(screen.title)
         .frame(minWidth: 880, minHeight: 520)
@@ -115,38 +117,6 @@ struct MainWindow: View {
             ProjectsView(model: model)
         case .tags:
             TagsView(model: model)
-        }
-    }
-}
-
-/// The running timer with a button to stop it, or a button to start one.
-struct TimerControl: View {
-    let model: AppModel
-    @Environment(\.undoManager) private var undoManager
-
-    var body: some View {
-        if let running = model.running {
-            HStack(spacing: 10) {
-                ProjectLabel(ledger: model.ledger, projectID: running.entry.projectID)
-                    .frame(maxWidth: 240)
-                Text(Format.duration(model.duration(of: running)))
-                    .monospacedDigit()
-                Button {
-                    model.stopTimer(undoManager: undoManager)
-                } label: {
-                    Label("Stop Timer", systemImage: "stop.fill")
-                }
-                .help("Stop the timer")
-                .disabled(model.isReadOnly)
-            }
-        } else {
-            Button {
-                model.startTimer(undoManager: undoManager)
-            } label: {
-                Label("Start Timer", systemImage: "play.fill")
-            }
-            .help("Start a timer without a project")
-            .disabled(model.isReadOnly)
         }
     }
 }

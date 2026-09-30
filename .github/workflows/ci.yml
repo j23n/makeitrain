@@ -22,9 +22,11 @@ jobs:
       - run: swift test --package-path Packages/TrackerCore
       - run: swift test --package-path Packages/TrackerKit
 
+  # The packages build above uses Xcode 16; the apps build with Xcode 26, so
+  # both the macOS 15 and the macOS 26 SDK compile.
   apps:
     name: Mac and iOS apps
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v5
       - run: xcodebuild -version

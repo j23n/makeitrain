@@ -4,14 +4,15 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 
-/// The popover under the menu bar item: the running timer, a quick start,
-/// and recent combinations to switch to.
+/// The popover under the menu bar item: the running timer, a quick start
+/// with a note, project and tags, and recent combinations to switch to.
 struct MenuBarPopover: View {
     let model: AppModel
     @Environment(\.openWindow) private var openWindow
     @Environment(\.undoManager) private var undoManager
     @State private var note = ""
     @State private var projectID: UUID?
+    @State private var tags: [String] = []
     @State private var choosingProject = false
     @State private var adjusting: Adjustment?
     @State private var adjustedTime = Date()
@@ -120,34 +121,45 @@ struct MenuBarPopover: View {
     // MARK: Quick start
 
     /// The project list opens inline rather than in a popover of its own,
-    /// because a second window taking focus can close the menu bar's.
+    /// because a second window taking focus can close the menu bar's. The
+    /// tags offered are the project's.
     private var quickStart: some View {
         VStack(alignment: .leading, spacing: 8) {
             TextField("What are you working on?", text: $note)
                 .textFieldStyle(.roundedBorder)
                 .onSubmit(start)
-            HStack {
-                Text("Project")
-                Button {
-                    choosingProject.toggle()
-                } label: {
-                    ProjectPickerButtonLabel(ledger: model.ledger, projectID: projectID)
-                        .frame(maxWidth: 190, alignment: .leading)
+            Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
+                GridRow {
+                    Text("Project")
+                        .gridColumnAlignment(.trailing)
+                    Button {
+                        choosingProject.toggle()
+                    } label: {
+                        ProjectPickerButtonLabel(ledger: model.ledger, projectID: projectID)
+                            .frame(maxWidth: 190, alignment: .leading)
+                    }
+                    .help("Choose a project; type to search clients and projects")
                 }
-                .help("Choose a project; type to search clients and projects")
-                Spacer()
-                Button(model.running == nil ? "Start" : "Switch", action: start)
-            }
-            if choosingProject {
-                ProjectChooser(ledger: model.ledger, current: ProjectChoice(projectID)) { chosen in
-                    projectID = chosen
-                    choosingProject = false
-                } cancel: {
-                    choosingProject = false
+                if choosingProject {
+                    ProjectChooser(ledger: model.ledger, current: ProjectChoice(projectID)) { chosen in
+                        projectID = chosen
+                        choosingProject = false
+                    } cancel: {
+                        choosingProject = false
+                    }
+                    .background(.background, in: RoundedRectangle(cornerRadius: 8))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 8).strokeBorder(.separator)
+                    }
                 }
-                .background(.background, in: RoundedRectangle(cornerRadius: 8))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8).strokeBorder(.separator)
+                GridRow {
+                    Text("Tags")
+                    HStack {
+                        TagField(tags: tags, suggestions: model.projectTags[projectID] ?? [], placeholder: "Add tags") { newTags in
+                            tags = newTags
+                        }
+                        Button(model.running == nil ? "Start" : "Switch", action: start)
+                    }
                 }
             }
         }
@@ -156,9 +168,13 @@ struct MenuBarPopover: View {
     }
 
     private func start() {
+        // The tag field hands over what's typed when it stops editing, which
+        // clicking a button doesn't make it do.
+        NSApp.keyWindow?.makeFirstResponder(nil)
         let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
-        model.startTimer(Combination(projectID: projectID, tags: []), note: trimmed, undoManager: undoManager)
+        model.startTimer(Combination(projectID: projectID, tags: tags), note: trimmed, undoManager: undoManager)
         note = ""
+        tags = []
     }
 
     // MARK: Recent combinations
@@ -202,9 +218,7 @@ struct MenuBarPopover: View {
     }
 
     private func isRunning(_ combination: Combination) -> Bool {
-        guard let running = model.running else { return false }
-        return running.entry.projectID == combination.projectID
-            && running.entry.tags.map { $0.lowercased() }.sorted() == combination.tags.map { $0.lowercased() }.sorted()
+        model.running.map { combination.matches($0.entry) } ?? false
     }
 
     // MARK: Footer

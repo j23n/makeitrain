@@ -87,7 +87,8 @@ struct EntryOrder: SortComparator, Hashable {
 }
 
 /// Every entry in a sortable table, edited in place: click a value to
-/// change it. The context menu splits entries, fixes overlaps and changes
+/// change it. The bar above narrows it to a period, clients, projects, tags
+/// or overlaps. The context menu splits entries, fixes overlaps and changes
 /// several entries at once.
 ///
 /// With thousands of entries, what each redraw costs matters: the rows are
@@ -99,7 +100,7 @@ struct EntriesView: View {
     @State private var selection: Set<UUID>
     @State private var sortOrder = [EntryOrder(column: .start, order: .reverse)]
     @State private var search = ""
-    @State private var overlapsOnly = false
+    @State private var filter = EntriesFilter()
     @State private var sheet: EntriesSheet?
     /// Opens the CSV import.
     let imports: ImportActions?
@@ -111,8 +112,42 @@ struct EntriesView: View {
     }
 
     var body: some View {
+        let rows = self.rows
+        VStack(spacing: 0) {
+            if !model.resolved.isEmpty || filter.isActive {
+                EntriesFilterBar(model: model, filter: $filter, rows: rows)
+            }
+            table(rows)
+        }
+        .searchable(text: $search, placement: .toolbar, prompt: "Notes, projects and tags")
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button(action: addEntry) {
+                    Label("New Entry", systemImage: "plus")
+                }
+                .keyboardShortcut("n", modifiers: .command)
+                .help("Add an entry for the last hour")
+                .disabled(model.isReadOnly)
+                if let imports {
+                    Menu {
+                        Button("CSV File…", action: imports.csv)
+                        Button("Calendar Events…", action: imports.calendar)
+                    } label: {
+                        Label("Import", systemImage: "square.and.arrow.down")
+                    }
+                    .help("Import entries from a CSV file or from calendars")
+                    .disabled(model.isReadOnly)
+                }
+            }
+        }
+        .sheet(item: $sheet) { sheet in
+            EntriesSheetView(model: model, sheet: sheet, undoManager: undoManager)
+        }
+    }
+
+    private func table(_ rows: [EntryRow]) -> some View {
         let projectTags = model.projectTags
-        Table(rows, selection: $selection, sortOrder: $sortOrder) {
+        return Table(rows, selection: $selection, sortOrder: $sortOrder) {
             TableColumn("", sortUsing: EntryOrder(column: .status)) { row in
                 EntryStatusIcon(row: row)
             }
@@ -161,48 +196,41 @@ struct EntriesView: View {
                     systemImage: "clock",
                     description: Text("Start a timer from the menu bar, or add an entry with the + button.")
                 )
-            }
-        }
-        .searchable(text: $search, placement: .toolbar, prompt: "Notes, projects and tags")
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Toggle(isOn: $overlapsOnly) {
-                    Label("Show Overlaps", systemImage: "exclamationmark.triangle")
-                }
-                .help("Show only entries that overlap another")
-                Button(action: addEntry) {
-                    Label("New Entry", systemImage: "plus")
-                }
-                .keyboardShortcut("n", modifiers: .command)
-                .help("Add an entry for the last hour")
-                .disabled(model.isReadOnly)
-                if let imports {
-                    Menu {
-                        Button("CSV File…", action: imports.csv)
-                        Button("Calendar Events…", action: imports.calendar)
-                    } label: {
-                        Label("Import", systemImage: "square.and.arrow.down")
+            } else if rows.isEmpty {
+                ContentUnavailableView {
+                    Label("No Matching Entries", systemImage: "line.3.horizontal.decrease.circle")
+                } description: {
+                    Text(noMatches)
+                } actions: {
+                    Button("Show All Entries") {
+                        filter = EntriesFilter()
+                        search = ""
                     }
-                    .help("Import entries from a CSV file or from calendars")
-                    .disabled(model.isReadOnly)
                 }
             }
-        }
-        .sheet(item: $sheet) { sheet in
-            EntriesSheetView(model: model, sheet: sheet, undoManager: undoManager)
         }
     }
 
-    /// The rows shown, in one pass over the entries, with each project's
-    /// title worked out once.
+    private var noMatches: String {
+        switch (filter.isActive, search.isEmpty) {
+        case (true, false): "No entries match the filter and the search."
+        case (true, true): "No entries match the filter."
+        case (false, _): "No entries match the search."
+        }
+    }
+
+    /// The rows the filter and search leave, in one pass over the entries,
+    /// with each project's title worked out once.
     private var rows: [EntryRow] {
         let flagged = model.overlaps.flagged
         let ledger = model.ledger
+        let overlapsOnly = filter.overlapsOnly
+        let matches = filter.entryFilter.matcher(in: ledger)
         var titles: [UUID?: String] = [:]
         var rows: [EntryRow] = []
         for entry in model.resolved {
             let isFlagged = flagged.contains(entry.id)
-            guard !overlapsOnly || isFlagged else { continue }
+            guard !overlapsOnly || isFlagged, matches(entry) else { continue }
             let projectID = entry.entry.projectID
             let title: String
             if let known = titles[projectID] {
