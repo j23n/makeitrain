@@ -7,9 +7,8 @@ import TrackerCore
 @testable import MacUI
 @testable import TrackerKit
 
-/// Prints where the toolbar puts the timer, the title and the other items,
-/// in a few arrangements, to find the one that centers the timer between
-/// the title and the items. Temporary.
+/// Prints how much space the main window's toolbar leaves on either side of
+/// the timer, between the title and the next item. Temporary.
 @Suite(.serialized)
 @MainActor
 struct ToolbarLayoutProbe {
@@ -18,176 +17,54 @@ struct ToolbarLayoutProbe {
         NSApp.setActivationPolicy(.accessory)
         let model = PreviewData.model()
         print("PROBE macOS \(ProcessInfo.processInfo.operatingSystemVersionString)")
-        show("app, entries", MainWindow(model: model, screen: .entries))
-        show("app, timeline", MainWindow(model: model, screen: .timeline))
-        show("principal, no padding", ProbeWindow(arrangement: .principal))
-        #if compiler(>=6.2)
-        if #available(macOS 26.0, *) {
-            show("outer spacers, automatic", ProbeWindow(arrangement: .outerAutomatic))
-            show("outer spacers, primary action", ProbeWindow(arrangement: .outerPrimaryAction))
-            show("inner spacers, automatic", ProbeWindow(arrangement: .innerAutomatic))
-            show("inner spacers, primary action", ProbeWindow(arrangement: .innerPrimaryAction))
+        for width in [1024.0, 1280.0] {
+            for screen in [Screen.entries, .timeline, .reports] {
+                show("\(screen.rawValue), \(Int(width)) wide", MainWindow(model: model, screen: screen), width: width)
+            }
         }
-        #endif
     }
 
-    private func show(_ name: String, _ view: some View) {
+    private func show(_ name: String, _ view: some View, width: CGFloat) {
         let controller = NSHostingController(rootView: view)
         controller.sceneBridgingOptions = [.toolbars, .title]
         controller.sizingOptions = []
         let window = NSWindow(contentViewController: controller)
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
         window.toolbarStyle = .unified
-        window.setContentSize(CGSize(width: 1200, height: 740))
+        window.setContentSize(CGSize(width: width, height: 700))
         window.makeKeyAndOrderFront(nil)
-        for _ in 0..<5 {
+        // As after each event in the app, which measures the toolbar again.
+        for _ in 0..<6 {
             RunLoop.main.run(until: Date().addingTimeInterval(0.2))
+            window.update()
         }
-        print("PROBE == \(name), window \(Int(window.frame.width)) wide")
-        if let root = window.contentView?.superview {
-            if let split = Self.first(NSSplitView.self, in: root) {
-                for (index, pane) in split.arrangedSubviews.enumerated() {
-                    let rect = pane.convert(pane.bounds, to: nil)
-                    print("PROBE   pane \(index): x \(Int(rect.minX))...\(Int(rect.maxX))")
-                }
-            }
-            dump(root, window: window, depth: 0)
+        guard let root = window.contentView?.superview else { return }
+        let capsule = Self.all(in: root).first { String(describing: type(of: $0)).contains("GapReaderView") }
+        let title = Self.all(in: root).compactMap { $0 as? NSTextField }.first { $0.stringValue == window.title }
+        guard let capsule, let title else {
+            print("PROBE \(name): window \(Int(window.frame.width)), capsule \(capsule != nil), title \(title != nil)")
+            window.orderOut(nil)
+            return
         }
+        let capsuleFrame = capsule.convert(capsule.bounds, to: nil)
+        let titleEnd = title.convert(title.bounds, to: nil).maxX
+        let band = capsuleFrame.minY - 20...capsuleFrame.maxY + 20
+        let next = Self.all(in: root)
+            .filter { $0 is NSControl || String(describing: type(of: $0)).contains("HostingView") }
+            .filter { !$0.isHidden && $0.window != nil }
+            .map { $0.convert($0.bounds, to: nil) }
+            .filter { band.contains($0.midY) && $0.minX >= capsuleFrame.maxX - 1 && $0.width >= 12 }
+            .map(\.minX)
+            .min()
+        let nextText = next.map { "\(Int($0))" } ?? "none"
+        let gaps = next.map { "left \(Int(capsuleFrame.minX - titleEnd)), right \(Int($0 - capsuleFrame.maxX))" } ?? ""
+        print("PROBE \(name): window \(Int(window.frame.width)), title ends \(Int(titleEnd)), capsule \(Int(capsuleFrame.minX))...\(Int(capsuleFrame.maxX)) h \(Int(capsuleFrame.height)), next item \(nextText); \(gaps)")
         window.orderOut(nil)
         window.contentViewController = nil
     }
 
-    private func dump(_ view: NSView, window: NSWindow, depth: Int) {
-        let rect = view.convert(view.bounds, to: nil)
-        let name = String(describing: type(of: view))
-        let inBar = rect.minY > window.frame.height - 90 && rect.height < 70 && rect.width > 4
-        let interesting = view is NSControl || name.contains("Hosting") || name.contains("Title")
-            || name.contains("ToolbarItem") || name.contains("Glass")
-        if inBar, interesting, rect.width < window.frame.width * 0.8 {
-            var text = ""
-            if let field = view as? NSTextField, !field.stringValue.isEmpty {
-                text = " \"\(field.stringValue)\""
-            }
-            print("PROBE   \(String(repeating: ".", count: depth))\(name.prefix(70)) x \(Int(rect.minX))...\(Int(rect.maxX)) y \(Int(rect.minY)) h \(Int(rect.height))\(text)")
-        }
-        for subview in view.subviews where !subview.isHidden {
-            dump(subview, window: window, depth: depth + 1)
-        }
-    }
-
-    private static func first<T: NSView>(_ type: T.Type, in view: NSView) -> T? {
-        if let match = view as? T { return match }
-        for subview in view.subviews {
-            if let match = first(type, in: subview) { return match }
-        }
-        return nil
-    }
-}
-
-/// A window like the main window, with the entries screen's toolbar items
-/// and a 222-point stand-in for the timer, arranged one of several ways.
-private struct ProbeWindow: View {
-    enum Arrangement {
-        case principal, outerAutomatic, outerPrimaryAction, innerAutomatic, innerPrimaryAction
-    }
-
-    let arrangement: Arrangement
-    @State private var search = ""
-
-    var body: some View {
-        NavigationSplitView {
-            List {
-                Text("Timeline")
-                Text("Entries")
-            }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 260)
-        } detail: {
-            detail
-        }
-        .navigationTitle("Entries")
-    }
-
-    private var marker: some View {
-        Capsule().fill(.orange).frame(width: 222, height: 28)
-    }
-
-    @ViewBuilder
-    private var detail: some View {
-        let content = Color.clear
-            .searchable(text: $search, placement: .toolbar)
-        switch arrangement {
-        case .principal:
-            content
-                .toolbar { items }
-                .toolbar {
-                    ToolbarItem(placement: .principal) { marker }
-                }
-        default:
-            #if compiler(>=6.2)
-            if #available(macOS 26.0, *) {
-                spaced(content)
-            }
-            #else
-            content
-            #endif
-        }
-    }
-
-    #if compiler(>=6.2)
-    @available(macOS 26.0, *)
-    @ViewBuilder
-    private func spaced(_ content: some View) -> some View {
-        switch arrangement {
-        case .outerAutomatic:
-            content
-                .toolbar { items }
-                .toolbar {
-                    ToolbarSpacer(.flexible)
-                    ToolbarItem { marker }.sharedBackgroundVisibility(.hidden)
-                    ToolbarSpacer(.flexible)
-                }
-        case .outerPrimaryAction:
-            content
-                .toolbar { items }
-                .toolbar {
-                    ToolbarSpacer(.flexible, placement: .primaryAction)
-                    ToolbarItem(placement: .primaryAction) { marker }.sharedBackgroundVisibility(.hidden)
-                    ToolbarSpacer(.flexible, placement: .primaryAction)
-                }
-        case .innerAutomatic:
-            content
-                .toolbar {
-                    ToolbarSpacer(.flexible)
-                    ToolbarItem { marker }.sharedBackgroundVisibility(.hidden)
-                    ToolbarSpacer(.flexible)
-                    items
-                }
-        case .innerPrimaryAction:
-            content
-                .toolbar {
-                    ToolbarSpacer(.flexible, placement: .primaryAction)
-                    ToolbarItem(placement: .primaryAction) { marker }.sharedBackgroundVisibility(.hidden)
-                    ToolbarSpacer(.flexible, placement: .primaryAction)
-                    items
-                }
-        case .principal:
-            content
-        }
-    }
-    #endif
-
-    @ToolbarContentBuilder
-    private var items: some ToolbarContent {
-        ToolbarItemGroup(placement: .primaryAction) {
-            Button {} label: {
-                Label("New Entry", systemImage: "plus")
-            }
-            Menu {
-                Button("CSV File…") {}
-            } label: {
-                Label("Import", systemImage: "square.and.arrow.down")
-            }
-        }
+    private static func all(in view: NSView) -> [NSView] {
+        [view] + view.subviews.flatMap { all(in: $0) }
     }
 }
 #endif

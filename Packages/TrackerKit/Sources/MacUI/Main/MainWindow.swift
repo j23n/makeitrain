@@ -32,12 +32,11 @@ enum Screen: String, CaseIterable, Identifiable {
 }
 
 /// The main window: the screens in a sidebar, and the timer in the toolbar,
-/// over the middle of the detail column.
+/// between the title and the screen's items.
 struct MainWindow: View {
     let model: AppModel
     @SceneStorage private var screen: Screen
     @Environment(\.undoManager) private var undoManager
-    @State private var detailColumn = DetailColumn()
     @State private var importing = false
     @State private var importRequest: ImportRequest?
     @State private var importError: String?
@@ -63,12 +62,7 @@ struct MainWindow: View {
             }
         } detail: {
             detail
-                .onGeometryChange(for: CGRect.self) { proxy in
-                    proxy.frame(in: .global)
-                } action: { frame in
-                    detailColumn.frame = frame
-                }
-                .timerToolbar(ToolbarTimer(model: model, detail: detailColumn))
+                .timerToolbar(ToolbarTimer(model: model))
         }
         .navigationTitle(screen.title)
         .frame(minWidth: 880, minHeight: 520)

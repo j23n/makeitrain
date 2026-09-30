@@ -4,30 +4,24 @@ import Testing
 @testable import MacUI
 
 @Suite struct ToolbarTimerTests {
-    @Test func movesOverTheMiddleOfTheDetailColumn() {
-        // A 1,200-point window with a 200-point sidebar. The toolbar centers
-        // the item at 600; 200 points of padding move its content to 700.
-        let detail = CGRect(x: 200, y: 0, width: 1000, height: 600)
-        #expect(ToolbarTimer.leadingPadding(detail: detail, width: 260, titleSpace: 150) == 200)
+    @Test func movesToTheMiddleOfTheSpaceBetweenTheTitleAndTheItems() {
+        // The toolbar centers the item at 505, but the title ends at 75 and
+        // the first button starts at 860, so the middle of the space is 467.5.
+        #expect(ToolbarTimer.shift(itemCenter: 505, width: 262, left: 75, right: 860) == -38)
+        // A long title on the other side moves it the other way.
+        #expect(ToolbarTimer.shift(itemCenter: 505, width: 262, left: 250, right: 960) == 100)
     }
 
-    @Test func leavesTheTitleRoom() {
-        // In an 880-point window, the item has to stay right of 180 + 150.
-        let detail = CGRect(x: 180, y: 0, width: 700, height: 600)
-        #expect(ToolbarTimer.leadingPadding(detail: detail, width: 200, titleSpace: 150) == 20)
-        #expect(ToolbarTimer.leadingPadding(detail: detail, width: 300, titleSpace: 150) == 0)
+    @Test func movesOnlyAsFarAsTheWidenedItemStaysClear() {
+        #expect(ToolbarTimer.shift(itemCenter: 505, width: 600, left: 75, right: 860) == -38)
+        // A 680-point item centered on 505 reaches 845. Moved 7 points to the
+        // left, it's 14 points wider and reaches 852, 8 short of the button.
+        #expect(ToolbarTimer.shift(itemCenter: 505, width: 680, left: 75, right: 860) == -7)
+        #expect(ToolbarTimer.shift(itemCenter: 505, width: 800, left: 75, right: 860) == 0)
     }
 
-    @Test func staysInTheMiddleWithoutASidebar() {
-        let detail = CGRect(x: 0, y: 0, width: 1200, height: 600)
-        #expect(ToolbarTimer.leadingPadding(detail: detail, width: 260, titleSpace: 150) == 0)
-        // Before the first layout, nothing is known yet.
-        #expect(ToolbarTimer.leadingPadding(detail: .zero, width: 0, titleSpace: 150) == 0)
-    }
-
-    @Test func makesRoomForTheLongestTitle() {
-        #expect(ToolbarTimer.titleSpace > 100)
-        #expect(ToolbarTimer.titleSpace < 300)
+    @Test func staysPutWhenAlreadyInTheMiddle() {
+        #expect(ToolbarTimer.shift(itemCenter: 500, width: 200, left: 100, right: 900) == 0)
     }
 }
 #endif

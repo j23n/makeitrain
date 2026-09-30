@@ -4,58 +4,176 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 
-/// Where the main window's detail column is, for centering the timer over
-/// it. It's kept apart from the window's own state so that resizing the
-/// window or the sidebar redraws only the timer.
-@Observable
-final class DetailColumn {
-    /// In window coordinates.
-    var frame: CGRect = .zero
-}
-
-/// The timer in the main window's toolbar.
+/// The timer in the main window's toolbar, in the middle of the space
+/// between the title and the next item.
 ///
-/// The toolbar centers its principal item in the window, which puts it off
-/// to the left of the detail column while the sidebar shows. Padding on its
-/// leading side moves it to the middle of the column instead, as far as that
-/// leaves room for the title.
+/// The toolbar centers its principal item in the part beside the sidebar,
+/// which puts it off the middle of the free space whenever the items on one
+/// side take more room than the title on the other, as the entries screen's
+/// three buttons do. Padding on the far side moves it by the difference, as
+/// far as that keeps it clear of both.
 struct ToolbarTimer: View {
     let model: AppModel
-    let detail: DetailColumn
-    @State private var width: CGFloat = 0
+    @State private var shift: CGFloat = 0
 
     var body: some View {
         TimerCapsule(model: model)
             .fixedSize()
-            .onGeometryChange(for: CGFloat.self) { proxy in
-                proxy.size.width
-            } action: { newWidth in
-                width = newWidth
+            .background {
+                ToolbarGapReader { newShift in
+                    shift = newShift
+                }
             }
-            .padding(.leading, Self.leadingPadding(detail: detail.frame, width: width, titleSpace: Self.titleSpace))
+            .padding(.leading, max(0, 2 * shift))
+            .padding(.trailing, max(0, -2 * shift))
     }
 
-    /// The padding that moves an item `width` wide, centered in a window that
-    /// ends where `detail` does, over the middle of `detail`, as far as the
-    /// item stays `titleSpace` clear of the column's leading edge.
+    /// How far to move content `width` wide, in an item the toolbar centers
+    /// on `itemCenter`, to the middle of the space from `left` to `right`.
     ///
-    /// Padding moves the item's content right by half the padding, and makes
-    /// the item reach as far to the left as it does to the right.
-    static func leadingPadding(detail: CGRect, width: CGFloat, titleSpace: CGFloat) -> CGFloat {
-        guard detail.minX > 0, width > 0 else { return 0 }
-        let room = detail.maxX - 2 * (detail.minX + titleSpace) - width
-        return max(0, min(detail.minX, room)).rounded()
+    /// Padding on the far side moves it, which widens the item by twice as
+    /// much, evenly around its center. It moves only as far as the widened
+    /// item stays `margin` clear of both ends, since the toolbar would
+    /// otherwise move the item itself.
+    static func shift(itemCenter: CGFloat, width: CGFloat, left: CGFloat, right: CGFloat, margin: CGFloat = 8) -> CGFloat {
+        let wanted = (left + right) / 2 - itemCenter
+        let limit = max(0, min(itemCenter - width / 2 - left, right - itemCenter - width / 2) - margin)
+        return min(max(wanted, -limit), limit).rounded()
+    }
+}
+
+/// Reports how far to move the toolbar item it's in to the middle of the
+/// space between the title and the next item, from the frames of the
+/// toolbar's views: the window title's text field, the item's neighbors in
+/// the row the title shares with the items, and the controls and SwiftUI
+/// views in them. It reports no move if it can't find them.
+///
+/// It measures again after every event the window handles, as when the
+/// sidebar or the window is resized or the search field opens, and when
+/// the toolbar's items change.
+private struct ToolbarGapReader: NSViewRepresentable {
+    let report: (CGFloat) -> Void
+
+    func makeNSView(context: Context) -> GapReaderView {
+        let view = GapReaderView()
+        view.report = report
+        return view
     }
 
-    /// Room for the longest screen title, with the space around it. The same
-    /// for every screen, so the timer doesn't move when the screen changes.
-    static let titleSpace: CGFloat = {
-        let font = NSFont.boldSystemFont(ofSize: 15)
-        let widest = Screen.allCases
-            .map { ($0.title as NSString).size(withAttributes: [.font: font]).width }
-            .max() ?? 0
-        return ceil(widest) + 40
-    }()
+    func updateNSView(_ view: GapReaderView, context: Context) {
+        view.report = report
+        view.scheduleMeasuring()
+    }
+}
+
+private final class GapReaderView: NSView {
+    var report: ((CGFloat) -> Void)?
+    private var reported: CGFloat = 0
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        nil
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        let center = NotificationCenter.default
+        center.removeObserver(self)
+        NSObject.cancelPreviousPerformRequests(withTarget: self)
+        guard let window else { return }
+        center.addObserver(self, selector: #selector(scheduleMeasuring), name: NSWindow.didUpdateNotification, object: window)
+        center.addObserver(self, selector: #selector(scheduleMeasuring), name: NSWindow.didResizeNotification, object: window)
+        if let toolbar = window.toolbar {
+            center.addObserver(self, selector: #selector(scheduleMeasuring), name: NSToolbar.willAddItemNotification, object: toolbar)
+            center.addObserver(self, selector: #selector(scheduleMeasuring), name: NSToolbar.didRemoveItemNotification, object: toolbar)
+        }
+        scheduleMeasuring()
+    }
+
+    /// Measures once the toolbar has laid out what's changed, on the next
+    /// turn of the run loop, also while the window is being resized.
+    @objc func scheduleMeasuring() {
+        NSObject.cancelPreviousPerformRequests(withTarget: self, selector: #selector(measure), object: nil)
+        perform(#selector(measure), with: nil, afterDelay: 0, inModes: [.common])
+    }
+
+    @objc private func measure() {
+        guard let window, !window.title.isEmpty, let found = place(title: window.title) else {
+            send(0)
+            return
+        }
+        let itemFrame = found.item.convert(found.item.bounds, to: nil)
+        guard itemFrame.width < window.frame.width * 0.7 else {
+            send(0)
+            return
+        }
+        var left: CGFloat?
+        var right: CGFloat?
+        for neighbor in found.row.subviews where neighbor !== found.item && !neighbor.isHidden {
+            for frame in Self.contentFrames(in: neighbor) {
+                if frame.maxX <= itemFrame.minX + 1 {
+                    left = max(left ?? frame.maxX, frame.maxX)
+                } else if frame.minX >= itemFrame.maxX - 1 {
+                    right = min(right ?? frame.minX, frame.minX)
+                }
+            }
+        }
+        guard let left else {
+            send(0)
+            return
+        }
+        let end = right ?? found.row.convert(found.row.bounds, to: nil).maxX
+        let width = convert(bounds, to: nil).width
+        send(ToolbarTimer.shift(itemCenter: itemFrame.midX, width: width, left: left, right: end))
+    }
+
+    private func send(_ shift: CGFloat) {
+        guard abs(shift - reported) >= 1 else { return }
+        reported = shift
+        report?(shift)
+    }
+
+    /// The toolbar item this view is in, and the row it shares with the title.
+    private struct Place {
+        let item: NSView
+        let row: NSView
+    }
+
+    /// The item is the ancestor beside the title.
+    private func place(title: String) -> Place? {
+        var view: NSView = self
+        while let parent = view.superview {
+            if parent.subviews.contains(where: { $0 !== view && Self.shows(title: title, in: $0) }) {
+                return Place(item: view, row: parent)
+            }
+            view = parent
+        }
+        return nil
+    }
+
+    private static func shows(title: String, in view: NSView) -> Bool {
+        if let field = view as? NSTextField, field.stringValue == title {
+            return true
+        }
+        return view.subviews.contains { shows(title: title, in: $0) }
+    }
+
+    /// Where the visible controls and SwiftUI views in `view` are, in window
+    /// coordinates. Spaces between items have neither.
+    private static func contentFrames(in view: NSView) -> [CGRect] {
+        guard !view.isHidden, view.alphaValue > 0.01 else { return [] }
+        var frames: [CGRect] = []
+        let name = String(describing: type(of: view))
+        if view is NSControl || name.contains("HostingView") {
+            let frame = view.convert(view.bounds, to: nil)
+            if frame.width >= 12 {
+                frames.append(frame)
+            }
+        }
+        for subview in view.subviews {
+            frames += contentFrames(in: subview)
+        }
+        return frames
+    }
 }
 
 /// A capsule with a round button to start a timer, or with the running
@@ -64,6 +182,22 @@ struct ToolbarTimer: View {
 struct TimerCapsule: View {
     let model: AppModel
     @Environment(\.undoManager) private var undoManager
+
+    /// Whether toolbar items sit on glass, as on macOS 26 and later when
+    /// built with its SDK.
+    static var toolbarIsGlass: Bool {
+        #if compiler(>=6.2)
+        if #available(macOS 26.0, *) {
+            return true
+        }
+        #endif
+        return false
+    }
+
+    /// As tall as the toolbar's other items.
+    static let height: CGFloat = toolbarIsGlass ? 36 : 28
+    /// Around the round button, between it and the capsule's edge.
+    static let inset: CGFloat = toolbarIsGlass ? 4 : 3
 
     var body: some View {
         let recents = model.ledger.recentCombinations()
@@ -94,14 +228,14 @@ struct TimerCapsule: View {
             }
             if !recents.isEmpty {
                 Divider()
-                    .frame(height: 16)
+                    .frame(height: Self.height - 12)
                     .padding(.leading, 10)
                 recentsMenu(recents)
             }
         }
-        .padding(.leading, 3)
-        .padding(.trailing, recents.isEmpty ? 12 : 4)
-        .frame(height: 28)
+        .padding(.leading, Self.inset)
+        .padding(.trailing, recents.isEmpty ? Self.height / 2 - 2 : Self.inset)
+        .frame(height: Self.height)
         .timerCapsule(tint: model.running.map { model.ledger.color(ofProject: $0.entry.projectID) })
         .disabled(model.isReadOnly)
     }
@@ -120,7 +254,7 @@ struct TimerCapsule: View {
             Image(systemName: "chevron.down")
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.secondary)
-                .frame(width: 24, height: 24)
+                .frame(width: 24, height: Self.height - 2 * Self.inset)
                 .contentShape(Rectangle())
         }
         .menuStyle(.button)
@@ -180,20 +314,23 @@ private struct RunningTimerSummary: View {
     }
 }
 
-/// A white symbol on a colored circle, the timer's start or stop button.
+/// A white symbol on a colored circle, the timer's start or stop button,
+/// filling the capsule's height but for its inset.
 private struct TimerGlyph: View {
     let title: String
     let systemImage: String
     let color: Color
 
+    private static let diameter = TimerCapsule.height - 2 * TimerCapsule.inset
+
     var body: some View {
         Label(title, systemImage: systemImage)
             .labelStyle(.iconOnly)
-            .font(.system(size: 9, weight: .heavy))
+            .font(.system(size: (Self.diameter * 0.4).rounded(), weight: .heavy))
             .foregroundStyle(.white)
             // The play triangle's weight sits left of its middle.
             .offset(x: systemImage == "play.fill" ? 1 : 0)
-            .frame(width: 22, height: 22)
+            .frame(width: Self.diameter, height: Self.diameter)
             .background(color, in: Circle())
     }
 }
