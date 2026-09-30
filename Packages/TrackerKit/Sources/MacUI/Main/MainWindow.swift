@@ -31,8 +31,7 @@ enum Screen: String, CaseIterable, Identifiable {
     }
 }
 
-/// The main window: the screens in a sidebar, and the timer in the toolbar,
-/// between the title and the screen's items.
+/// The main window: the screens in a sidebar, and the timer in the toolbar.
 struct MainWindow: View {
     let model: AppModel
     @SceneStorage private var screen: Screen
@@ -62,7 +61,7 @@ struct MainWindow: View {
             }
         } detail: {
             detail
-                .timerToolbar(ToolbarTimer(model: model))
+                .timerToolbar(TimerCapsule(model: model).fixedSize())
         }
         .navigationTitle(screen.title)
         .frame(minWidth: 880, minHeight: 520)
