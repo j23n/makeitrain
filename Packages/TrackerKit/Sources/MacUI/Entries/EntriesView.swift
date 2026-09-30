@@ -91,9 +91,12 @@ struct EntryOrder: SortComparator, Hashable {
 /// or overlaps. The context menu splits entries, fixes overlaps and changes
 /// several entries at once.
 ///
-/// With thousands of entries, what each redraw costs matters: the rows are
-/// built in one pass from values the model keeps, and nothing here reads the
-/// clock, so the table isn't rebuilt as time passes.
+/// What the table costs to show matters. Its cells show text, and become
+/// date pickers, token fields and text fields when the pointer comes over
+/// them, since those controls take long to make. With thousands of entries,
+/// what each redraw costs matters too: the rows are built in one pass from
+/// values the model keeps, and nothing here reads the clock, so the table
+/// isn't rebuilt as time passes.
 struct EntriesView: View {
     let model: AppModel
     @Environment(\.undoManager) private var undoManager
@@ -165,18 +168,27 @@ struct EntriesView: View {
             }
             .width(min: 100, ideal: 180)
             TableColumn("Tags", sortUsing: EntryOrder(column: .tags)) { row in
-                TagField(tags: row.entry.entry.tags, suggestions: projectTags[row.entry.entry.projectID] ?? [], placeholder: "", bordered: false) { tags in
-                    model.updateEntries([row.id], actionName: "Change Tags", undoManager: undoManager) { $0.tags = tags }
+                EditOnHover(enabled: !model.isReadOnly) {
+                    TagList(tags: row.entry.entry.tags, interactive: false)
+                } editor: {
+                    TagField(tags: row.entry.entry.tags, suggestions: projectTags[row.entry.entry.projectID] ?? [], placeholder: "", bordered: false) { tags in
+                        model.updateEntries([row.id], actionName: "Change Tags", undoManager: undoManager) { $0.tags = tags }
+                    }
+                    .disabled(model.isReadOnly)
                 }
-                .disabled(model.isReadOnly)
             }
             .width(min: 60, ideal: 130)
             TableColumn("Note", sortUsing: EntryOrder(column: .note)) { row in
-                CommitField(title: "", value: row.note) { note in
-                    model.updateEntries([row.id], actionName: "Change Note", undoManager: undoManager) { $0.note = note }
+                EditOnHover(enabled: !model.isReadOnly) {
+                    Text(row.note)
+                        .lineLimit(1)
+                } editor: {
+                    CommitField(title: "", value: row.note) { note in
+                        model.updateEntries([row.id], actionName: "Change Note", undoManager: undoManager) { $0.note = note }
+                    }
+                    .textFieldStyle(.plain)
+                    .disabled(model.isReadOnly)
                 }
-                .textFieldStyle(.plain)
-                .disabled(model.isReadOnly)
             }
             .width(min: 100, ideal: 240)
         }
@@ -285,25 +297,30 @@ struct EntryStartCell: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            DatePicker(
-                "Start",
-                selection: Binding(
-                    get: { row.start.date },
-                    set: { date in commit(Timestamp(date).wholeSeconds) }
-                ),
-                in: ...(row.entry.end ?? model.now).date,
-                displayedComponents: [.date, .hourAndMinute]
-            )
-            .labelsHidden()
-            .datePickerStyle(.compact)
-            .environment(\.timeZone, Zones.zone(row.zone))
+            EditOnHover(enabled: !model.isReadOnly) {
+                DateTimeText(time: row.start, zone: row.zone)
+            } editor: {
+                DatePicker(
+                    "Start",
+                    selection: Binding(
+                        get: { row.start.date },
+                        set: { date in commit(Timestamp(date).wholeSeconds) }
+                    ),
+                    in: ...(row.entry.end ?? model.now).date,
+                    displayedComponents: [.date, .hourAndMinute]
+                )
+                .labelsHidden()
+                .datePickerStyle(.compact)
+                .environment(\.timeZone, Zones.zone(row.zone))
+                .disabled(model.isReadOnly)
+            }
+            .fixedSize(horizontal: true, vertical: false)
             if let label = row.zoneLabel {
                 Text(label)
                     .foregroundStyle(.secondary)
                     .help("Recorded in \(row.zone)")
             }
         }
-        .disabled(model.isReadOnly)
     }
 
     private func commit(_ start: Timestamp) {
@@ -325,20 +342,24 @@ struct EntryEndCell: View {
 
     var body: some View {
         if let end = row.entry.end {
-            DatePicker(
-                "End",
-                selection: Binding(
-                    get: { end.date },
-                    set: { date in commit(Timestamp(date).wholeSeconds, replacing: end) }
-                ),
-                in: row.start.date...,
-                displayedComponents: [.date, .hourAndMinute]
-            )
-            .labelsHidden()
-            .datePickerStyle(.compact)
-            .environment(\.timeZone, Zones.zone(row.zone))
+            EditOnHover(enabled: !model.isReadOnly) {
+                DateTimeText(time: end, zone: row.zone)
+            } editor: {
+                DatePicker(
+                    "End",
+                    selection: Binding(
+                        get: { end.date },
+                        set: { date in commit(Timestamp(date).wholeSeconds, replacing: end) }
+                    ),
+                    in: row.start.date...,
+                    displayedComponents: [.date, .hourAndMinute]
+                )
+                .labelsHidden()
+                .datePickerStyle(.compact)
+                .environment(\.timeZone, Zones.zone(row.zone))
+                .disabled(model.isReadOnly)
+            }
             .help("Lasts \(Format.duration(row.start.distance(to: end)))")
-            .disabled(model.isReadOnly)
         } else {
             Text("Running")
                 .foregroundStyle(.secondary)
@@ -348,6 +369,20 @@ struct EntryEndCell: View {
     private func commit(_ end: Timestamp, replacing current: Timestamp) {
         guard end != current else { return }
         model.updateEntries([row.id], actionName: "Change End", undoManager: undoManager) { $0.end = end }
+    }
+}
+
+/// A date and time as the compact date picker shows them, in a time zone,
+/// for showing in its place.
+struct DateTimeText: View {
+    let time: Timestamp
+    let zone: String
+
+    var body: some View {
+        Text(time.date, format: Date.FormatStyle(date: .numeric, time: .shortened, timeZone: Zones.zone(zone)))
+            .lineLimit(1)
+            // Where the date picker's text starts, inside its border.
+            .padding(.leading, 4)
     }
 }
 

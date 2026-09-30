@@ -47,13 +47,12 @@ struct EntriesTimings {
             TableColumn("Tags") { row in Text(row.tagsText) }
             TableColumn("Note") { row in Text(row.note) }
         })
-        measure("30 start and 30 end pickers", cells(rows) { row in
+        measure("30 start and 30 end cells, as text", cells(rows) { row in
             HStack {
                 EntryStartCell(model: model, row: row)
                 EntryEndCell(model: model, row: row)
             }
         })
-        measure("30 start pickers", cells(rows) { row in EntryStartCell(model: model, row: row) })
         measure("30 plain date pickers", cells(rows) { row in
             DatePicker("Start", selection: .constant(row.start.date), displayedComponents: [.date, .hourAndMinute])
                 .labelsHidden()
@@ -62,6 +61,7 @@ struct EntriesTimings {
         measure("30 tag fields", cells(rows) { row in
             TagField(tags: row.entry.entry.tags, suggestions: projectTags[row.entry.entry.projectID] ?? [], placeholder: "", bordered: false) { _ in }
         })
+        measure("30 tag lists", cells(rows) { row in TagList(tags: row.entry.entry.tags, interactive: false) })
         measure("30 note fields", cells(rows) { row in CommitField(title: "", value: row.note) { _ in } })
         measure("30 project cells", cells(rows) { row in EntryProjectCell(model: model, row: row) })
         measure("30 status icons", cells(rows) { row in EntryStatusIcon(row: row) })

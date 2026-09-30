@@ -87,6 +87,48 @@ struct TagField: NSViewRepresentable {
     }
 }
 
+/// A value shown as text until the pointer first comes over it, and the
+/// control that edits it from then on.
+///
+/// Date pickers, token fields and text fields are slow to make, most of all
+/// on macOS 26, where a date picker takes about 20 milliseconds. A table
+/// with several of them in every row takes seconds to open, even with only
+/// a few dozen rows. Made when the pointer arrives, the control is there by
+/// the time it's clicked, so editing still takes one click.
+struct EditOnHover<Display: View, Editor: View>: View {
+    let enabled: Bool
+    let display: () -> Display
+    let editor: () -> Editor
+    @State private var editing = false
+
+    init(
+        enabled: Bool = true,
+        @ViewBuilder display: @escaping () -> Display,
+        @ViewBuilder editor: @escaping () -> Editor
+    ) {
+        self.enabled = enabled
+        self.display = display
+        self.editor = editor
+    }
+
+    var body: some View {
+        if editing {
+            editor()
+        } else {
+            // As tall as the controls, so a row keeps its height when one
+            // takes the text's place.
+            display()
+                .frame(maxWidth: .infinity, minHeight: 22, alignment: .leading)
+                .contentShape(Rectangle())
+                .onHover { inside in
+                    if inside, enabled {
+                        editing = true
+                    }
+                }
+        }
+    }
+}
+
 /// A button that opens the searchable project list in a popover and hands
 /// over the project chosen, such as for several entries at once or as a
 /// project to merge into.
