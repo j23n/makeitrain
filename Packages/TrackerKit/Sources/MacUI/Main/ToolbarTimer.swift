@@ -117,13 +117,24 @@ private final class GapReaderView: NSView {
                 }
             }
         }
-        guard let left else {
+        guard var start = left else {
             send(0)
             return
         }
-        let end = right ?? found.row.convert(found.row.bounds, to: nil).maxX
+        var end = right ?? found.row.convert(found.row.bounds, to: nil).maxX
+        // The toolbar's sections end where the window's panes meet, as
+        // beside an inspector, and an item stays in its own.
+        if let content = window.contentView {
+            for edge in Self.paneEdges(in: content) {
+                if edge <= itemFrame.minX + 1 {
+                    start = max(start, edge)
+                } else if edge >= itemFrame.maxX - 1 {
+                    end = min(end, edge)
+                }
+            }
+        }
         let width = convert(bounds, to: nil).width
-        send(ToolbarTimer.shift(itemCenter: itemFrame.midX, width: width, left: left, right: end))
+        send(ToolbarTimer.shift(itemCenter: itemFrame.midX, width: width, left: start, right: end))
     }
 
     private func send(_ shift: CGFloat) {
@@ -155,6 +166,25 @@ private final class GapReaderView: NSView {
             return true
         }
         return view.subviews.contains { shows(title: title, in: $0) }
+    }
+
+    /// Where side-by-side panes meet in `view`, in window coordinates. Split
+    /// views sit near the top, so it doesn't look inside scroll views.
+    private static func paneEdges(in view: NSView) -> [CGFloat] {
+        if view is NSScrollView {
+            return []
+        }
+        var edges: [CGFloat] = []
+        if let split = view as? NSSplitView, split.isVertical {
+            let panes = split.arrangedSubviews.filter { !$0.isHidden && $0.frame.width > 1 }
+            for pane in panes.dropLast() {
+                edges.append(pane.convert(pane.bounds, to: nil).maxX)
+            }
+        }
+        for subview in view.subviews {
+            edges += paneEdges(in: subview)
+        }
+        return edges
     }
 
     /// Where the visible controls and SwiftUI views in `view` are, in window

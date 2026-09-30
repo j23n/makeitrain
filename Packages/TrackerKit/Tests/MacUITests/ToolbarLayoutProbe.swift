@@ -47,6 +47,19 @@ struct ToolbarLayoutProbe {
             return
         }
         let capsuleFrame = capsule.convert(capsule.bounds, to: nil)
+        var ancestor = capsule.superview
+        while let view = ancestor, !String(describing: type(of: view)).contains("ItemViewer") {
+            ancestor = view.superview
+        }
+        let item = ancestor.map { $0.convert($0.bounds, to: nil) }
+        let splits = Self.all(in: window.contentView ?? root).compactMap { $0 as? NSSplitView }.filter(\.isVertical)
+        let edges = splits.map { split in
+            split.arrangedSubviews.map { pane in
+                let frame = pane.convert(pane.bounds, to: nil)
+                return "\(Int(frame.minX))...\(Int(frame.maxX))\(pane.isHidden ? " hidden" : "")"
+            }.joined(separator: " | ")
+        }
+        print("PROBE \(name): item \(item.map { "\(Int($0.minX))...\(Int($0.maxX)), center \(Int($0.midX))" } ?? "none"); panes \(edges.joined(separator: "; "))")
         let titleEnd = title.convert(title.bounds, to: nil).maxX
         let band = capsuleFrame.minY - 20...capsuleFrame.maxY + 20
         let next = Self.all(in: root)
