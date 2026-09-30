@@ -4,24 +4,66 @@ import Testing
 @testable import MacUI
 
 @Suite struct ToolbarTimerTests {
-    @Test func movesToTheMiddleOfTheSpaceBetweenTheTitleAndTheItems() {
-        // The toolbar centers the item at 505, but the title ends at 75 and
-        // the first button starts at 860, so the middle of the space is 467.5.
-        #expect(ToolbarTimer.shift(itemCenter: 505, width: 262, left: 75, right: 860) == -38)
-        // A long title on the other side moves it the other way.
-        #expect(ToolbarTimer.shift(itemCenter: 505, width: 262, left: 250, right: 960) == 100)
+    /// Centers a timer `width` wide in `space`, in a toolbar that puts its
+    /// middle at `place(padding)`, until the centering stops changing the
+    /// padding. Where the timer ends up, and how many changes that took.
+    func settle(width: CGFloat, space: ClosedRange<CGFloat>, place: (CGFloat) -> CGFloat) -> (center: CGFloat, changes: Int) {
+        var centering = TimerCentering()
+        var center = place(0)
+        var changes = 0
+        while let padding = centering.update(center: center, width: width, space: space), changes < 20 {
+            changes += 1
+            center = place(padding)
+        }
+        return (center, changes)
     }
 
-    @Test func movesOnlyAsFarAsTheWidenedItemStaysClear() {
-        #expect(ToolbarTimer.shift(itemCenter: 505, width: 600, left: 75, right: 860) == -38)
-        // A 680-point item centered on 505 reaches 845. Moved 7 points to the
-        // left, it's 14 points wider and reaches 852, 8 short of the button.
-        #expect(ToolbarTimer.shift(itemCenter: 505, width: 680, left: 75, right: 860) == -7)
-        #expect(ToolbarTimer.shift(itemCenter: 505, width: 800, left: 75, right: 860) == 0)
+    @Test func centersAnItemTheToolbarCenters() {
+        // The toolbar centers the item on 505; padding on one side widens it
+        // on both, so the timer moves half as far.
+        let result = settle(width: 262, space: 75...860) { padding in 505 + padding / 2 }
+        #expect(abs(result.center - 467.5) <= 1)
+        #expect(result.changes == 1)
     }
 
-    @Test func staysPutWhenAlreadyInTheMiddle() {
-        #expect(ToolbarTimer.shift(itemCenter: 500, width: 200, left: 100, right: 900) == 0)
+    @Test func centersAnItemRightAfterTheTitle() {
+        // Without room to center it, the toolbar puts the item right after
+        // the title, at 290, and leading padding moves the timer as far.
+        let result = settle(width: 411, space: 206...816) { padding in 290 + 411 / 2 + max(0, padding) }
+        #expect(abs(result.center - 511) <= 1)
+        #expect(result.changes <= 3)
+    }
+
+    @Test func centersAnItemAgainstTheButtons() {
+        // An item that ends against the buttons moves left with trailing
+        // padding, as far.
+        let result = settle(width: 411, space: 281...883) { padding in 875 - 411 / 2 + min(0, padding) }
+        #expect(abs(result.center - 582) <= 1)
+        #expect(result.changes <= 3)
+    }
+
+    @Test func staysPutInTheMiddle() {
+        var centering = TimerCentering()
+        #expect(centering.update(center: 500, width: 200, space: 100...900) == nil)
+    }
+
+    @Test func stopsAfterEightChanges() {
+        // A toolbar that moves the timer somewhere else each time.
+        var centering = TimerCentering()
+        var changes = 0
+        var center: CGFloat = 505
+        while centering.update(center: center, width: 262, space: 75...860) != nil, changes < 20 {
+            changes += 1
+            center = changes.isMultiple(of: 2) ? 300 : 700
+        }
+        #expect(changes == 8)
+    }
+
+    @Test func dropsThePaddingWithNothingToCenterIn() {
+        var centering = TimerCentering()
+        #expect(centering.update(center: 505, width: 262, space: 75...860) == -75)
+        #expect(centering.update(center: 467, width: 262, space: nil) == 0)
+        #expect(centering.update(center: 505, width: 262, space: nil) == nil)
     }
 }
 #endif

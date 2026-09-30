@@ -7,46 +7,89 @@ import TrackerKit
 /// The timer in the main window's toolbar, in the middle of the space
 /// between the title and the next item.
 ///
-/// The toolbar centers its principal item in the part beside the sidebar,
-/// which puts it off the middle of the free space whenever the items on one
-/// side take more room than the title on the other, as the entries screen's
-/// three buttons do. Padding on the far side moves it by the difference, as
-/// far as that keeps it clear of both.
+/// The toolbar centers its principal item in its part of the toolbar, which
+/// puts it off the middle of the free space whenever the items on one side
+/// take more room than the title on the other, as the entries screen's three
+/// buttons do; where there isn't room to center it, the toolbar puts it
+/// right after the title. Padding on one side moves it, by as much as the
+/// timer sees it move.
 struct ToolbarTimer: View {
     let model: AppModel
-    @State private var shift: CGFloat = 0
+    /// Leading padding if positive, trailing if negative.
+    @State private var padding: CGFloat = 0
 
     var body: some View {
         TimerCapsule(model: model)
             .fixedSize()
             .background {
-                ToolbarGapReader { newShift in
-                    shift = newShift
+                ToolbarGapReader { newPadding in
+                    padding = newPadding
                 }
             }
-            .padding(.leading, max(0, 2 * shift))
-            .padding(.trailing, max(0, -2 * shift))
-    }
-
-    /// How far to move content `width` wide, in an item the toolbar centers
-    /// on `itemCenter`, to the middle of the space from `left` to `right`.
-    ///
-    /// Padding on the far side moves it, which widens the item by twice as
-    /// much, evenly around its center. It moves only as far as the widened
-    /// item stays `margin` clear of both ends, since the toolbar would
-    /// otherwise move the item itself.
-    static func shift(itemCenter: CGFloat, width: CGFloat, left: CGFloat, right: CGFloat, margin: CGFloat = 8) -> CGFloat {
-        let wanted = (left + right) / 2 - itemCenter
-        let limit = max(0, min(itemCenter - width / 2 - left, right - itemCenter - width / 2) - margin)
-        return min(max(wanted, -limit), limit).rounded()
+            .padding(.leading, max(0, padding))
+            .padding(.trailing, max(0, -padding))
     }
 }
 
-/// Reports how far to move the toolbar item it's in to the middle of the
-/// space between the title and the next item, from the frames of the
-/// toolbar's views: the window title's text field, the item's neighbors in
-/// the row the title shares with the items, and the controls and SwiftUI
-/// views in them. It reports no move if it can't find them.
+/// Works out the padding that puts the timer in the middle of its space,
+/// from where it sees the timer end up.
+///
+/// How far padding moves the timer depends on how the toolbar places it:
+/// half as far when it centers the item, which the padding widens on both
+/// sides, and as far when the item sits against something. It starts from
+/// the first, and goes by what it sees after each change. It makes at most
+/// eight changes for the same space, so the timer can't wander.
+struct TimerCentering {
+    /// Leading padding if positive, trailing if negative.
+    private(set) var padding: CGFloat = 0
+    private var gain: CGFloat = 0.5
+    private var space: ClosedRange<CGFloat>?
+    private var last: (padding: CGFloat, center: CGFloat)?
+    private var changes = 0
+
+    /// The new padding for a timer `width` wide whose middle is at `center`,
+    /// in `space`, or nil to keep the padding. No space means there's
+    /// nothing to center in, and no padding.
+    mutating func update(center: CGFloat, width: CGFloat, space measured: ClosedRange<CGFloat>?) -> CGFloat? {
+        guard let measured else {
+            space = nil
+            last = nil
+            guard padding != 0 else { return nil }
+            padding = 0
+            return 0
+        }
+        let current = measured.lowerBound.rounded()...measured.upperBound.rounded()
+        if current != space {
+            space = current
+            last = nil
+            gain = 0.5
+            changes = 0
+        }
+        if let last, abs(padding - last.padding) >= 1 {
+            let seen = (center - last.center) / (padding - last.padding)
+            if seen > 0.2 {
+                gain = min(seen, 2)
+            }
+        }
+        last = (padding, center)
+        let error = (current.lowerBound + current.upperBound) / 2 - center
+        guard abs(error) >= 1, changes < 8 else { return nil }
+        let room = max(0, (current.upperBound - current.lowerBound - width) / 2)
+        let next = min(max(padding + error / gain, -room), room).rounded()
+        guard abs(next - padding) >= 1 else { return nil }
+        changes += 1
+        padding = next
+        return next
+    }
+}
+
+/// Reports the padding that moves the toolbar item it's in to the middle of
+/// the space between the title and the next item. It finds them from the
+/// frames of the toolbar's views: the window title's text field, the item's
+/// neighbors in the row the title shares with the items, and the controls
+/// and SwiftUI views in them. The toolbar's sections end where the window's
+/// panes meet, as beside an inspector. It reports no padding if it can't
+/// find the title.
 ///
 /// It measures again after every event the window handles, as when the
 /// sidebar or the window is resized or the search field opens, and when
@@ -60,15 +103,22 @@ private struct ToolbarGapReader: NSViewRepresentable {
         return view
     }
 
+    /// Called when the timer is drawn again, as with a new padding.
     func updateNSView(_ view: GapReaderView, context: Context) {
         view.report = report
-        view.scheduleMeasuring()
+        view.redrawn()
     }
 }
 
 private final class GapReaderView: NSView {
     var report: ((CGFloat) -> Void)?
-    private var reported: CGFloat = 0
+    private var centering = TimerCentering()
+    /// When it last reported, to stop if the toolbar keeps moving the timer.
+    private var reports: [Date] = []
+    private var paused = false
+    /// When it reported a padding the timer hasn't been drawn with yet.
+    /// Measuring before then would see it where it was.
+    private var waitingSince: Date?
 
     override func hitTest(_ point: NSPoint) -> NSView? {
         nil
@@ -81,11 +131,21 @@ private final class GapReaderView: NSView {
         NSObject.cancelPreviousPerformRequests(withTarget: self)
         guard let window else { return }
         center.addObserver(self, selector: #selector(scheduleMeasuring), name: NSWindow.didUpdateNotification, object: window)
-        center.addObserver(self, selector: #selector(scheduleMeasuring), name: NSWindow.didResizeNotification, object: window)
+        center.addObserver(self, selector: #selector(windowChanged), name: NSWindow.didResizeNotification, object: window)
         if let toolbar = window.toolbar {
-            center.addObserver(self, selector: #selector(scheduleMeasuring), name: NSToolbar.willAddItemNotification, object: toolbar)
-            center.addObserver(self, selector: #selector(scheduleMeasuring), name: NSToolbar.didRemoveItemNotification, object: toolbar)
+            center.addObserver(self, selector: #selector(windowChanged), name: NSToolbar.willAddItemNotification, object: toolbar)
+            center.addObserver(self, selector: #selector(windowChanged), name: NSToolbar.didRemoveItemNotification, object: toolbar)
         }
+        windowChanged()
+    }
+
+    @objc private func windowChanged() {
+        paused = false
+        scheduleMeasuring()
+    }
+
+    func redrawn() {
+        waitingSince = nil
         scheduleMeasuring()
     }
 
@@ -97,15 +157,31 @@ private final class GapReaderView: NSView {
     }
 
     @objc private func measure() {
-        guard let window, !window.title.isEmpty, let found = place(title: window.title) else {
-            send(0)
+        guard !paused, let window else { return }
+        if let waitingSince {
+            guard Date().timeIntervalSince(waitingSince) > 0.5 else { return }
+        }
+        waitingSince = nil
+        let frame = convert(bounds, to: nil)
+        guard let padding = centering.update(center: frame.midX, width: frame.width, space: space(in: window)) else {
             return
         }
+        let now = Date()
+        reports = reports.filter { now.timeIntervalSince($0) < 2 } + [now]
+        if reports.count > 20 {
+            // Something keeps moving it; leave it until the window changes.
+            paused = true
+        }
+        waitingSince = now
+        report?(padding)
+    }
+
+    /// The space the timer has: from the title, or a pane's edge, to the
+    /// next item, or a pane's edge, or the end of the row.
+    private func space(in window: NSWindow) -> ClosedRange<CGFloat>? {
+        guard !window.title.isEmpty, let found = place(title: window.title) else { return nil }
         let itemFrame = found.item.convert(found.item.bounds, to: nil)
-        guard itemFrame.width < window.frame.width * 0.7 else {
-            send(0)
-            return
-        }
+        guard itemFrame.width < window.frame.width * 0.7 else { return nil }
         var left: CGFloat?
         var right: CGFloat?
         for neighbor in found.row.subviews where neighbor !== found.item && !neighbor.isHidden {
@@ -117,15 +193,10 @@ private final class GapReaderView: NSView {
                 }
             }
         }
-        guard var start = left else {
-            send(0)
-            return
-        }
+        guard var start = left else { return nil }
         var end = right ?? found.row.convert(found.row.bounds, to: nil).maxX
-        // The toolbar's sections end where the window's panes meet, as
-        // beside an inspector, and an item stays in its own.
         if let content = window.contentView {
-            for edge in Self.paneEdges(in: content) {
+            for edge in Self.paneEdges(in: content, width: window.frame.width) {
                 if edge <= itemFrame.minX + 1 {
                     start = max(start, edge)
                 } else if edge >= itemFrame.maxX - 1 {
@@ -133,14 +204,7 @@ private final class GapReaderView: NSView {
                 }
             }
         }
-        let width = convert(bounds, to: nil).width
-        send(ToolbarTimer.shift(itemCenter: itemFrame.midX, width: width, left: start, right: end))
-    }
-
-    private func send(_ shift: CGFloat) {
-        guard abs(shift - reported) >= 1 else { return }
-        reported = shift
-        report?(shift)
+        return start < end ? start...end : nil
     }
 
     /// The toolbar item this view is in, and the row it shares with the title.
@@ -168,21 +232,28 @@ private final class GapReaderView: NSView {
         return view.subviews.contains { shows(title: title, in: $0) }
     }
 
-    /// Where side-by-side panes meet in `view`, in window coordinates. Split
-    /// views sit near the top, so it doesn't look inside scroll views.
-    private static func paneEdges(in view: NSView) -> [CGFloat] {
+    /// Where side-by-side panes end inside the window, in window coordinates,
+    /// but for the ends of the split views they're in. From macOS 26 the
+    /// middle pane runs under the sidebar and the inspector, so it's their
+    /// edges that count. Split views sit near the top, so it doesn't look
+    /// inside scroll views.
+    private static func paneEdges(in view: NSView, width: CGFloat) -> [CGFloat] {
         if view is NSScrollView {
             return []
         }
         var edges: [CGFloat] = []
         if let split = view as? NSSplitView, split.isVertical {
-            let panes = split.arrangedSubviews.filter { !$0.isHidden && $0.frame.width > 1 }
-            for pane in panes.dropLast() {
-                edges.append(pane.convert(pane.bounds, to: nil).maxX)
+            let ends = split.convert(split.bounds, to: nil)
+            for pane in split.arrangedSubviews where !pane.isHidden && pane.frame.width > 1 {
+                let frame = pane.convert(pane.bounds, to: nil)
+                for edge in [frame.minX, frame.maxX]
+                where edge > 1 && edge < width - 1 && abs(edge - ends.minX) > 1 && abs(edge - ends.maxX) > 1 {
+                    edges.append(edge)
+                }
             }
         }
         for subview in view.subviews {
-            edges += paneEdges(in: subview)
+            edges += paneEdges(in: subview, width: width)
         }
         return edges
     }
