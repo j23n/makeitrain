@@ -25,7 +25,7 @@ public struct AppScenes: Scene {
         }
         .defaultSize(width: 1200, height: 720)
         .commands {
-            ImportCommands()
+            FileCommands()
         }
 
         Settings {

@@ -61,9 +61,10 @@ extension FocusedValues {
     }
 }
 
-/// File › Import CSV… and File › Import Calendar Events….
-struct ImportCommands: Commands {
+/// File › Import CSV…, Import Calendar Events… and Export CSV….
+struct FileCommands: Commands {
     @FocusedValue(\.imports) private var imports
+    @FocusedValue(\.exports) private var exports
 
     var body: some Commands {
         CommandGroup(after: .importExport) {
@@ -76,6 +77,11 @@ struct ImportCommands: Commands {
                 imports?.calendar()
             }
             .disabled(imports == nil)
+            Button("Export CSV…") {
+                exports?.csv?()
+            }
+            .keyboardShortcut("e", modifiers: [.command, .shift])
+            .disabled(exports?.csv == nil)
         }
     }
 }

@@ -62,6 +62,9 @@ struct MainWindow: View {
         } detail: {
             detail
                 .timerToolbar(title: screen.title, timer: TimerCapsule(model: model).fixedSize())
+                // Here rather than beside the import, so the two file dialogs
+                // aren't on the same view.
+                .exportsEntries(of: model)
         }
         .navigationTitle(screen.title)
         .frame(minWidth: 880, minHeight: 520)

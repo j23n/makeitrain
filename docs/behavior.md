@@ -76,7 +76,7 @@ The rules the app follows, whichever screen or device an edit comes from. One ti
 
 ## CSV export
 
-The CSV has the entries behind the report: the same range and filters, one row each, whatever the grouping.
+The CSV has the entries behind the report: the same range and filters, one row each, whatever the grouping. On the Mac, File › Export CSV… saves every entry the same way, from the first day to the last.
 
 ```csv
 date,start,end,hours,client,project,tags,note

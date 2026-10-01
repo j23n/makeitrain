@@ -78,6 +78,25 @@ import Testing
         #expect(lines(text).count == 3)
     }
 
+    @Test func writesEveryEntryButARunningTimer() {
+        var ledger = ledger
+        for entry in [
+            TimeEntry(id: uuid(1), start: t("2026-09-23T09:00:00+02:00"), end: t("2026-09-23T10:00:00+02:00"), timeZone: "Europe/Berlin", updated: now),
+            TimeEntry(id: uuid(2), start: t("2025-03-04T09:00:00+01:00"), end: t("2025-03-04T09:30:00+01:00"), timeZone: "Europe/Berlin", updated: now),
+            TimeEntry(id: uuid(3), start: t("2026-09-25T17:00:00+02:00"), timeZone: "Europe/Berlin", updated: now),
+        ] {
+            ledger.merge(entry)
+        }
+
+        let rows = lines(CSVExport.text(for: ledger.resolvedEntries(), ledger: ledger))
+        #expect(rows == [
+            "date,start,end,hours,client,project,tags,note",
+            "2025-03-04,2025-03-04T09:00:00+01:00,2025-03-04T09:30:00+01:00,0.5000,,,,",
+            "2026-09-23,2026-09-23T09:00:00+02:00,2026-09-23T10:00:00+02:00,1.0000,,,,",
+            "",
+        ])
+    }
+
     @Test func roundsHoursToFourDecimals() {
         #expect(CSVExport.hours(0) == "0.0000")
         #expect(CSVExport.hours(1000) == "0.0003")

@@ -1,6 +1,6 @@
 import Foundation
 
-/// A report's entries as CSV, one row per entry:
+/// Entries as CSV, such as a report's, one row per entry:
 ///
 ///     date,start,end,hours,client,project,tags,note
 ///
@@ -17,12 +17,21 @@ public enum CSVExport {
     public static let header = ["date", "start", "end", "hours", "client", "project", "tags", "note"]
 
     public static func data(for report: Report, ledger: Ledger) -> Data {
-        Data(text(for: report, ledger: ledger).utf8)
+        data(for: report.entries, ledger: ledger)
+    }
+
+    /// The entries in the order given, such as every entry the app has.
+    public static func data(for entries: [ResolvedEntry], ledger: Ledger) -> Data {
+        Data(text(for: entries, ledger: ledger).utf8)
     }
 
     public static func text(for report: Report, ledger: Ledger) -> String {
+        text(for: report.entries, ledger: ledger)
+    }
+
+    public static func text(for entries: [ResolvedEntry], ledger: Ledger) -> String {
         var lines = [header.joined(separator: ",")]
-        for resolved in report.entries {
+        for resolved in entries {
             guard let end = resolved.end else { continue }
             let entry = resolved.entry
             let project = entry.projectID.flatMap { ledger.projects[$0] }
