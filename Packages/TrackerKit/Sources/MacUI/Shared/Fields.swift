@@ -13,6 +13,11 @@ struct TagField: NSViewRepresentable {
     /// Whether it looks like a text field. In a table cell it doesn't, and
     /// keeps to one line.
     var bordered = true
+    /// Whether it starts editing as it shows, after the last tag, as when a
+    /// table cell is clicked.
+    var editsOnAppear = false
+    /// Called once editing has ended and the tags are committed.
+    var endEditing: (() -> Void)? = nil
     let commit: ([String]) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -20,7 +25,8 @@ struct TagField: NSViewRepresentable {
     }
 
     func makeNSView(context: Context) -> NSTokenField {
-        let field = NSTokenField()
+        let field = TagTokenField()
+        field.editsOnAppear = editsOnAppear
         field.delegate = context.coordinator
         field.tokenStyle = .rounded
         field.completionDelay = 0.1
@@ -65,6 +71,12 @@ struct TagField: NSViewRepresentable {
             if tokens != parent.tags {
                 parent.commit(tokens)
             }
+            if let endEditing = parent.endEditing {
+                // Once AppKit is done with the field, which this may remove.
+                Task { @MainActor in
+                    endEditing()
+                }
+            }
         }
 
         func tokenField(
@@ -87,6 +99,197 @@ struct TagField: NSViewRepresentable {
     }
 }
 
+/// A token field that can start editing as it shows.
+private final class TagTokenField: NSTokenField {
+    var editsOnAppear = false
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard editsOnAppear, window != nil else { return }
+        editsOnAppear = false
+        // Once the window has finished setting up its first responder.
+        Task { @MainActor [weak self] in
+            guard let self, let window = self.window, window.makeFirstResponder(self) else { return }
+            // The insertion point after the last tag, rather than every tag
+            // selected, so that typing adds one.
+            if let editor = self.currentEditor() {
+                editor.selectedRange = NSRange(location: (editor.string as NSString).length, length: 0)
+            }
+        }
+    }
+}
+
+/// A date and time to type over, field by field, or to pick from the
+/// calendar that opens when its date is clicked, in a time zone. It has no
+/// stepper. Return finishes editing, Escape puts back the date it had, and
+/// the date is committed when editing ends.
+struct DateTimeField: NSViewRepresentable {
+    let title: String
+    let date: Date
+    var minimum: Date? = nil
+    var maximum: Date? = nil
+    let timeZone: TimeZone
+    /// Whether it starts editing as it shows, as when a table cell is
+    /// clicked.
+    var editsOnAppear = false
+    /// Called once editing has ended and the date is committed.
+    var endEditing: (() -> Void)? = nil
+    let commit: (Date) -> Void
+
+    func makeNSView(context: Context) -> DateTimePicker {
+        let picker = DateTimePicker()
+        picker.datePickerStyle = .textField
+        picker.datePickerElements = [.yearMonthDay, .hourMinute]
+        picker.presentsCalendarOverlay = true
+        picker.isBezeled = true
+        picker.drawsBackground = true
+        picker.backgroundColor = .textBackgroundColor
+        picker.setContentHuggingPriority(.defaultHigh, for: .horizontal)
+        picker.setAccessibilityLabel(title)
+        picker.editsOnAppear = editsOnAppear
+        updateNSView(picker, context: context)
+        return picker
+    }
+
+    func updateNSView(_ picker: DateTimePicker, context: Context) {
+        picker.timeZone = timeZone
+        picker.minDate = minimum
+        picker.maxDate = maximum
+        picker.isEnabled = context.environment.isEnabled
+        // Not while it's edited, which would undo what's typed.
+        if !picker.isEditing, picker.dateValue != date {
+            picker.dateValue = date
+        }
+        picker.ended = { changed in
+            // Once AppKit is done with the picker, which this may remove.
+            Task { @MainActor in
+                if let changed {
+                    commit(changed)
+                }
+                endEditing?()
+            }
+        }
+    }
+
+    static func dismantleNSView(_ picker: DateTimePicker, coordinator: ()) {
+        // Removed while edited, such as when its row scrolls away: what was
+        // typed still counts.
+        picker.finishEditing()
+    }
+}
+
+/// A date picker that says when editing ends and whether the date changed,
+/// and that can start editing as it shows.
+final class DateTimePicker: NSDatePicker {
+    var editsOnAppear = false
+    /// Called when editing ends, with the new date, or nil when it's the
+    /// same as when editing began.
+    var ended: ((Date?) -> Void)?
+    private(set) var isEditing = false
+    private var original: Date?
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard editsOnAppear, window != nil else { return }
+        editsOnAppear = false
+        // Once the window has finished setting up its first responder.
+        Task { @MainActor [weak self] in
+            guard let self, let window = self.window else { return }
+            window.makeFirstResponder(self)
+        }
+    }
+
+    override func becomeFirstResponder() -> Bool {
+        let became = super.becomeFirstResponder()
+        if became, !isEditing {
+            isEditing = true
+            original = dateValue
+        }
+        return became
+    }
+
+    override func resignFirstResponder() -> Bool {
+        let resigned = super.resignFirstResponder()
+        if resigned {
+            finishEditing()
+        }
+        return resigned
+    }
+
+    /// Ends editing, unless it has ended already, and says so.
+    func finishEditing() {
+        guard isEditing else { return }
+        isEditing = false
+        ended?(dateValue == original ? nil : dateValue)
+    }
+
+    override func keyDown(with event: NSEvent) {
+        switch event.keyCode {
+        case 36, 76:
+            // Return or Enter.
+            window?.makeFirstResponder(nil)
+        case 53:
+            // Escape.
+            if let original {
+                dateValue = original
+            }
+            window?.makeFirstResponder(nil)
+        default:
+            super.keyDown(with: event)
+        }
+    }
+}
+
+/// A value shown as text until it's clicked, and then the control that
+/// edits it, until editing ends. The control starts editing as it shows, and
+/// calls `done` when editing ends, to show the text again.
+///
+/// For controls that don't look like their text, such as date fields and
+/// token fields: only the one being edited looks different, whatever the
+/// pointer has passed over. `EditOnHover` is for controls that do.
+struct EditOnClick<Display: View, Editor: View>: View {
+    let enabled: Bool
+    let display: () -> Display
+    let editor: (_ done: @escaping () -> Void) -> Editor
+    @State private var editing = false
+
+    init(
+        enabled: Bool = true,
+        @ViewBuilder display: @escaping () -> Display,
+        @ViewBuilder editor: @escaping (_ done: @escaping () -> Void) -> Editor
+    ) {
+        self.enabled = enabled
+        self.display = display
+        self.editor = editor
+    }
+
+    var body: some View {
+        if editing {
+            editor {
+                editing = false
+            }
+        } else {
+            // As tall as the controls, so a row keeps its height when one
+            // takes the text's place.
+            display()
+                .frame(maxWidth: .infinity, minHeight: 22, alignment: .leading)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    edit()
+                }
+                .accessibilityAction {
+                    edit()
+                }
+        }
+    }
+
+    private func edit() {
+        if enabled {
+            editing = true
+        }
+    }
+}
+
 /// A value shown as text until the pointer first comes over it, and the
 /// control that edits it from then on.
 ///
@@ -94,7 +297,9 @@ struct TagField: NSViewRepresentable {
 /// on macOS 26, where a date picker takes about 20 milliseconds. A table
 /// with several of them in every row takes seconds to open, even with only
 /// a few dozen rows. Made when the pointer arrives, the control is there by
-/// the time it's clicked, so editing still takes one click.
+/// the time it's clicked, so editing still takes one click. It's for
+/// controls that look like their text, such as a plain text field, since
+/// the ones the pointer has passed over stay.
 struct EditOnHover<Display: View, Editor: View>: View {
     let enabled: Bool
     let display: () -> Display
@@ -171,6 +376,14 @@ struct ProjectChooserButton: View {
     }
     .formStyle(.grouped)
     .frame(width: 420)
+}
+
+#Preview("Date Time Field") {
+    VStack(alignment: .leading, spacing: 12) {
+        DateTimeText(time: PreviewData.now, zone: TimeZone.current.identifier)
+        DateTimeField(title: "Start", date: PreviewData.now.date, timeZone: .current) { _ in }
+    }
+    .padding(40)
 }
 
 #Preview("Project Chooser Button") {

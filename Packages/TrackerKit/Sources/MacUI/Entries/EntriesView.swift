@@ -168,10 +168,17 @@ struct EntriesView: View {
             }
             .width(min: 100, ideal: 180)
             TableColumn("Tags", sortUsing: EntryOrder(column: .tags)) { row in
-                EditOnHover(enabled: !model.isReadOnly) {
+                EditOnClick(enabled: !model.isReadOnly) {
                     TagList(tags: row.entry.entry.tags, interactive: false)
-                } editor: {
-                    TagField(tags: row.entry.entry.tags, suggestions: projectTags[row.entry.entry.projectID] ?? [], placeholder: "", bordered: false) { tags in
+                } editor: { done in
+                    TagField(
+                        tags: row.entry.entry.tags,
+                        suggestions: projectTags[row.entry.entry.projectID] ?? [],
+                        placeholder: "",
+                        bordered: false,
+                        editsOnAppear: true,
+                        endEditing: done
+                    ) { tags in
                         model.updateEntries([row.id], actionName: "Change Tags", undoManager: undoManager) { $0.tags = tags }
                     }
                     .disabled(model.isReadOnly)
@@ -297,21 +304,19 @@ struct EntryStartCell: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            EditOnHover(enabled: !model.isReadOnly) {
+            EditOnClick(enabled: !model.isReadOnly) {
                 DateTimeText(time: row.start, zone: row.zone)
-            } editor: {
-                DatePicker(
-                    "Start",
-                    selection: Binding(
-                        get: { row.start.date },
-                        set: { date in commit(Timestamp(date).wholeSeconds) }
-                    ),
-                    in: ...(row.entry.end ?? model.now).date,
-                    displayedComponents: [.date, .hourAndMinute]
-                )
-                .labelsHidden()
-                .datePickerStyle(.compact)
-                .environment(\.timeZone, Zones.zone(row.zone))
+            } editor: { done in
+                DateTimeField(
+                    title: "Start",
+                    date: row.start.date,
+                    maximum: (row.entry.end ?? model.now).date,
+                    timeZone: Zones.zone(row.zone),
+                    editsOnAppear: true,
+                    endEditing: done
+                ) { date in
+                    commit(Timestamp(date).wholeSeconds)
+                }
                 .disabled(model.isReadOnly)
             }
             .fixedSize(horizontal: true, vertical: false)
@@ -342,21 +347,19 @@ struct EntryEndCell: View {
 
     var body: some View {
         if let end = row.entry.end {
-            EditOnHover(enabled: !model.isReadOnly) {
+            EditOnClick(enabled: !model.isReadOnly) {
                 DateTimeText(time: end, zone: row.zone)
-            } editor: {
-                DatePicker(
-                    "End",
-                    selection: Binding(
-                        get: { end.date },
-                        set: { date in commit(Timestamp(date).wholeSeconds, replacing: end) }
-                    ),
-                    in: row.start.date...,
-                    displayedComponents: [.date, .hourAndMinute]
-                )
-                .labelsHidden()
-                .datePickerStyle(.compact)
-                .environment(\.timeZone, Zones.zone(row.zone))
+            } editor: { done in
+                DateTimeField(
+                    title: "End",
+                    date: end.date,
+                    minimum: row.start.date,
+                    timeZone: Zones.zone(row.zone),
+                    editsOnAppear: true,
+                    endEditing: done
+                ) { date in
+                    commit(Timestamp(date).wholeSeconds, replacing: end)
+                }
                 .disabled(model.isReadOnly)
             }
             .help("Lasts \(Format.duration(row.start.distance(to: end)))")
@@ -372,8 +375,8 @@ struct EntryEndCell: View {
     }
 }
 
-/// A date and time as the compact date picker shows them, in a time zone,
-/// for showing in its place.
+/// A date and time as the date field shows them, in a time zone, for
+/// showing in its place until it's clicked.
 struct DateTimeText: View {
     let time: Timestamp
     let zone: String
