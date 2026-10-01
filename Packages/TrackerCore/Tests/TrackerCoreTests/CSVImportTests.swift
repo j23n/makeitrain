@@ -86,6 +86,41 @@ import Testing
         #expect(result.entries[0].note == "Wireframes")
     }
 
+    @Test func readsCompactDateTimes() throws {
+        // In UTC, as Timewarrior writes them, without seconds or zone, and
+        // with an offset.
+        let result = try plan("""
+        start,end,tags
+        20260713T152036Z,20260713T163000Z,design
+        20260714T0900,20260714T1015,
+        20260715T090000+0400,20260715T100000+04:00,
+        """)
+        #expect(result.problems.isEmpty)
+        #expect(result.entries.map(\.start) == [
+            t("2026-07-13T15:20:36Z"), t("2026-07-14T09:00:00+02:00"), t("2026-07-15T09:00:00+04:00"),
+        ])
+        #expect(result.entries.compactMap(\.end) == [
+            t("2026-07-13T16:30:00Z"), t("2026-07-14T10:15:00+02:00"), t("2026-07-15T10:00:00+04:00"),
+        ])
+        // UTC doesn't say where the work was done, so it shows at Berlin's
+        // time, 17:20; an offset keeps the time of day it was recorded at.
+        #expect(result.entries[0].timeZone == berlin)
+        #expect(result.entries[1].timeZone == berlin)
+        let dubai = result.entries[2]
+        #expect(Zones.offset(dubai.timeZone, at: dubai.start) == 4 * 3600)
+    }
+
+    @Test func showsTimesInUTCInThisDevicesZone() throws {
+        let result = try plan("""
+        date,start,end
+        ,2026-07-13T15:20:36Z,2026-07-13T16:30:00Z
+        20260714,09:00,10:00
+        """)
+        #expect(result.problems.isEmpty)
+        #expect(result.entries.map(\.timeZone) == [berlin, berlin])
+        #expect(result.entries.map(\.start) == [t("2026-07-13T15:20:36Z"), t("2026-07-14T09:00:00+02:00")])
+    }
+
     @Test func readsAmericanDatesAndTwelveHourTimes() throws {
         // As Clockify exports them.
         let result = try plan("""
@@ -175,6 +210,20 @@ import Testing
         #expect(records.map { $0.line } == [1, 2])
         #expect(CSVImport.separator(in: "a;b;\"c,d,e\"\n1,2,3") == ";")
         #expect(CSVImport.decode(Data([0xEF, 0xBB, 0xBF] + Array("date".utf8))) == "date")
+    }
+
+    @Test func readsCompactISO8601() {
+        #expect(CSVImport.extended("20260713T152036Z") == "2026-07-13T15:20:36Z")
+        #expect(CSVImport.extended("20260713t1520z") == "2026-07-13T15:20:00Z")
+        #expect(CSVImport.extended("20260713T152036.25+0200") == "2026-07-13T15:20:36+02:00")
+        #expect(CSVImport.extended("20260713 152036-05") == "2026-07-13T15:20:36-05:00")
+        #expect(CSVImport.extended("20260713T152036+02:30") == "2026-07-13T15:20:36+02:30")
+        #expect(CSVImport.extended("20260713T152036") == "2026-07-13T15:20:36")
+        #expect(CSVImport.extended("20260713") == "2026-07-13")
+        // Anything else stays as it is.
+        for text in ["2026-07-13T15:20:36Z", "09:00", "1.5", "20260713T15", "20260713T152036+2", "20260713T152036Zx", "Design"] {
+            #expect(CSVImport.extended(text) == text)
+        }
     }
 
     @Test func readsDatesTimesAndDurations() {

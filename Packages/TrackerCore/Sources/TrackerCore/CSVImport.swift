@@ -8,19 +8,22 @@ import Foundation
 /// - `start` and `end`: date-times with an offset, as the app exports them,
 ///   such as "2026-09-23T09:00:00+02:00"; a date and time without one, such
 ///   as "2026-09-23 09:00"; or just a time, such as "09:00" or "9:00 PM",
-///   on the day in `start date` or `date`, and in `end date`. Times without
-///   an offset are read in the time zone given. An end time earlier than
-///   the start is on the next day, unless an end date says otherwise.
+///   on the day in `start date` or `date`, and in `end date`. Date-times can
+///   also be written compactly, as "20260923T070000Z". Times without an
+///   offset are read in the time zone given, and so are times in UTC,
+///   ending in "Z", which don't say where the work was done. An end time
+///   earlier than the start is on the next day, unless an end date says
+///   otherwise.
 /// - `duration` ("1:30", "1:30:00", or hours such as "1.5") or `hours`,
 ///   when there's no end. Rows with a day and a duration but no times are
 ///   placed one after another from 9:00.
 /// - `client`, `project`, `tags` (separated by ";" or ","), and `note`,
 ///   `notes` or `description`.
 ///
-/// Dates can be written "2026-09-23", "23.09.2026", "09/23/2026" or
-/// "23/09/2026"; with slashes, the day comes first if any date in the file
-/// says so. Commas, semicolons and tabs all separate fields, whichever the
-/// heading uses.
+/// Dates can be written "2026-09-23", "20260923", "23.09.2026",
+/// "09/23/2026" or "23/09/2026"; with slashes, the day comes first if any
+/// date in the file says so. Commas, semicolons and tabs all separate
+/// fields, whichever the heading uses.
 ///
 /// Clients and projects are matched by name, ignoring case, and added when
 /// they're new. A row with the same start, end, project and note as an
@@ -274,7 +277,10 @@ public enum CSVImport {
             let startText = value(.start)
             let endText = value(.end)
             let dayText = columns.has(.startDate) ? value(.startDate) : value(.date)
-            let day = CSVImport.date(dayText, dayFirst: dayFirst)
+            // Compact ISO 8601, as "20260713T152036Z", reads as the usual form.
+            let startISO = CSVImport.extended(startText)
+            let endISO = CSVImport.extended(endText)
+            let day = CSVImport.date(CSVImport.extended(dayText), dayFirst: dayFirst)
             if !dayText.isEmpty, day == nil {
                 throw RowProblem(message: "Can't read the date \u{201C}\(dayText)\u{201D}.")
             }
@@ -283,10 +289,13 @@ public enum CSVImport {
             // The start: a date-time, or a time on the row's day.
             let start: Timestamp
             let zone: String
-            if let (time, offset) = DateTimeFormat.parseWithOffset(startText) {
+            if let (time, offset) = DateTimeFormat.parseWithOffset(startISO) {
                 start = time
-                zone = CSVImport.zone(forOffset: offset, at: time, preferring: timeZone)
-            } else if let (date, second) = CSVImport.localDateTime(startText, dayFirst: dayFirst) {
+                // A time in UTC doesn't say where the work was done, so it's
+                // shown in this device's zone. An offset keeps the time of
+                // day the entry was recorded at.
+                zone = CSVImport.isUTC(startISO) ? timeZone : CSVImport.zone(forOffset: offset, at: time, preferring: timeZone)
+            } else if let (date, second) = CSVImport.localDateTime(startISO, dayFirst: dayFirst) {
                 start = Timestamp(date: date, secondOfDay: second, zone: timeZone)
                 zone = timeZone
             } else if !startText.isEmpty {
@@ -310,16 +319,16 @@ public enum CSVImport {
 
             // The end: a date-time, a time, or the start plus the duration.
             let end: Timestamp
-            if let (time, _) = DateTimeFormat.parseWithOffset(endText) {
+            if let (time, _) = DateTimeFormat.parseWithOffset(endISO) {
                 end = time
-            } else if let (date, second) = CSVImport.localDateTime(endText, dayFirst: dayFirst) {
+            } else if let (date, second) = CSVImport.localDateTime(endISO, dayFirst: dayFirst) {
                 end = Timestamp(date: date, secondOfDay: second, zone: zone)
             } else if !endText.isEmpty {
                 guard let second = CSVImport.clockTime(endText) else {
                     throw RowProblem(message: "Can't read the end \u{201C}\(endText)\u{201D}.")
                 }
                 let endDayText = value(.endDate)
-                if let endDay = CSVImport.date(endDayText, dayFirst: dayFirst) {
+                if let endDay = CSVImport.date(CSVImport.extended(endDayText), dayFirst: dayFirst) {
                     end = Timestamp(date: endDay, secondOfDay: second, zone: zone)
                 } else if endDayText.isEmpty {
                     let startDay = start.local(in: zone).date
@@ -547,6 +556,64 @@ public enum CSVImport {
               let second = clockTime(String(trimmed[trimmed.index(after: split)...]))
         else { return nil }
         return (day, second)
+    }
+
+    /// A date or date-time in ISO 8601's compact form, as "20260713" or
+    /// "20260713T152036Z", in the usual one the other readers take, as
+    /// "2026-07-13" or "2026-07-13T15:20:36Z", and anything else as it is.
+    /// The seconds can be left out and fractions of them are dropped; the
+    /// zone is "Z" or an offset such as "+02", "+0200" or "+02:00".
+    static func extended(_ text: String) -> String {
+        let characters = Array(text.trimmingCharacters(in: .whitespaces))
+        func digits(_ range: Range<Int>) -> String? {
+            guard range.upperBound <= characters.count, characters[range].allSatisfy(\.isASCIIDigit) else { return nil }
+            return String(characters[range])
+        }
+        guard let year = digits(0..<4), let month = digits(4..<6), let day = digits(6..<8) else { return text }
+        let date = "\(year)-\(month)-\(day)"
+        if characters.count == 8 {
+            return date
+        }
+        guard "Tt ".contains(characters[8]), let hour = digits(9..<11), let minute = digits(11..<13) else { return text }
+        var index = 13
+        var second = "00"
+        if let seconds = digits(13..<15) {
+            second = seconds
+            index = 15
+        }
+        if index < characters.count, characters[index] == "." || characters[index] == "," {
+            let fraction = index + 1
+            index = fraction
+            while index < characters.count, characters[index].isASCIIDigit {
+                index += 1
+            }
+            guard index > fraction else { return text }
+        }
+        let time = "\(date)T\(hour):\(minute):\(second)"
+        let zone = Array(characters[index...])
+        guard let sign = zone.first else { return time }
+        if zone == ["Z"] || zone == ["z"] {
+            return time + "Z"
+        }
+        guard sign == "+" || sign == "-" else { return text }
+        // "+02", "+0200" or "+02:00".
+        let offset = String(zone.dropFirst())
+        let hours = String(offset.prefix(2))
+        let minutes: String
+        switch offset.count {
+        case 2: minutes = "00"
+        case 4: minutes = String(offset.suffix(2))
+        case 5 where Array(offset)[2] == ":": minutes = String(offset.suffix(2))
+        default: return text
+        }
+        guard (hours + minutes).allSatisfy(\.isASCIIDigit) else { return text }
+        return time + "\(sign)\(hours):\(minutes)"
+    }
+
+    /// Whether a date-time is in UTC, ending in "Z".
+    static func isUTC(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        return trimmed.hasSuffix("Z") || trimmed.hasSuffix("z")
     }
 
     /// A duration written as "1:30", "1:30:00", or hours such as "1.5" or

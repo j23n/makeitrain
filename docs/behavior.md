@@ -95,8 +95,9 @@ date,start,end,hours,client,project,tags,note
 File › Import CSV… on the Mac, also in the Entries toolbar, and Settings › Import CSV… on iOS add entries from a CSV file. A summary shows what the file adds before anything changes, and the whole import is one step to undo.
 
 - The app's own CSV reads back as it was exported. Detailed exports from other time trackers work too: columns are found by their headings, such as `start`, `end`, `start date`, `start time`, `end date`, `end time`, `date`, `duration`, `hours`, `client`, `project`, `tags`, and `note` or `description`. Commas, semicolons and tabs all separate fields.
-- Date-times with an offset keep their wall-clock time: an entry recorded in New York still shows at its New York time. Times without an offset are read in the device's time zone. An end time earlier than the start is on the next day, unless an end date says otherwise.
-- Dates can be written 2026-09-23, 23.09.2026, 09/23/2026 or 23/09/2026. With slashes, the day comes first if any date in the file needs it, as 23/09/2026 does.
+- Date-times with an offset keep their wall-clock time: an entry recorded in New York still shows at its New York time. Times without an offset are read in the device's time zone, and so are times in UTC, ending in Z, since they don't say where the work was done. An end time earlier than the start is on the next day, unless an end date says otherwise.
+- Date-times can also be written in ISO 8601's compact form, as Timewarrior and calendars write them: 20260713T152036Z, with or without seconds, and with Z, an offset such as +0200, or no zone.
+- Dates can be written 2026-09-23, 20260923, 23.09.2026, 09/23/2026 or 23/09/2026. With slashes, the day comes first if any date in the file needs it, as 23/09/2026 does.
 - Rows with a day and a duration but no times are placed one after another from 9:00.
 - Clients and projects are matched by name, ignoring case, and added when they're new. Tags are separated by `;` or `,` and take the spelling of existing tags.
 - A row with the same start, end, project and note as an entry that's already there is skipped, so importing a file twice adds its entries once.
