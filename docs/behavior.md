@@ -70,6 +70,11 @@ The rules the app follows, whichever screen or device an edit comes from. One ti
 - An entry that runs past midnight counts in full on its first day, in totals and the chart alike, so the chart adds up to the total.
 - The timeline draws each entry at its own wall-clock time. On a travel day blocks can look as if they overlap when they don't; overlap warnings use real time.
 
+## Durations
+
+- Durations under a day are written as a stopwatch writes them, such as 7:45, and from a day up with their units, such as 42 h 31 m or 574 h, so a week's or a project's total doesn't read as a time of day. Every screen follows this rule, and seconds are left out.
+- A duration can be typed as 1:30, 1.5, 90m, 1h 30m or 1h30, or as the app writes it.
+
 ## Reports
 
 - A report covers a day, a week, a month or a custom range; the iPhone offers the first three. Weeks start on the day chosen in Settings.

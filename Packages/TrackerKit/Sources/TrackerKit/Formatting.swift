@@ -3,11 +3,28 @@ import TrackerCore
 
 /// Text for times, days and durations, shared by the Mac and iOS screens.
 public enum Format {
-    /// Hours and minutes, such as "1:05" or "12:30". Seconds are dropped.
+    /// Hours and minutes. Under a day, as a stopwatch writes them, such as
+    /// "1:05" or "12:30"; from a day up, with their units, such as
+    /// "42 h 31 m" or "574 h", since "574:46" reads as a time of day.
+    /// Seconds are dropped. The spaces don't break, so a duration stays on
+    /// one line.
     public static func duration(_ milliseconds: Int64) -> String {
+        durationParts(milliseconds)
+            .map { part in part.unit.map { "\(part.number)\u{00A0}\($0)" } ?? part.number }
+            .joined(separator: "\u{00A0}")
+    }
+
+    /// The numbers of `duration(_:)` and their units: one number without a
+    /// unit under a day, such as ("1:05", nil), and from a day up the
+    /// hours and any minutes, such as ("574", "h") and ("46", "m"). Views
+    /// that set the units smaller than the numbers use them.
+    public static func durationParts(_ milliseconds: Int64) -> [(number: String, unit: String?)] {
         let minutes = max(0, milliseconds) / 60000
-        let rest = minutes % 60
-        return "\(minutes / 60):\(rest < 10 ? "0" : "")\(rest)"
+        let (hours, rest) = (minutes / 60, minutes % 60)
+        guard hours >= 24 else {
+            return [("\(hours):\(rest < 10 ? "0" : "")\(rest)", nil)]
+        }
+        return rest == 0 ? [("\(hours)", "h")] : [("\(hours)", "h"), ("\(rest)", "m")]
     }
 
     /// Reads a duration typed as "1:30", "1.5" (hours), "90m", "1h 30m" or
