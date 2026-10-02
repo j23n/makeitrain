@@ -38,13 +38,17 @@ struct FocusProbe {
             }
         }
 
-        guard let table = Self.find(NSTableView.self, in: window.contentView) else {
-            print("PROBE no table")
+        let tables = Self.findAll(NSTableView.self, in: window.contentView)
+        for table in tables {
+            print("PROBE table \(type(of: table)) columns \(table.tableColumns.map(\.title)) rows \(table.numberOfRows)")
+        }
+        guard let table = tables.first(where: { $0.tableColumns.contains { $0.title == "Start" } }),
+              let startColumn = table.tableColumns.firstIndex(where: { $0.title == "Start" })
+        else {
+            print("PROBE no entries table")
             return
         }
-        print("PROBE columns \(table.tableColumns.map(\.title)) rows \(table.numberOfRows)")
-        // The first column is the status icon, then Start.
-        let cell = table.frameOfCell(atColumn: 1, row: 0)
+        let cell = table.frameOfCell(atColumn: startColumn, row: 0)
         let point = table.convert(NSPoint(x: cell.minX + 30, y: cell.midY), to: nil)
         print("PROBE clicking at \(point) in cell \(cell)")
         click(at: point, in: window)
