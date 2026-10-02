@@ -74,7 +74,7 @@ struct PhoneTabs: View {
             TimerScreen(model: model)
                 .tabItem { Label("Timer", systemImage: "stopwatch") }
             EntriesScreen(model: model)
-                .tabItem { Label("Entries", systemImage: "list.bullet") }
+                .tabItem { Label("Entries", systemImage: "list.bullet.rectangle") }
             MobileReportsScreen(model: model)
                 .tabItem { Label("Reports", systemImage: "chart.bar.xaxis") }
             MobileSettingsScreen(model: model)

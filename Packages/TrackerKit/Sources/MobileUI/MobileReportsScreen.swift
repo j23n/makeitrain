@@ -28,12 +28,16 @@ struct MobileReportsScreen: View {
                     }
                     .pickerStyle(.segmented)
 
+                    // The arrows are as big as a finger; the title goes back
+                    // to the period containing today.
                     HStack {
                         Button {
                             range = period.shift(currentRange, by: -1, firstWeekday: model.firstWeekday)
                         } label: {
                             Label("Previous", systemImage: "chevron.left")
                                 .labelStyle(.iconOnly)
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(Rectangle())
                         }
                         Spacer()
                         Button(Format.days(currentRange)) {
@@ -41,12 +45,15 @@ struct MobileReportsScreen: View {
                         }
                         .font(.headline)
                         .foregroundStyle(.primary)
+                        .accessibilityHint(Text("Shows the current \(period.rawValue)"))
                         Spacer()
                         Button {
                             range = period.shift(currentRange, by: 1, firstWeekday: model.firstWeekday)
                         } label: {
                             Label("Next", systemImage: "chevron.right")
                                 .labelStyle(.iconOnly)
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(Rectangle())
                         }
                     }
 

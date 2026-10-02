@@ -50,7 +50,9 @@ struct SettingsForm: View {
                 }
             }
 
-            Section("Reports") {
+            // General rather than Reports, since the iPad's timeline and
+            // filters and the calendar import use it as well.
+            Section("General") {
                 Picker("First Day of the Week", selection: $model.firstWeekday) {
                     ForEach(1...7, id: \.self) { day in
                         Text(Calendar.current.weekdaySymbols[day - 1]).tag(day)
@@ -241,8 +243,10 @@ struct MobileProjectsScreen: View {
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Toggle("Show Archived", isOn: $showArchived)
-                    .toggleStyle(.button)
+                Toggle(isOn: $showArchived) {
+                    Label("Show Archived", systemImage: "archivebox")
+                }
+                .toggleStyle(.button)
             }
         }
         .alert(
@@ -296,10 +300,13 @@ struct MobileClientForm: View {
         if let client = model.ledger.clients[id], !client.isDeleted {
             Form {
                 Section {
-                    CommitField(title: "Name", value: client.name) { name in
-                        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                        guard !trimmed.isEmpty else { return }
-                        model.updateClient(id, actionName: "Rename Client", undoManager: undoManager) { $0.name = trimmed }
+                    LabeledContent("Name") {
+                        CommitField(title: "Name", value: client.name) { name in
+                            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                            guard !trimmed.isEmpty else { return }
+                            model.updateClient(id, actionName: "Rename Client", undoManager: undoManager) { $0.name = trimmed }
+                        }
+                        .multilineTextAlignment(.trailing)
                     }
                     Toggle("Archived", isOn: Binding(
                         get: { client.archived },
@@ -366,10 +373,13 @@ struct MobileProjectForm: View {
         if let project = model.ledger.projects[id], !project.isDeleted {
             Form {
                 Section {
-                    CommitField(title: "Name", value: project.name) { name in
-                        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-                        guard !trimmed.isEmpty else { return }
-                        update("Rename Project") { $0.name = trimmed }
+                    LabeledContent("Name") {
+                        CommitField(title: "Name", value: project.name) { name in
+                            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                            guard !trimmed.isEmpty else { return }
+                            update("Rename Project") { $0.name = trimmed }
+                        }
+                        .multilineTextAlignment(.trailing)
                     }
                     Picker("Client", selection: Binding(
                         get: { project.clientID },
@@ -386,8 +396,11 @@ struct MobileProjectForm: View {
                     ))
                 }
                 Section("Color") {
-                    HStack {
+                    // Each swatch takes its share of the row and the row's
+                    // height, so a finger can hit it.
+                    HStack(spacing: 0) {
                         ForEach(ProjectColors.palette, id: \.self) { hex in
+                            let chosen = hex.caseInsensitiveCompare(project.color) == .orderedSame
                             Button {
                                 update("Change Color") { $0.color = hex }
                             } label: {
@@ -395,15 +408,18 @@ struct MobileProjectForm: View {
                                     .fill(Color(hex: hex))
                                     .frame(width: 28, height: 28)
                                     .overlay {
-                                        if hex.caseInsensitiveCompare(project.color) == .orderedSame {
+                                        if chosen {
                                             Image(systemName: "checkmark")
                                                 .font(.caption.bold())
                                                 .foregroundStyle(.white)
                                         }
                                     }
+                                    .frame(maxWidth: .infinity, minHeight: 44)
+                                    .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
-                            .frame(maxWidth: .infinity)
+                            .accessibilityLabel(Text(ProjectColors.name(of: hex)))
+                            .accessibilityAddTraits(chosen ? .isSelected : [])
                         }
                     }
                 }

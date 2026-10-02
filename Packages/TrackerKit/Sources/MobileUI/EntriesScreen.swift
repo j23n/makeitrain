@@ -20,6 +20,7 @@ struct EntriesScreen: View {
     var body: some View {
         NavigationStack(path: $path) {
             let flagged = model.overlaps.flagged
+            let days = self.days
             List {
                 MobileNotices(model: model)
                 ForEach(days) { day in
@@ -45,6 +46,8 @@ struct EntriesScreen: View {
                         systemImage: "clock",
                         description: Text("Start a timer, or add an entry with the + button.")
                     )
+                } else if days.isEmpty {
+                    ContentUnavailableView.search(text: search)
                 }
             }
             .searchable(text: $search, prompt: "Notes, projects and tags")
@@ -108,7 +111,9 @@ struct MobileDayHeader: View {
     }
 }
 
-/// An entry in the list: its project, times, duration and note.
+/// An entry in the list: its project, times, duration and note, with the
+/// overlap warning or the running mark the Mac's table shows. VoiceOver
+/// reads it as one.
 struct MobileEntryRow: View {
     let model: AppModel
     let entry: ResolvedEntry
@@ -120,9 +125,9 @@ struct MobileEntryRow: View {
                 ProjectLabel(ledger: model.ledger, projectID: entry.entry.projectID)
                 Spacer()
                 if flagged {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                        .accessibilityLabel("Overlaps another entry")
+                    OverlapIcon()
+                } else if entry.isRunning {
+                    RunningIcon()
                 }
                 // Only the running timer's time follows the clock.
                 Text(Format.duration(entry.end.map { entry.start.distance(to: $0) } ?? model.duration(of: entry)))
@@ -137,13 +142,17 @@ struct MobileEntryRow: View {
                     .lineLimit(2)
             }
             if !entry.entry.tags.isEmpty {
+                // On as many lines as they need, rather than squeezed onto
+                // one in a narrow row.
                 TagList(
                     tags: entry.entry.tags,
                     links: model.ledger.issueLinks(tags: entry.entry.tags, projectID: entry.entry.projectID),
-                    interactive: false
+                    interactive: false,
+                    wraps: true
                 )
             }
         }
+        .accessibilityElement(children: .combine)
     }
 
     private var times: String {
@@ -253,9 +262,12 @@ struct EntryForm: View {
                     }
                 } else {
                     LabeledContent("Duration", value: Format.duration(model.duration(of: entry)))
-                    Button("Stop Timer") {
+                    Button {
                         model.stopTimer(undoManager: undoManager)
+                    } label: {
+                        Label("Stop Timer", systemImage: "stop.fill")
                     }
+                    .tint(.red)
                 }
             } footer: {
                 if let label = Format.zoneLabel(zone, at: entry.start) {

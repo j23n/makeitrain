@@ -73,11 +73,14 @@ struct TimerList: View {
                         .foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 4)
+                // Red, as the stop buttons in the Mac's and the iPad's
+                // toolbars are.
                 Button {
                     model.stopTimer(undoManager: undoManager)
                 } label: {
                     Label("Stop Timer", systemImage: "stop.fill")
                 }
+                .tint(.red)
                 .disabled(model.isReadOnly)
                 Button("Started Earlier…") {
                     adjusting = .start
@@ -111,6 +114,10 @@ struct TimerList: View {
         if !combinations.isEmpty {
             Section("Switch To") {
                 ForEach(combinations, id: \.self) { combination in
+                    // The running timer's project and tags are marked, and
+                    // can't be picked again, as in the timer's menus on the
+                    // Mac and the iPad.
+                    let running = model.running.map { combination.matches($0.entry) } ?? false
                     Button {
                         model.startTimer(combination, undoManager: undoManager)
                     } label: {
@@ -122,10 +129,13 @@ struct TimerList: View {
                                 interactive: false
                             )
                             Spacer()
+                            if running {
+                                RunningIcon()
+                            }
                         }
                         .foregroundStyle(.primary)
                     }
-                    .disabled(model.isReadOnly)
+                    .disabled(model.isReadOnly || running)
                 }
             }
         }
