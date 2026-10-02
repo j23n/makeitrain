@@ -4,31 +4,8 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 
-// The parts of a project's settings beyond its name and client: its tags,
-// its GitHub repositories, and the calendar on this Mac its events come from.
-
-/// A project's tags, with the ones that refer to issues linked.
-struct ProjectTagsSection: View {
-    let model: AppModel
-    let project: Project
-
-    var body: some View {
-        let tags = model.ledger.tags(ofProject: project.id)
-        Section {
-            if tags.isEmpty {
-                Text("None yet")
-                    .foregroundStyle(.secondary)
-            } else {
-                TagList(tags: tags, links: model.ledger.issueLinks(tags: tags, projectID: project.id), wraps: true)
-            }
-        } header: {
-            Text("Tags")
-        } footer: {
-            Text("Each project has its own tags: the ones on its entries. Rename or remove them under Tags.")
-                .foregroundStyle(.secondary)
-        }
-    }
-}
+// The parts of a project's settings beyond its name and client: its GitHub
+// repositories, and the calendar on this Mac its events come from.
 
 /// The GitHub repositories that tags like "#123" refer to.
 struct RepositoriesSection: View {

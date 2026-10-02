@@ -4,69 +4,42 @@ import TrackerCore
 import TrackerKit
 import UniformTypeIdentifiers
 
-/// The screens in the main window's sidebar.
-enum Screen: String, CaseIterable, Identifiable {
-    case timeline, entries, reports, projects, tags
-
-    var id: Self { self }
-
-    var title: String {
-        switch self {
-        case .timeline: "Timeline"
-        case .entries: "Entries"
-        case .reports: "Reports"
-        case .projects: "Clients & Projects"
-        case .tags: "Tags"
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .timeline: "calendar.day.timeline.left"
-        case .entries: "list.bullet.rectangle"
-        case .reports: "chart.bar.xaxis"
-        case .projects: "folder"
-        case .tags: "tag"
-        }
-    }
-}
-
-/// The main window: the screens in a sidebar, and the timer in the toolbar.
+/// The main window: the screens, clients and projects in a sidebar, the
+/// screen or page chosen beside it, and the timer in the toolbar.
 struct MainWindow: View {
     let model: AppModel
-    @SceneStorage private var screen: Screen
+    /// What's shown, as `SidebarItem.key` writes it.
+    @SceneStorage private var shown: String
     @Environment(\.undoManager) private var undoManager
     @State private var importing = false
     @State private var importRequest: ImportRequest?
     @State private var importError: String?
     @State private var importingEvents = false
+    @State private var adding: NewRecord?
 
-    init(model: AppModel, screen: Screen = .timeline) {
+    init(model: AppModel, item: SidebarItem = .timeline) {
         self.model = model
-        _screen = SceneStorage(wrappedValue: screen, "screen")
+        _shown = SceneStorage(wrappedValue: item.key, "screen")
+    }
+
+    /// What's shown, or the timeline in place of a screen that's gone.
+    private var item: SidebarItem {
+        SidebarItem(key: shown) ?? .timeline
     }
 
     var body: some View {
         NavigationSplitView {
-            List(selection: Binding<Screen?>(get: { screen }, set: { if let new = $0 { screen = new } })) {
-                ForEach(Screen.allCases) { item in
-                    Label(item.title, systemImage: item.icon)
-                        .tag(item)
-                }
-            }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 260)
-            .safeAreaInset(edge: .bottom) {
-                Notices(model: model)
-                    .padding(.bottom, 10)
+            Sidebar(model: model, selection: Binding(get: { item }, set: { shown = $0.key })) { record in
+                adding = record
             }
         } detail: {
             detail
-                .timerToolbar(title: screen.title, timer: TimerCapsule(model: model).fixedSize())
+                .timerToolbar(title: title, timer: TimerCapsule(model: model).fixedSize())
                 // Here rather than beside the import, so the two file dialogs
                 // aren't on the same view.
                 .exportsEntries(of: model)
         }
-        .navigationTitle(screen.title)
+        .navigationTitle(title)
         .frame(minWidth: 880, minHeight: 520)
         .focusedSceneValue(\.imports, imports)
         .fileImporter(isPresented: $importing, allowedContentTypes: [.commaSeparatedText, .tabSeparatedText, .plainText]) { result in
@@ -81,6 +54,11 @@ struct MainWindow: View {
         }
         .sheet(isPresented: $importingEvents) {
             CalendarImportSheet(model: model, undoManager: undoManager)
+        }
+        .sheet(item: $adding) { record in
+            NewRecordSheet(model: model, record: record, undoManager: undoManager) { added in
+                shown = added.key
+            }
         }
         .alert(
             "Couldn't Import the File",
@@ -100,56 +78,87 @@ struct MainWindow: View {
         }
     }
 
+    /// The screen's name, or the client's or project's.
+    private var title: String {
+        switch item {
+        case .timeline, .entries, .reports: item.screen?.title ?? ""
+        case .client(let id): model.ledger.clients[id]?.name ?? "Client"
+        case .project(let id): model.ledger.projects[id]?.name ?? "Project"
+        case .unassigned: "Unassigned"
+        }
+    }
+
     @ViewBuilder
     private var detail: some View {
-        switch screen {
+        switch item {
         case .timeline:
             TimelineScreen(model: model)
         case .entries:
             EntriesView(model: model, imports: imports)
         case .reports:
             ReportsView(model: model)
-        case .projects:
-            ProjectsView(model: model)
-        case .tags:
-            TagsView(model: model)
+        case .client(let id):
+            ClientPage(model: model, clientID: id, select: show) { record in
+                adding = record
+            }
+            .id(item)
+        case .project(let id):
+            ProjectPage(model: model, projectID: id, select: show)
+                .id(item)
+        case .unassigned:
+            ProjectPage(model: model, projectID: nil, select: show)
+                .id(item)
         }
+    }
+
+    private func show(_ item: SidebarItem) {
+        shown = item.key
     }
 }
 
 #if DEBUG
 #Preview("Timeline") {
-    MainWindow(model: PreviewData.model(), screen: .timeline)
+    MainWindow(model: PreviewData.model(), item: .timeline)
         .frame(width: 1200, height: 720)
 }
 
 #Preview("Entries") {
-    MainWindow(model: PreviewData.model(), screen: .entries)
+    MainWindow(model: PreviewData.model(), item: .entries)
         .frame(width: 1200, height: 720)
 }
 
 #Preview("Reports") {
-    MainWindow(model: PreviewData.model(), screen: .reports)
-        .frame(width: 1200, height: 720)
+    MainWindow(model: PreviewData.model(), item: .reports)
+        .frame(width: 1200, height: 800)
 }
 
-#Preview("Clients & Projects") {
-    MainWindow(model: PreviewData.model(), screen: .projects)
-        .frame(width: 1200, height: 720)
+#Preview("A Freelancer's Reports") {
+    MainWindow(model: PreviewData.model(PreviewData.ownerLedger), item: .reports)
+        .frame(width: 1200, height: 800)
 }
 
-#Preview("Tags") {
-    MainWindow(model: PreviewData.model(), screen: .tags)
-        .frame(width: 1200, height: 720)
+#Preview("A Freelancer's Project") {
+    MainWindow(model: PreviewData.model(PreviewData.ownerLedger), item: .project(PreviewData.quotlify))
+        .frame(width: 1200, height: 900)
+}
+
+#Preview("Client") {
+    MainWindow(model: PreviewData.model(), item: .client(PreviewData.acme))
+        .frame(width: 1200, height: 760)
+}
+
+#Preview("Narrow") {
+    MainWindow(model: PreviewData.model(PreviewData.ownerLedger), item: .project(PreviewData.quotlify))
+        .frame(width: 880, height: 720)
 }
 
 #Preview("No Data") {
-    MainWindow(model: PreviewData.model(Ledger()), screen: .entries)
+    MainWindow(model: PreviewData.model(Ledger()), item: .entries)
         .frame(width: 1200, height: 720)
 }
 
 #Preview("iCloud Unavailable") {
-    MainWindow(model: PreviewData.model(state: .iCloudUnavailable), screen: .entries)
+    MainWindow(model: PreviewData.model(state: .iCloudUnavailable), item: .entries)
         .frame(width: 1200, height: 720)
 }
 #endif

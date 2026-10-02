@@ -37,21 +37,24 @@ The rules the app follows, whichever screen or device an edit comes from. One ti
 
 ## Clients and projects
 
-- A project without a client is listed under "No client".
+- In reports, a project without a client is listed under "No client".
 - Pickers show "Acme › Website redesign"; a project without a client has no prefix.
+- On the Mac, the sidebar lists each client with its projects under the screens, then the projects without a client and, if there are any, the entries without a project, "Unassigned". Archived clients and projects are folded away under "Archived". New Project… and New Client… are in the menu at the bottom of the sidebar, which asks for the name, and right-clicking a project starts its timer.
+- Each client and project has a page: its time this week, this month and in all, and each of its last twelve weeks. A project's page lists its tags, and has a button that starts its timer, or stops it while it runs; a client's page lists its projects with their time and adds new ones. The unassigned entries have a page like a project's. The settings of a client or project are in the inspector of its page, which stays closed until Settings in the toolbar opens it.
 - Typing in a project picker narrows the list to projects whose client or project name has each word typed, ignoring case and accents: "web", "site" and "acme web" all find "Acme › Website redesign". Projects whose name starts with what's typed come first. On the Mac, the arrow keys move through the list, Return picks, and Escape clears the search or closes the list.
 - Archiving a client hides it and its projects from pickers and the menu bar's "Switch to" list. Their history stays in reports.
 - Deleting a client or project that has entries isn't possible; the app offers to archive it instead. A client has entries when any of its projects does. Deleting a client deletes its projects too.
 - Another device may still log time to a project deleted here. An entry pointing at a deleted project shows that project as archived, and so does a project whose client was deleted.
 - "Merge Into…" moves every entry of one project to another, or every project of one client to another, and deletes the first. It's for when two devices each added "Acme".
 - Entries point at the project, not the client, so moving a project to another client moves its history too, including in past reports.
-- A project's settings, in the inspector under Clients & Projects on the Mac and iPad and in the project's form on iPhone, show its tags, its GitHub repositories and the calendar its events come from on this device.
+- A project's settings, in the inspector of its page on the Mac, in the inspector under Clients & Projects on iPad and in the project's form on iPhone, show its GitHub repositories and the calendar its events come from on this device, and on iPad and iPhone its tags.
 
 ## Tags
 
 - Tags are free text on each entry. Extra spaces are trimmed, matching ignores case, and `;` is dropped, because it separates tags in the CSV.
 - Each project has its own tags: the ones on its entries, and for entries without a project, theirs. Typing a tag suggests the entry's project's tags with their existing spelling, and "Add Tag" offers them. An entry moved to another project takes its tags along.
-- The Tags screen, on the Mac and iPad, lists each project's tags under the project. Renaming a tag changes it on that project's entries only, and renaming it to another of the project's tags merges the two. A tag can also be removed from the project's entries.
+- On the Mac, a project's page lists its tags with their time and entries, the busiest first, and a bar for each. Tags that refer to issues are listed apart, by repository, numbered, with an arrow that opens the issue; a long list shows its busiest eight until asked for all. Selecting a tag shows its settings in the inspector. The Tags screen on iPad lists each project's tags under the project.
+- Renaming a tag changes it on that project's entries only, and renaming it to another of the project's tags merges the two. A tag can also be removed from the project's entries.
 - Reports filter and group by tag name across projects.
 
 ## GitHub
@@ -117,7 +120,7 @@ File › Import CSV… on the Mac and iPad, also in the Mac's Entries toolbar, a
 
 ## Calendar import
 
-Each project can have a calendar on each device, chosen in the project's settings under Clients & Projects, on the Mac, iPhone and iPad; one calendar per client. File › Import Calendar Events… on the Mac and iPad, also in the Mac's Entries toolbar's Import menu, and Settings › Import Calendar Events… on iPhone and iPad then add the events of linked calendars as entries. A summary shows what the import adds before anything changes, and the whole import is one step to undo.
+Each project can have a calendar on each device, chosen in the project's settings on the Mac, iPhone and iPad; one calendar per client. File › Import Calendar Events… on the Mac and iPad, also in the Mac's Entries toolbar's Import menu, and Settings › Import Calendar Events… on iPhone and iPad then add the events of linked calendars as entries. A summary shows what the import adds before anything changes, and the whole import is one step to undo.
 
 - The app reads the calendars the Mac, iPhone or iPad has: every account in Internet Accounts, such as iCloud, Google or Exchange, and calendars subscribed to by link. It reads only linked calendars, and only when importing or showing a project's settings.
 - Links are kept on each device, because each device identifies calendars differently and may have other accounts. A link follows its calendar when the calendar's id changes, as after its account is removed and added back, by the calendar's title and account.
