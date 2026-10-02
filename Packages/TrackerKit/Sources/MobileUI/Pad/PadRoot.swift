@@ -68,16 +68,14 @@ struct PadRoot: View {
             }
             .navigationTitle("Time Tracker")
         } detail: {
-            Group {
-                if let screen {
-                    NavigationStack {
-                        PadScreenView(model: model, screen: screen, files: files)
-                    }
-                    .id(screen)
-                } else {
-                    ContentUnavailableView("No Screen", systemImage: "sidebar.left", description: Text("Choose a screen in the sidebar."))
-                }
+            // The screen last shown until the sidebar's selection is set, so
+            // the window doesn't open empty. In a narrow window, the
+            // selection alone decides whether the screen or the sidebar shows.
+            let shown = screen ?? savedScreen
+            NavigationStack {
+                PadScreenView(model: model, screen: shown, files: files)
             }
+            .id(shown)
             // Here rather than beside the import, so the two file dialogs
             // aren't on the same view.
             .fileExporter(
