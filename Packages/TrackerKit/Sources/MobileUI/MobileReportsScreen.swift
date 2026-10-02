@@ -3,7 +3,9 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 
-/// Totals for a day, week or month, with a chart, and the CSV to share.
+/// Totals for a day, week or month: the figures, the time of each day on a
+/// chart, and the time by client, project or tag with a bar for each, and
+/// the CSV to share.
 struct MobileReportsScreen: View {
     let model: AppModel
     @State private var period = ReportPeriod.week
@@ -57,18 +59,41 @@ struct MobileReportsScreen: View {
                         }
                     }
 
-                    ReportSummary(report: report, now: model.now, incomplete: model.missingFiles > 0 || !model.issues.isEmpty)
-                    ReportChart(report: report, ledger: model.ledger)
-                        .frame(height: 200)
-
-                    Picker("Group by", selection: $grouping) {
-                        Text("Client").tag(ReportRequest.Grouping.client)
-                        Text("Project").tag(ReportRequest.Grouping.project)
-                        Text("Tag").tag(ReportRequest.Grouping.tag)
+                    ReportSummary(
+                        report: report,
+                        comparison: ReportComparison(
+                            report,
+                            period: period,
+                            today: model.today,
+                            firstWeekday: model.firstWeekday,
+                            ledger: model.ledger,
+                            resolved: model.resolved,
+                            now: model.now
+                        ),
+                        period: period,
+                        now: model.now,
+                        incomplete: model.missingFiles > 0 || !model.issues.isEmpty
+                    )
+                    if report.days.count > 1 {
+                        ReportChart(report: report, ledger: model.ledger, today: model.today, firstWeekday: model.firstWeekday, height: 150)
+                            .card()
                     }
-                    .pickerStyle(.segmented)
 
-                    ReportGroupList(report: report)
+                    VStack(alignment: .leading, spacing: 14) {
+                        Picker("Group by", selection: $grouping) {
+                            Text("Client").tag(ReportRequest.Grouping.client)
+                            Text("Project").tag(ReportRequest.Grouping.project)
+                            Text("Tag").tag(ReportRequest.Grouping.tag)
+                        }
+                        .pickerStyle(.segmented)
+                        if report.groups.isEmpty {
+                            Text("No time logged on these days.")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ReportBreakdown(report: report, style: .stacked)
+                        }
+                    }
+                    .card()
                 }
                 .padding()
             }
@@ -108,6 +133,10 @@ struct MobileReportsScreen: View {
 #if DEBUG
 #Preview("This Week") {
     MobileReportsScreen(model: PreviewData.model())
+}
+
+#Preview("A Freelancer's Week") {
+    MobileReportsScreen(model: PreviewData.model(PreviewData.ownerLedger))
 }
 
 #Preview("No Entries") {

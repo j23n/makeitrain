@@ -1,36 +1,139 @@
-import Charts
 import SwiftUI
 import TrackerCore
 import UniformTypeIdentifiers
 
 // Report views shared by the Mac and iOS screens.
 
-/// The total, how much of it overlapping entries count twice, and the
-/// running timer, which isn't included.
+/// A report's figures: its total, its average day worked, how many days
+/// had time logged, and the change from the period before; then what the
+/// total leaves out or counts twice. A report of one day shows its entries
+/// and when its work started and ended in place of the average and the
+/// days.
 public struct ReportSummary: View {
     let report: Report
+    let comparison: ReportComparison
+    let period: ReportPeriod
     let now: Timestamp
     let incomplete: Bool
-    /// The total's size, which grows with Dynamic Type like a large title.
-    @ScaledMetric(relativeTo: .largeTitle) private var totalSize: CGFloat = 34
 
     /// `incomplete` says some data files are still downloading or can't be
     /// read, so the totals may be missing entries.
-    public init(report: Report, now: Timestamp, incomplete: Bool = false) {
+    public init(report: Report, comparison: ReportComparison, period: ReportPeriod, now: Timestamp, incomplete: Bool = false) {
         self.report = report
+        self.comparison = comparison
+        self.period = period
         self.now = now
         self.incomplete = incomplete
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(Format.duration(report.total))
-                    .font(.system(size: totalSize, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
-                Text(detail)
-                    .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 12) {
+            // In a row where they fit, otherwise two by two.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    totalTile
+                    firstMiddleTile
+                    secondMiddleTile
+                    changeTile
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                Grid(horizontalSpacing: 12, verticalSpacing: 12) {
+                    GridRow {
+                        totalTile
+                        firstMiddleTile
+                    }
+                    GridRow {
+                        secondMiddleTile
+                        changeTile
+                    }
+                }
+                .fixedSize(horizontal: false, vertical: true)
             }
+            notices
+        }
+    }
+
+    private var isOneDay: Bool {
+        report.days.count == 1
+    }
+
+    private var totalTile: some View {
+        FigureTile("Total", detail: report.entries.count == 1 ? "1 entry" : "\(report.entries.count) entries") {
+            DurationText(report.total, size: 30)
+        }
+    }
+
+    /// The average day, or for a day its entries.
+    @ViewBuilder
+    private var firstMiddleTile: some View {
+        if isOneDay {
+            FigureTile("Entries", detail: report.daysWorked == 0 ? "No time logged" : nil) {
+                FigureText("\(report.entries.count)")
+            }
+        } else {
+            FigureTile("Daily Average", detail: "On days worked") {
+                DurationText(report.averagePerDayWorked)
+            }
+        }
+    }
+
+    /// The days worked, or for a day when its work started and ended.
+    @ViewBuilder
+    private var secondMiddleTile: some View {
+        if isOneDay {
+            FigureTile("Workday", detail: "First start to last end") {
+                FigureText(workday ?? "—")
+            }
+        } else {
+            FigureTile("Days Worked", detail: "Out of \(report.days.count)") {
+                FigureText("\(report.daysWorked)")
+            }
+        }
+    }
+
+    /// When the first entry started and the last one ended, each in its own
+    /// time zone, such as "9:00 – 17:30"; nil without entries.
+    private var workday: String? {
+        guard let first = report.entries.first,
+              let last = report.entries.max(by: { ($0.end ?? $0.start) < ($1.end ?? $1.start) }),
+              let end = last.end
+        else { return nil }
+        return "\(Format.time(first.start, zone: first.entry.timeZone)) – \(Format.time(end, zone: last.entry.timeZone))"
+    }
+
+    private var changeTile: some View {
+        FigureTile(changeTitle, detail: "\(Format.duration(comparison.previousTotal)) in \(Format.days(comparison.previousRange))") {
+            FigureText(changeText)
+        }
+        .help(comparison.isPartial
+            ? "Compared with as many days at the start of the period before, since this one isn't over yet"
+            : "Compared with the period before, with the same filters")
+    }
+
+    /// Which period the change is from.
+    private var changeTitle: String {
+        switch (period, comparison.isPartial) {
+        case (.day, _): "vs. Previous Day"
+        case (.week, false): "vs. Previous Week"
+        case (.week, true): "vs. Same Days Last Week"
+        case (.month, false): "vs. Previous Month"
+        case (.month, true): "vs. Same Days Last Month"
+        case (.custom, _):
+            "vs. Previous \(comparison.previousRange.upperBound.daysSince1970 - comparison.previousRange.lowerBound.daysSince1970 + 1) Days"
+        }
+    }
+
+    /// Such as "+12%" or "−8%", or a dash when nothing was logged before.
+    private var changeText: String {
+        guard let percent = comparison.percent else { return "—" }
+        return percent > 0 ? "+\(percent)%" : percent < 0 ? "\u{2212}\(-percent)%" : "0%"
+    }
+
+    /// What the total leaves out or counts twice, and whether it may be
+    /// missing entries.
+    @ViewBuilder
+    private var notices: some View {
+        VStack(alignment: .leading, spacing: 6) {
             if report.doubleCounted > 0 {
                 Label(
                     "Includes \(Format.duration(report.doubleCounted)) counted twice where entries overlap.",
@@ -52,150 +155,159 @@ public struct ReportSummary: View {
                     .foregroundStyle(.orange)
             }
         }
-    }
-
-    private var detail: String {
-        let entries = report.entries.count == 1 ? "1 entry" : "\(report.entries.count) entries"
-        return "\(Format.hours(report.total)) hours in \(entries)"
+        .font(.callout)
     }
 }
 
-/// Hours per day, stacked by project in the projects' colors.
+/// A report's time on a chart: a column for each day, stacked by project in
+/// the projects' colors, with each day's total over it and a dashed line at
+/// the average day worked; for a long range, a column for each week or
+/// month. The projects are named under it.
 public struct ReportChart: View {
-    let report: Report
-    let ledger: Ledger
+    let data: ReportChartData
+    let height: CGFloat
 
-    public init(report: Report, ledger: Ledger) {
-        self.report = report
-        self.ledger = ledger
-    }
-
-    struct Bar: Identifiable {
-        var date: Date
-        var project: String
-        var hours: Double
-
-        var id: String { "\(date.timeIntervalSince1970) \(project)" }
+    /// Weeks start on `firstWeekday`, and the column with `today` stands
+    /// out.
+    public init(report: Report, ledger: Ledger, today: LocalDate, firstWeekday: Int, height: CGFloat = 170) {
+        data = ReportChartData(report, ledger: ledger, today: today, firstWeekday: firstWeekday)
+        self.height = height
     }
 
     public var body: some View {
-        let data = chartData
-        Chart(data.bars) { bar in
-            BarMark(
-                x: .value("Day", bar.date, unit: .day),
-                y: .value("Hours", bar.hours)
-            )
-            .foregroundStyle(by: .value("Project", bar.project))
-        }
-        .chartForegroundStyleScale(domain: data.titles, range: data.colors)
-        .chartXScale(domain: days)
-        .chartYAxisLabel("Hours")
-        .overlay {
-            if data.bars.isEmpty {
-                Text("No time logged")
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    /// Every day in the range, including days without bars.
-    private var days: ClosedRange<Date> {
-        let calendar = Calendar.current
-        let first = calendar.startOfDay(for: report.request.range.lowerBound.pickerDate)
-        let last = calendar.startOfDay(for: report.request.range.upperBound.pickerDate)
-        return first...(calendar.date(byAdding: .day, value: 1, to: last) ?? last)
-    }
-
-    /// The bars, and the projects' titles and colors, busiest first.
-    private var chartData: (bars: [Bar], titles: [String], colors: [Color]) {
-        var totals: [UUID?: Int64] = [:]
-        for day in report.days {
-            for (projectID, milliseconds) in day.projects {
-                totals[projectID, default: 0] += milliseconds
-            }
-        }
-        let order = totals.keys.sorted { a, b in
-            totals[a, default: 0] != totals[b, default: 0]
-                ? totals[a, default: 0] > totals[b, default: 0]
-                : ledger.projectTitle(a) < ledger.projectTitle(b)
-        }
-        var titles: [String] = []
-        var colors: [Color] = []
-        for projectID in order where !titles.contains(ledger.projectTitle(projectID)) {
-            titles.append(ledger.projectTitle(projectID))
-            colors.append(ledger.color(ofProject: projectID))
-        }
-        var bars: [Bar] = []
-        for day in report.days {
-            for projectID in order {
-                if let milliseconds = day.projects[projectID], milliseconds > 0 {
-                    bars.append(Bar(
-                        date: day.date.pickerDate,
-                        project: ledger.projectTitle(projectID),
-                        hours: Double(milliseconds) / 3_600_000
-                    ))
+        VStack(alignment: .leading, spacing: 12) {
+            Text(data.unit.title)
+                .font(.headline)
+            BarChart(columns: data.columns, average: data.average, height: height)
+                .overlay {
+                    if data.legend.isEmpty {
+                        Text("No time logged")
+                            .foregroundStyle(.secondary)
+                    }
                 }
-            }
-        }
-        return (bars, titles, colors)
-    }
-}
-
-/// The report's groups, with a client's projects indented under it.
-public struct ReportGroupList: View {
-    let report: Report
-
-    public init(report: Report) {
-        self.report = report
-    }
-
-    public var body: some View {
-        // Grouped by project, "Unassigned" has the ring of no project, so its
-        // title lines up with the projects' titles.
-        let byProject = report.request.grouping == .project
-        VStack(spacing: 0) {
-            ForEach(report.groups) { group in
-                ReportGroupRow(group: group, total: report.total, indented: false, hasDot: byProject || group.color != nil)
-                ForEach(group.children) { child in
-                    ReportGroupRow(group: child, total: report.total, indented: true, hasDot: true)
-                }
+            if !data.legend.isEmpty {
+                ChartLegend(parts: data.legend)
             }
         }
     }
 }
 
-struct ReportGroupRow: View {
-    let group: ReportGroup
+/// Lines of time by client, project or tag, each with its share of the
+/// total and a bar for it, such as a report's groups. A client with
+/// several projects has a bar in their colors, and its projects under it.
+public struct ReportBreakdown: View {
+    /// Where the bars go.
+    public enum Style {
+        /// Beside the names, in a column of their own, so they compare at a
+        /// glance.
+        case inline
+        /// Under the names, for a narrow screen.
+        case stacked
+    }
+
+    let rows: [BreakdownRow]
     let total: Int64
-    let indented: Bool
-    /// Whether the row starts with its project's dot, or the ring of no
-    /// project.
-    let hasDot: Bool
+    let style: Style
     @ScaledMetric private var indent: CGFloat = 22
-    @ScaledMetric private var percentWidth: CGFloat = 44
+    @ScaledMetric private var markWidth: CGFloat = 14
+    @ScaledMetric private var percentWidth: CGFloat = 40
 
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                if hasDot {
-                    ProjectDot(color: group.color.map { Color(hex: $0) })
+    public init(report: Report, style: Style = .inline) {
+        self.init(rows: BreakdownRow.rows(of: report), total: report.total, style: style)
+    }
+
+    /// `total` is what the shares are of.
+    public init(rows: [BreakdownRow], total: Int64, style: Style = .inline) {
+        self.rows = rows
+        self.total = total
+        self.style = style
+    }
+
+    public var body: some View {
+        switch style {
+        case .inline:
+            Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 12) {
+                ForEach(rows) { row in
+                    GridRow {
+                        title(row)
+                            .padding(.leading, row.isNested ? indent : 0)
+                            .frame(maxWidth: 320, alignment: .leading)
+                        bar(row)
+                            .frame(minWidth: 60)
+                        duration(row)
+                            .gridColumnAlignment(.trailing)
+                        percent(row)
+                            .gridColumnAlignment(.trailing)
+                    }
                 }
-                Text(group.title)
-                    .fontWeight(indented ? .regular : .medium)
-                    .lineLimit(1)
-                Spacer()
-                Text(Format.duration(group.milliseconds))
-                    .monospacedDigit()
-                Text(Format.percent(group.milliseconds, of: total))
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-                    .frame(width: percentWidth, alignment: .trailing)
             }
-            .padding(.leading, indented ? indent : 0)
-            .padding(.vertical, 7)
-            .accessibilityElement(children: .combine)
-            Divider()
+        case .stacked:
+            VStack(alignment: .leading, spacing: 14) {
+                ForEach(rows) { row in
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            title(row)
+                            Spacer(minLength: 8)
+                            duration(row)
+                            percent(row)
+                                .frame(minWidth: percentWidth, alignment: .trailing)
+                        }
+                        bar(row)
+                    }
+                    .padding(.leading, row.isNested ? indent : 0)
+                    .accessibilityElement(children: .combine)
+                }
+            }
         }
+    }
+
+    private func title(_ row: BreakdownRow) -> some View {
+        HStack(spacing: 8) {
+            switch row.mark {
+            case .blank:
+                EmptyView()
+            case .client:
+                Image(systemName: "briefcase")
+                    .imageScale(.small)
+                    .foregroundStyle(.secondary)
+                    .frame(width: markWidth)
+                    .accessibilityHidden(true)
+            case .project(let color):
+                ProjectDot(color: color.map { Color(hex: $0) })
+                    .frame(width: markWidth)
+            }
+            Text(row.title)
+                .fontWeight(row.isNested ? .regular : .medium)
+                .lineLimit(1)
+                .truncationMode(.middle)
+        }
+    }
+
+    @ViewBuilder
+    private func bar(_ row: BreakdownRow) -> some View {
+        switch row.bar {
+        case .accent:
+            ShareBar(row.milliseconds, of: total, color: .accentColor)
+        case .parts(let parts):
+            ShareBar(
+                parts: parts.map { ShareBar.Part(color: $0.color.map { Color(hex: $0) } ?? .gray, value: $0.milliseconds) },
+                of: total
+            )
+        }
+    }
+
+    private func duration(_ row: BreakdownRow) -> some View {
+        Text(Format.duration(row.milliseconds))
+            .fontWeight(row.isNested ? .regular : .semibold)
+            .monospacedDigit()
+            .lineLimit(1)
+    }
+
+    private func percent(_ row: BreakdownRow) -> some View {
+        Text(Format.percent(row.milliseconds, of: total))
+            .monospacedDigit()
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
     }
 }
 
@@ -235,43 +347,77 @@ public struct CSVFile: Transferable {
 }
 
 #if DEBUG
-#Preview("Report") {
-    let week = LocalDate(year: 2026, month: 9, day: 21)...LocalDate(year: 2026, month: 9, day: 27)
-    let report = Report(ReportRequest(range: week), ledger: PreviewData.ledger, now: PreviewData.now)
-    return ScrollView {
-        VStack(alignment: .leading, spacing: 20) {
-            ReportSummary(report: report, now: PreviewData.now)
-            ReportChart(report: report, ledger: PreviewData.ledger)
-                .frame(height: 220)
-            ReportGroupList(report: report)
-        }
-        .padding()
-    }
-    .frame(width: 640, height: 720)
-}
+/// A report of the sample data's week, or another ledger's, with what the
+/// report views need around it, for previews.
+struct PreviewReport {
+    let report: Report
+    let comparison: ReportComparison
+    let ledger: Ledger
+    let period: ReportPeriod
 
-#Preview("By Project") {
-    let week = LocalDate(year: 2026, month: 9, day: 21)...LocalDate(year: 2026, month: 9, day: 27)
-    let report = Report(ReportRequest(range: week, grouping: .project), ledger: PreviewData.ledger, now: PreviewData.now)
-    return ScrollView {
-        ReportGroupList(report: report)
+    init(
+        _ ledger: Ledger = PreviewData.ledger,
+        period: ReportPeriod = .week,
+        grouping: ReportRequest.Grouping = .client
+    ) {
+        let today = PreviewData.now.local(in: "Europe/Berlin").date
+        let range = period.range(containing: today, firstWeekday: 2)
+        let request = ReportRequest(range: range, grouping: grouping)
+        let resolved = ledger.resolvedEntries()
+        report = Report(request, ledger: ledger, resolved: resolved, now: PreviewData.now)
+        comparison = ReportComparison(report, period: period, today: today, firstWeekday: 2, ledger: ledger, resolved: resolved, now: PreviewData.now)
+        self.ledger = ledger
+        self.period = period
+    }
+
+    /// The summary, the chart and the breakdown, as a report screen shows
+    /// them.
+    func page(style: ReportBreakdown.Style = .inline, incomplete: Bool = false) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                ReportSummary(report: report, comparison: comparison, period: period, now: PreviewData.now, incomplete: incomplete)
+                ReportChart(report: report, ledger: ledger, today: PreviewData.now.local(in: "Europe/Berlin").date, firstWeekday: 2)
+                    .card()
+                ReportBreakdown(report: report, style: style)
+                    .card()
+            }
             .padding()
+        }
     }
-    .frame(width: 640, height: 320)
 }
 
-#Preview("By Tag, Incomplete") {
-    let week = LocalDate(year: 2026, month: 9, day: 21)...LocalDate(year: 2026, month: 9, day: 27)
-    let report = Report(ReportRequest(range: week, grouping: .tag), ledger: PreviewData.ledger, now: PreviewData.now)
-    return ScrollView {
-        VStack(alignment: .leading, spacing: 20) {
-            ReportSummary(report: report, now: PreviewData.now, incomplete: true)
-            ReportChart(report: report, ledger: PreviewData.ledger)
-                .frame(height: 220)
-            ReportGroupList(report: report)
-        }
-        .padding()
-    }
-    .frame(width: 640, height: 720)
+#Preview("Week") {
+    PreviewReport().page()
+        .frame(width: 900, height: 820)
+}
+
+#Preview("A Freelancer's Week") {
+    PreviewReport(PreviewData.ownerLedger).page()
+        .frame(width: 900, height: 760)
+}
+
+#Preview("A Freelancer's Month by Tag") {
+    PreviewReport(PreviewData.ownerLedger, period: .month, grouping: .tag).page()
+        .frame(width: 900, height: 1100)
+}
+
+#Preview("By Project, Incomplete") {
+    PreviewReport(grouping: .project).page(incomplete: true)
+        .frame(width: 900, height: 820)
+}
+
+#Preview("A Day") {
+    PreviewReport(period: .day).page()
+        .frame(width: 900, height: 560)
+}
+
+#Preview("Narrow") {
+    PreviewReport(PreviewData.ownerLedger).page(style: .stacked)
+        .frame(width: 380, height: 900)
+}
+
+#Preview("No Time") {
+    PreviewReport(Ledger()).page()
+        .frame(width: 900, height: 640)
 }
 #endif

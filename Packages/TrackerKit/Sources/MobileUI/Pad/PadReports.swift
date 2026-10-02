@@ -4,7 +4,9 @@ import TrackerCore
 import TrackerKit
 
 /// Totals on iPad for a day, a week, a month or days of your choice,
-/// grouped and filtered as on the Mac, with a chart, and the CSV to share.
+/// filtered as on the Mac: the figures across the top, the time of each
+/// day on a chart, and the time by client, project or tag with a bar for
+/// each, and the CSV to share.
 struct PadReportsScreen: View {
     let model: AppModel
     @State private var period = ReportPeriod.week
@@ -14,46 +16,70 @@ struct PadReportsScreen: View {
     @State private var clients: Set<UUID?> = []
     @State private var projects: Set<UUID?> = []
     @State private var tags: Set<String> = []
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     var body: some View {
         let report = Report(request, ledger: model.ledger, resolved: model.resolved, now: model.now)
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                controls
-                ReportSummary(report: report, now: model.now, incomplete: model.missingFiles > 0 || !model.issues.isEmpty)
-                ReportChart(report: report, ledger: model.ledger)
-                    .frame(height: 260)
-                Picker("Group by", selection: $grouping) {
-                    Text("Client").tag(ReportRequest.Grouping.client)
-                    Text("Project").tag(ReportRequest.Grouping.project)
-                    Text("Tag").tag(ReportRequest.Grouping.tag)
+        content(report)
+            .toolbar {
+                ToolbarItemGroup(placement: .primaryAction) {
+                    filterMenu
+                    ShareLink(
+                        item: CSVFile(data: CSVExport.data(for: report, ledger: model.ledger)),
+                        preview: SharePreview("Time Report \(currentRange.lowerBound) to \(currentRange.upperBound)")
+                    ) {
+                        Label("Export CSV", systemImage: "square.and.arrow.up")
+                    }
+                    .help("Share the entries behind this report as a CSV file")
+                    .disabled(report.entries.isEmpty)
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .frame(maxWidth: 360)
-                .help("Group the time by client, project or tag")
-                ReportGroupList(report: report)
             }
-            .padding(24)
-            .frame(maxWidth: 900, alignment: .leading)
-            .frame(maxWidth: .infinity)
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                filterMenu
-                ShareLink(
-                    item: CSVFile(data: CSVExport.data(for: report, ledger: model.ledger)),
-                    preview: SharePreview("Time Report \(currentRange.lowerBound) to \(currentRange.upperBound)")
-                ) {
-                    Label("Export CSV", systemImage: "square.and.arrow.up")
+            .onChange(of: model.firstWeekday) { _, firstWeekday in
+                if period == .week, let shown = range {
+                    range = ReportPeriod.week.range(containing: shown.lowerBound, firstWeekday: firstWeekday)
                 }
-                .help("Share the entries behind this report as a CSV file")
-                .disabled(report.entries.isEmpty)
             }
-        }
-        .onChange(of: model.firstWeekday) { _, firstWeekday in
-            if period == .week, let shown = range {
-                range = ReportPeriod.week.range(containing: shown.lowerBound, firstWeekday: firstWeekday)
+    }
+
+    @ViewBuilder
+    private func content(_ report: Report) -> some View {
+        if model.resolved.isEmpty {
+            ContentUnavailableView(
+                "No Time Logged Yet",
+                systemImage: "chart.bar.xaxis",
+                description: Text("Start a timer, and the time you log adds up here.")
+            )
+        } else {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    controls
+                    ReportSummary(
+                        report: report,
+                        comparison: ReportComparison(
+                            report,
+                            period: period,
+                            today: model.today,
+                            firstWeekday: model.firstWeekday,
+                            ledger: model.ledger,
+                            resolved: model.resolved,
+                            now: model.now
+                        ),
+                        period: period,
+                        now: model.now,
+                        incomplete: model.missingFiles > 0 || !model.issues.isEmpty
+                    )
+                    // A day's time is in its figures and breakdown; a chart
+                    // of one bar adds nothing.
+                    if report.days.count > 1 {
+                        ReportChart(report: report, ledger: model.ledger, today: model.today, firstWeekday: model.firstWeekday, height: 190)
+                            .card()
+                    }
+                    breakdown(report)
+                        .card()
+                }
+                .padding(24)
+                .frame(maxWidth: 1200, alignment: .leading)
+                .frame(maxWidth: .infinity)
             }
         }
     }
@@ -74,6 +100,33 @@ struct PadReportsScreen: View {
 
     private var isFiltered: Bool {
         !clients.isEmpty || !projects.isEmpty || !tags.isEmpty
+    }
+
+    /// The time by client, project or tag, with the grouping beside its
+    /// heading; in a narrow window the bars go under the names.
+    private func breakdown(_ report: Report) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 12) {
+                Text("Breakdown")
+                    .font(.headline)
+                Spacer(minLength: 12)
+                Picker("Group by", selection: $grouping) {
+                    Text("Client").tag(ReportRequest.Grouping.client)
+                    Text("Project").tag(ReportRequest.Grouping.project)
+                    Text("Tag").tag(ReportRequest.Grouping.tag)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .help("Group the time by client, project or tag")
+            }
+            if report.groups.isEmpty {
+                Text(isFiltered ? "No time logged on these days matches the filters." : "No time logged on these days.")
+                    .foregroundStyle(.secondary)
+            } else {
+                ReportBreakdown(report: report, style: sizeClass == .compact ? .stacked : .inline)
+            }
+        }
     }
 
     // MARK: Period
@@ -255,6 +308,14 @@ struct PadReportsScreen: View {
 #Preview("This Week") {
     NavigationStack {
         PadReportsScreen(model: PreviewData.model())
+            .navigationTitle("Reports")
+            .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+#Preview("A Freelancer's Week") {
+    NavigationStack {
+        PadReportsScreen(model: PreviewData.model(PreviewData.ownerLedger))
             .navigationTitle("Reports")
             .navigationBarTitleDisplayMode(.inline)
     }

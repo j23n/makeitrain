@@ -5,8 +5,9 @@ import TrackerCore
 /// Sample data for SwiftUI previews: a week of work for a designer with two
 /// clients, with a running timer, an overlap, an unassigned entry, one
 /// recorded in New York, an archived project, and tags that refer to issues
-/// in Acme's GitHub repositories. "Now" is Wednesday,
-/// September 23, 2026, at 15:40 in Berlin.
+/// in Acme's GitHub repositories, some written "Scheduler/#31". There's also
+/// a freelancer's three months, with hundreds of hours and dozens of issue
+/// tags. "Now" is Wednesday, September 23, 2026, at 15:40 in Berlin.
 public enum PreviewData {
     public static let now = time("23T15:40")
 
@@ -18,6 +19,12 @@ public enum PreviewData {
     public static let brand = id(13)
     public static let internalWork = id(14)
     public static let admin = id(15)
+
+    // The freelancer's clients and projects.
+    public static let zenith = id(3)
+    public static let northbridge = id(4)
+    public static let harbor = id(16)
+    public static let bookings = id(17)
 
     public static let ledger: Ledger = {
         let clients = [
@@ -38,7 +45,7 @@ public enum PreviewData {
                 clientID: acme,
                 name: "Mobile app",
                 color: "#C0504D",
-                repositories: ["https://github.com/acme/mobile", "https://github.com/acme/api"],
+                repositories: ["https://github.com/acme/mobile", "https://github.com/acme/api", "https://github.com/acme/Scheduler"],
                 updated: now
             ),
             Project(id: brand, clientID: globex, name: "Brand refresh", color: "#9BBB59", updated: now),
@@ -74,7 +81,7 @@ public enum PreviewData {
 
             make(website, "21T09:00", "21T11:30", "Wireframe review, round 2", ["design", "client-call"]),
             make(internalWork, "21T11:30", "21T12:15", "Planning"),
-            make(mobileApp, "21T13:00", "21T17:00", "Sync engine", ["development", "#118"]),
+            make(mobileApp, "21T13:00", "21T17:00", "Sync engine", ["development", "#118", "Scheduler/#64"]),
 
             make(brand, "22T08:45", "22T10:00", "Moodboard", ["design"]),
             make(website, "22T10:00", "22T12:30", "Hero section", ["design", "#42"]),
@@ -84,7 +91,7 @@ public enum PreviewData {
             make(website, "23T09:00", "23T10:30", "Kickoff with the new team", ["client-call"]),
             make(internalWork, "23T10:30", "23T12:00", "Invoices"),
             make(nil, "23T12:00", "23T12:20", "Email"),
-            make(mobileApp, "23T13:00", "23T14:30", "Code review", ["development"]),
+            make(mobileApp, "23T13:00", "23T14:30", "Code review", ["development", "Scheduler/#31"]),
             make(website, "23T14:45", nil, "Landing page copy", ["design", "#44"]),
         ]
         return Ledger(clients: clients, projects: projects, entries: entries)
@@ -114,6 +121,95 @@ public enum PreviewData {
             }
         }
         return Ledger(clients: Array(ledger.clients.values), projects: Array(ledger.projects.values), entries: entries)
+    }()
+
+    /// A freelancer's three months, shaped like the data of the app's owner:
+    /// Zenith › Harbor with fourteen early check-ins, 18 h 40 m, and
+    /// Northbridge › Bookings full-time, 574 h 46 m before today's running
+    /// timer, with a week off in August. Bookings's tags are mostly issues
+    /// in its two repositories, written like "Scheduler/#131", with
+    /// "daily" on Mondays and a few "data-exploration".
+    public static let ownerLedger: Ledger = {
+        let zone = "Europe/Berlin"
+        let clients = [
+            Client(id: zenith, name: "Zenith", updated: now),
+            Client(id: northbridge, name: "Northbridge", updated: now),
+        ]
+        let projects = [
+            Project(id: harbor, clientID: zenith, name: "Harbor", color: "#9BBB59", updated: now),
+            Project(
+                id: bookings,
+                clientID: northbridge,
+                name: "Bookings",
+                color: "#4F7CAC",
+                repositories: ["https://github.com/northbridge/Scheduler", "https://github.com/northbridge/Libs"],
+                updated: now
+            ),
+        ]
+        // The issues worked on, in turn; the busiest come up more often.
+        let scheduler = [
+            131, 98, 153, 131, 151, 33, 65, 189, 131, 55, 98, 153, 104, 66, 131, 43, 68, 97, 151, 181,
+            31, 64, 154, 133, 141, 189, 204, 220, 227, 114, 117, 123, 125, 127, 148, 59,
+        ]
+        let issues = scheduler.map { "Scheduler/#\($0)" } + [225, 212, 230, 233].map { "Libs/#\($0)" }
+        let notes = ["Review", "Refactoring", "Bug fix", "Pairing", "Tests", "Spec"]
+
+        var entries: [TimeEntry] = []
+        func add(_ project: UUID, _ day: LocalDate, at minute: Int, for minutes: Int?, tags: [String], note: String) {
+            let start = Timestamp(date: day, secondOfDay: minute * 60, zone: zone)
+            let end = minutes.map { start.adding(seconds: Int64($0) * 60) }
+            entries.append(TimeEntry(
+                id: id(1000 + entries.count),
+                projectID: project,
+                start: start,
+                end: end,
+                timeZone: zone,
+                tags: tags,
+                note: note,
+                updated: end ?? now
+            ))
+        }
+
+        // Weekdays from June 15 to yesterday, but for the week off.
+        let today = now.local(in: zone).date
+        let weekOff = LocalDate(year: 2026, month: 8, day: 10)...LocalDate(year: 2026, month: 8, day: 14)
+        var days: [LocalDate] = []
+        var day = LocalDate(year: 2026, month: 6, day: 15)
+        while day < today {
+            if (2...6).contains(day.weekday), !weekOff.contains(day) {
+                days.append(day)
+            }
+            day = day.adding(days: 1)
+        }
+
+        // Bookings: 574 h 46 m over those days and this morning, more on
+        // some days than on others.
+        let thisMorning = 3 * 60 + 30
+        let target = 574 * 60 + 46 - thisMorning
+        let offsets = [40, -20, 10, -30, 0]
+        var minutes = days.indices.map { index in
+            target / days.count + (index < target % days.count ? 1 : 0) + offsets[index % offsets.count]
+        }
+        minutes[minutes.count - 1] += target - minutes.reduce(0, +)
+        for (index, day) in days.enumerated() {
+            let morning = 180 + index % 5 * 12
+            let start = day.weekday == 2 ? 9 * 60 + 30 : 9 * 60
+            if day.weekday == 2 {
+                add(bookings, day, at: 9 * 60, for: 30, tags: ["daily"], note: "Planning")
+            }
+            add(bookings, day, at: start, for: morning - (start - 9 * 60), tags: [issues[index % issues.count]], note: notes[index % notes.count])
+            let afternoon = index % 23 == 4 ? ["data-exploration"] : [issues[(index + 7) % issues.count]]
+            add(bookings, day, at: 13 * 60 + 30, for: minutes[index] - morning, tags: afternoon, note: notes[(index + 2) % notes.count])
+        }
+        add(bookings, today, at: 9 * 60, for: thisMorning, tags: ["Scheduler/#131"], note: "Review")
+        add(bookings, today, at: 14 * 60 + 20, for: nil, tags: ["Scheduler/#227"], note: "Export to PDF")
+
+        // Harbor: an hour and twenty minutes before Bookings, on every fifth
+        // day.
+        for (index, day) in days.enumerated() where index % 5 == 0 && index / 5 < 14 {
+            add(harbor, day, at: 7 * 60 + 30, for: 80, tags: index == 0 ? ["meeting"] : [], note: "Check-in")
+        }
+        return Ledger(clients: clients, projects: projects, entries: entries)
     }()
 
     /// The sample data with the timer stopped at 15:40.
