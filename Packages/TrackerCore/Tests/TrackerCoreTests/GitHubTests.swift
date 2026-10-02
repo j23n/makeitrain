@@ -38,7 +38,15 @@ import Testing
         #expect(GitHub.Reference(tag: "#123")?.repository == nil)
         #expect(GitHub.Reference(tag: "api#7")?.repository == "api")
         #expect(GitHub.Reference(tag: "acme/api#7")?.repository == "acme/api")
-        for tag in ["design", "#", "#abc", "#12a", "#0", "# 12", "#12 login", "a/b/c#1", "/api#1", "#1234567890"] {
+        // With a slash before "#".
+        #expect(GitHub.Reference(tag: "api/#7") == GitHub.Reference(tag: "api#7"))
+        #expect(GitHub.Reference(tag: "Scheduler/#31")?.repository == "Scheduler")
+        #expect(GitHub.Reference(tag: "Scheduler/#31")?.number == 31)
+        #expect(GitHub.Reference(tag: "acme/api/#7")?.repository == "acme/api")
+        for tag in [
+            "design", "#", "#abc", "#12a", "#0", "# 12", "#12 login", "a/b/c#1", "/api#1", "#1234567890",
+            "/#1", "api//#1", "a/b/c/#1", "/api/#1",
+        ] {
             #expect(GitHub.Reference(tag: tag) == nil, "\(tag)")
         }
     }
@@ -53,8 +61,11 @@ import Testing
         #expect(url("api#3", repositories) == "https://github.com/acme/api/issues/3")
         #expect(url("API#3", repositories) == "https://github.com/acme/api/issues/3")
         #expect(url("acme/api#3", repositories) == "https://github.com/acme/api/issues/3")
+        #expect(url("api/#3", repositories) == "https://github.com/acme/api/issues/3")
+        #expect(url("acme/api/#3", repositories) == "https://github.com/acme/api/issues/3")
         // Any repository, written with its owner.
         #expect(url("other/lib#5", repositories) == "https://github.com/other/lib/issues/5")
+        #expect(url("other/lib/#5", repositories) == "https://github.com/other/lib/issues/5")
         // A name the project doesn't have, or a project without repositories.
         #expect(url("docs#3", repositories) == nil)
         #expect(url("#12", []) == nil)
@@ -112,6 +123,28 @@ import Testing
         // Removing the last one leaves the tags for the next repository.
         ledger.setRepositories([], ofProject: uuid(11), now: now)
         #expect(tags(2) == ["#12"])
+    }
+
+    @Test func tagsWrittenWithASlashKeepIt() {
+        let now = t("2026-09-24T09:00:00Z")
+        let web = "https://github.com/acme/web"
+        let api = "https://github.com/acme/api"
+        var ledger = Ledger(
+            projects: [Project(id: uuid(10), name: "Website", repositories: [web, api], updated: now)],
+            entries: [
+                TimeEntry(
+                    id: uuid(1), projectID: uuid(10),
+                    start: t("2026-09-23T09:00:00+02:00"), end: t("2026-09-23T10:00:00+02:00"),
+                    timeZone: "Europe/Berlin", tags: ["api/#3", "#12"], updated: t("2026-09-23T10:00:00+02:00")
+                ),
+            ]
+        )
+        #expect(ledger.issueURL(forTag: "api/#3", projectID: uuid(10))?.absoluteString == "https://github.com/acme/api/issues/3")
+
+        // Removing the repository it names adds the owner, and keeps the slash.
+        ledger.setRepositories([web], ofProject: uuid(10), now: now)
+        #expect(ledger.entries[uuid(1)]?.tags == ["acme/api/#3", "#12"])
+        #expect(ledger.issueURL(forTag: "acme/api/#3", projectID: uuid(10))?.absoluteString == "https://github.com/acme/api/issues/3")
     }
 
     @Test func tagsKeepTheirRepositoryAmongNamesakes() {

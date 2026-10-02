@@ -6,8 +6,9 @@ import Foundation
 /// A tag like `#123` refers to issue or pull request 123 in the project's
 /// first repository. `api#123` refers to #123 in the project's repository
 /// named `api`, and `owner/repo#123` to #123 in any repository, as GitHub
-/// writes references. Opening an issue's address shows the pull request
-/// when the number is one, so a tag doesn't need to say which it is.
+/// writes references. A slash before the "#", as in `api/#123`, reads the
+/// same. Opening an issue's address shows the pull request when the number
+/// is one, so a tag doesn't need to say which it is.
 public enum GitHub {
     /// A repository, such as github.com/j23n/makeitrain.
     public struct Repository: Hashable, Sendable {
@@ -74,10 +75,12 @@ public enum GitHub {
         }
     }
 
-    /// What a tag like `#123`, `api#123` or `owner/repo#123` refers to.
+    /// What a tag like `#123`, `api#123` or `owner/repo#123` refers to, or
+    /// the same with a slash before the "#", as in `api/#123`.
     public struct Reference: Hashable, Sendable {
-        /// The repository written before "#": a repository's name, or its
-        /// owner and name. Nil for the project's first repository.
+        /// The repository written before "#", without the slash: a
+        /// repository's name, or its owner and name. Nil for the project's
+        /// first repository.
         public var repository: String?
         /// The issue or pull request number.
         public var number: Int
@@ -90,7 +93,10 @@ public enum GitHub {
                   digits.allSatisfy({ $0.isASCII && $0.isNumber }),
                   let number = Int(digits), number > 0
             else { return nil }
-            let prefix = tag[..<hash]
+            var prefix = tag[..<hash]
+            if prefix.count > 1, prefix.hasSuffix("/") {
+                prefix = prefix.dropLast()
+            }
             if prefix.isEmpty {
                 repository = nil
             } else {
@@ -153,8 +159,9 @@ extension Ledger {
     /// would send a tag on the project's entries to another issue, or to
     /// none, the tag is rewritten to name the repository it meant, such as
     /// "web#123", or "acme/web#123" once that's removed, and keeps opening
-    /// the same issue. Removing the last repository leaves the tags as they
-    /// are, for the next one added.
+    /// the same issue. A tag written with a slash before the "#" keeps it,
+    /// as in "acme/web/#123". Removing the last repository leaves the tags
+    /// as they are, for the next one added.
     @discardableResult
     public mutating func setRepositories(_ repositories: [String], ofProject projectID: UUID, now: Timestamp) -> Changes {
         guard let project = projects[projectID] else { return Changes() }
@@ -165,7 +172,8 @@ extension Ledger {
             guard let meant = GitHub.target(ofTag: tag, repositories: before) else { return tag }
             let current = GitHub.target(ofTag: tag, repositories: repositories)
             guard current?.repository.address.lowercased() != meant.repository.address.lowercased() else { return tag }
-            return "\(GitHub.prefix(for: meant.repository, among: repositories))#\(meant.number)"
+            let hash = tag.contains("/#") ? "/#" : "#"
+            return "\(GitHub.prefix(for: meant.repository, among: repositories))\(hash)\(meant.number)"
         }
         for entry in entries.values where entry.projectID == projectID && !entry.isDeleted {
             let tags = entry.tags.map(kept)
