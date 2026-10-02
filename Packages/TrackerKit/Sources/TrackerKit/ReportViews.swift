@@ -39,10 +39,12 @@ public struct ReportSummary: View {
                 .foregroundStyle(.orange)
             }
             if let running = report.running {
-                Label(
-                    "Running: \(Format.duration(running.duration(now: now))), not included",
-                    systemImage: "record.circle"
-                )
+                // The running timer's red mark, as wherever entries are listed.
+                Label {
+                    Text("Running: \(Format.duration(running.duration(now: now))), not included")
+                } icon: {
+                    RunningIcon()
+                }
                 .foregroundStyle(.secondary)
             }
             if incomplete {

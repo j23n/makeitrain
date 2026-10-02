@@ -147,8 +147,7 @@ struct OverlapSection: View {
                         Label {
                             Text(model.overlapDescription(overlap, from: entry.id))
                         } icon: {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundStyle(.orange)
+                            OverlapIcon()
                         }
                         if let fix = overlap.fix {
                             Button(fix.title) {
