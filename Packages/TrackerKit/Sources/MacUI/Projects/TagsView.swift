@@ -57,7 +57,7 @@ struct TagsView: View {
                     ContentUnavailableView("No Selection", systemImage: "tag", description: Text("Select a tag to rename, merge or remove it."))
                 }
             }
-            .inspectorColumnWidth(min: 260, ideal: 300, max: 420)
+            .inspectorWidth()
         }
     }
 }

@@ -83,6 +83,7 @@ struct TimerCapsule: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 24, height: Self.height - 2 * Self.inset)
                 .contentShape(Rectangle())
+                .accessibilityLabel(Text(model.running == nil ? "Start with a recent project" : "Switch to a recent project"))
         }
         .menuStyle(.button)
         .buttonStyle(.plain)
@@ -105,9 +106,7 @@ private struct RunningTimerSummary: View {
     var body: some View {
         let entry = running.entry
         HStack(spacing: 6) {
-            Circle()
-                .fill(model.ledger.color(ofProject: entry.projectID))
-                .frame(width: 8, height: 8)
+            ProjectDot(ledger: model.ledger, projectID: entry.projectID)
             Text(model.ledger.projectTitle(entry.projectID))
                 .fontWeight(.medium)
                 .foregroundStyle(entry.projectID == nil ? .secondary : .primary)

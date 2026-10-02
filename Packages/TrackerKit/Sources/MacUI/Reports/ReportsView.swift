@@ -89,62 +89,90 @@ struct ReportsView: View {
 
     // MARK: Controls
 
+    /// The period and its days, then the grouping and filters; in a narrow
+    /// window on two lines.
     private var controls: some View {
-        HStack(spacing: 12) {
-            Picker("Period", selection: periodBinding) {
-                Text("Day").tag(ReportPeriod.day)
-                Text("Week").tag(ReportPeriod.week)
-                Text("Month").tag(ReportPeriod.month)
-                Text("Custom").tag(ReportPeriod.custom)
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                periodControls
+                Spacer(minLength: 12)
+                groupingControls
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .fixedSize()
-
-            if period == .custom {
-                DatePicker("From", selection: fromBinding, displayedComponents: .date)
-                    .labelsHidden()
-                Text("to")
-                DatePicker("To", selection: toBinding, displayedComponents: .date)
-                    .labelsHidden()
-            } else {
-                ControlGroup {
-                    Button {
-                        step(-1)
-                    } label: {
-                        Label("Previous", systemImage: "chevron.left")
-                    }
-                    .help("Previous \(period.rawValue)")
-                    Button(currentTitle) {
-                        range = nil
-                    }
-                    .help("Go to today")
-                    Button {
-                        step(1)
-                    } label: {
-                        Label("Next", systemImage: "chevron.right")
-                    }
-                    .help("Next \(period.rawValue)")
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    periodControls
                 }
-                .fixedSize()
-                Text(Format.days(currentRange))
-                    .font(.headline)
-                    .lineLimit(1)
+                HStack(spacing: 12) {
+                    groupingControls
+                }
             }
-
-            Spacer()
-
-            Picker("Group by", selection: $grouping) {
-                Text("Client").tag(ReportRequest.Grouping.client)
-                Text("Project").tag(ReportRequest.Grouping.project)
-                Text("Tag").tag(ReportRequest.Grouping.tag)
-            }
-            .fixedSize()
-
-            filterMenu
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
+    }
+
+    @ViewBuilder
+    private var periodControls: some View {
+        Picker("Period", selection: periodBinding) {
+            Text("Day").tag(ReportPeriod.day)
+            Text("Week").tag(ReportPeriod.week)
+            Text("Month").tag(ReportPeriod.month)
+            Text("Custom").tag(ReportPeriod.custom)
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .fixedSize()
+        .help("Show a day, a week, a month or days of your choice")
+
+        if period == .custom {
+            // Fields without a stepper, as in the entries' filter bar.
+            DatePicker("From", selection: fromBinding, displayedComponents: .date)
+                .datePickerStyle(.compact)
+                .labelsHidden()
+                .fixedSize()
+            Text("to")
+                .foregroundStyle(.secondary)
+            DatePicker("To", selection: toBinding, displayedComponents: .date)
+                .datePickerStyle(.compact)
+                .labelsHidden()
+                .fixedSize()
+        } else {
+            ControlGroup {
+                Button {
+                    step(-1)
+                } label: {
+                    Label("Previous", systemImage: "chevron.left")
+                }
+                .help("Show the previous \(period.rawValue)")
+                Button(currentTitle) {
+                    range = nil
+                }
+                .help("Show \(currentTitle.lowercased())")
+                Button {
+                    step(1)
+                } label: {
+                    Label("Next", systemImage: "chevron.right")
+                }
+                .help("Show the next \(period.rawValue)")
+            }
+            .fixedSize()
+            Text(Format.days(currentRange))
+                .font(.headline)
+                .lineLimit(1)
+        }
+    }
+
+    @ViewBuilder
+    private var groupingControls: some View {
+        Picker("Group by", selection: $grouping) {
+            Text("Client").tag(ReportRequest.Grouping.client)
+            Text("Project").tag(ReportRequest.Grouping.project)
+            Text("Tag").tag(ReportRequest.Grouping.tag)
+        }
+        .fixedSize()
+        .help("Group the time by client, project or tag")
+
+        filterMenu
     }
 
     private var currentTitle: String {
@@ -278,6 +306,11 @@ struct ReportsView: View {
 #Preview("No Entries") {
     ReportsView(model: PreviewData.model(Ledger()))
         .frame(width: 1000, height: 720)
+}
+
+#Preview("Narrow") {
+    ReportsView(model: PreviewData.model())
+        .frame(width: 640, height: 720)
 }
 #endif
 #endif

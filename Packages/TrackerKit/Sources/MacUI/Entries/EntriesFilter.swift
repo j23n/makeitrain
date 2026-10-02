@@ -5,7 +5,8 @@ import TrackerKit
 
 /// The bar over the entries table: the period, clients and projects, and
 /// tags shown, overlaps only, how many entries that leaves and their time,
-/// and a button that clears it all.
+/// and a button that clears it all. Days of your choice go on a line of
+/// their own when the bar is too narrow for them, as on iPad.
 struct EntriesFilterBar: View {
     let model: AppModel
     @Binding var filter: EntriesFilter
@@ -13,34 +14,22 @@ struct EntriesFilterBar: View {
     let rows: [EntryRow]
 
     var body: some View {
-        HStack(spacing: 8) {
-            periodPicker
-            if filter.period == .custom, let range = filter.range {
-                DatePicker("From", selection: fromBinding(range), displayedComponents: .date)
-                    .labelsHidden()
-                    .datePickerStyle(.compact)
-                Text("to")
-                    .foregroundStyle(.secondary)
-                DatePicker("To", selection: toBinding(range), displayedComponents: .date)
-                    .labelsHidden()
-                    .datePickerStyle(.compact)
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) {
+                periodPicker
+                customDays
+                filters
             }
-            projectsMenu
-            tagsMenu
-            Toggle(isOn: $filter.overlapsOnly) {
-                Label("Overlaps", systemImage: "exclamationmark.triangle")
-            }
-            .toggleStyle(.button)
-            .help("Show only entries that overlap another")
-
-            Spacer(minLength: 8)
-
-            EntriesSummary(model: model, rows: rows)
-            if filter.isActive {
-                Button("Clear") {
-                    filter = EntriesFilter()
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    periodPicker
+                    filters
                 }
-                .help("Show every entry")
+                if filter.period == .custom {
+                    HStack(spacing: 8) {
+                        customDays
+                    }
+                }
             }
         }
         .controlSize(.small)
@@ -58,7 +47,45 @@ struct EntriesFilterBar: View {
         }
     }
 
+    /// The clients and projects, tags and overlaps shown, how many entries
+    /// that leaves, and the button that clears it all.
+    @ViewBuilder
+    private var filters: some View {
+        projectsMenu
+        tagsMenu
+        Toggle(isOn: $filter.overlapsOnly) {
+            Label("Overlaps", systemImage: "exclamationmark.triangle")
+        }
+        .toggleStyle(.button)
+        .help("Show only entries that overlap another")
+
+        Spacer(minLength: 8)
+
+        EntriesSummary(model: model, rows: rows)
+        if filter.isActive {
+            Button("Clear") {
+                filter = EntriesFilter()
+            }
+            .help("Show every entry")
+        }
+    }
+
     // MARK: Period
+
+    /// The first and last day, when the period is days of your choice.
+    @ViewBuilder
+    private var customDays: some View {
+        if filter.period == .custom, let range = filter.range {
+            DatePicker("From", selection: fromBinding(range), displayedComponents: .date)
+                .labelsHidden()
+                .datePickerStyle(.compact)
+            Text("to")
+                .foregroundStyle(.secondary)
+            DatePicker("To", selection: toBinding(range), displayedComponents: .date)
+                .labelsHidden()
+                .datePickerStyle(.compact)
+        }
+    }
 
     private var periodPicker: some View {
         Picker("Period", selection: Binding(
@@ -249,6 +276,16 @@ struct EntriesSummary: View {
         rows: []
     )
     .frame(width: 900)
+}
+
+#Preview("Filter Bar, Narrow") {
+    let model = PreviewData.model()
+    EntriesFilterBar(
+        model: model,
+        filter: .constant(EntriesFilter(period: .custom, range: model.today.adding(days: -6)...model.today, tags: ["design"], overlapsOnly: true)),
+        rows: []
+    )
+    .frame(width: 620)
 }
 #endif
 #endif

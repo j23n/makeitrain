@@ -192,6 +192,9 @@ struct MenuBarPopover: View {
                     .padding(.top, 8)
                     .padding(.bottom, 2)
                 ForEach(combinations, id: \.self) { combination in
+                    // The running timer's project and tags are marked, and
+                    // can't be picked again, as in the toolbar's menu.
+                    let running = isRunning(combination)
                     Button {
                         model.startTimer(combination, undoManager: undoManager)
                     } label: {
@@ -203,14 +206,13 @@ struct MenuBarPopover: View {
                                 interactive: false
                             )
                             Spacer()
-                            if isRunning(combination) {
-                                Image(systemName: "record.circle")
-                                    .foregroundStyle(.red)
+                            if running {
+                                RunningIcon()
                             }
                         }
                     }
                     .buttonStyle(RowButtonStyle())
-                    .disabled(model.isReadOnly)
+                    .disabled(model.isReadOnly || running)
                 }
             }
             .padding(.bottom, 6)
@@ -248,7 +250,8 @@ struct MenuBarPopover: View {
     }
 }
 
-/// A full-width row that highlights under the pointer, like a menu item.
+/// A full-width row that highlights under the pointer, like a menu item,
+/// and dims when it's disabled, as a menu item does.
 struct RowButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         Row(configuration: configuration)
@@ -256,6 +259,7 @@ struct RowButtonStyle: ButtonStyle {
 
     private struct Row: View {
         let configuration: ButtonStyleConfiguration
+        @Environment(\.isEnabled) private var isEnabled
         @State private var hovering = false
 
         var body: some View {
@@ -264,9 +268,10 @@ struct RowButtonStyle: ButtonStyle {
                 .padding(.vertical, 5)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
+                .opacity(isEnabled ? 1 : 0.5)
                 .background(
                     RoundedRectangle(cornerRadius: 5)
-                        .fill(hovering || configuration.isPressed ? Color.accentColor.opacity(0.15) : Color.clear)
+                        .fill(isEnabled && (hovering || configuration.isPressed) ? Color.accentColor.opacity(0.15) : Color.clear)
                         .padding(.horizontal, 6)
                 )
                 .onHover { hovering = $0 }

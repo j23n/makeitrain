@@ -88,22 +88,14 @@ struct MonthDayCell: View {
 
     var body: some View {
         let total = entries.reduce(Int64(0)) { $0 + model.duration(of: $1) }
+        let flagged = model.overlaps.flagged
         // The lines under the day's number, one of them for "more" when not
         // every entry fits.
         let lines = max(0, Int((height - 30) / MonthCalendar.lineHeight))
         let shownCount = entries.count > lines ? max(lines - 1, 0) : entries.count
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("\(day.day)")
-                    .font(.callout.weight(isToday ? .semibold : .regular))
-                    .foregroundStyle(isToday ? Color.white : inMonth ? Color.primary : Color.secondary)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .background {
-                        if isToday {
-                            Capsule().fill(Color.accentColor)
-                        }
-                    }
+                DayNumber(day, font: .callout, isToday: isToday, dimmed: !inMonth)
                 Spacer(minLength: 2)
                 if total > 0 {
                     Text(Format.duration(total))
@@ -114,15 +106,21 @@ struct MonthDayCell: View {
             }
             .padding(.bottom, 3)
             ForEach(entries.prefix(shownCount)) { entry in
-                MonthEntryRow(model: model, entry: entry, selected: selection == entry.id)
-                    .onTapGesture {
-                        selection = entry.id
+                MonthEntryRow(
+                    model: model,
+                    entry: entry,
+                    flagged: flagged.contains(entry.id),
+                    selected: selection == entry.id,
+                    height: MonthCalendar.lineHeight
+                )
+                .onTapGesture {
+                    selection = entry.id
+                }
+                .contextMenu {
+                    EntriesMenu(model: model, ids: [entry.id], undoManager: undoManager, sheet: $sheet) { copies in
+                        selection = copies.first
                     }
-                    .contextMenu {
-                        EntriesMenu(model: model, ids: [entry.id], undoManager: undoManager, sheet: $sheet) { copies in
-                            selection = copies.first
-                        }
-                    }
+                }
             }
             if shownCount < entries.count {
                 Button("\(entries.count - shownCount) more") {
@@ -143,39 +141,6 @@ struct MonthDayCell: View {
         .onTapGesture(count: 2) {
             openDay(day)
         }
-    }
-}
-
-/// An entry in the month calendar: its project's color and title, and how
-/// long it ran.
-struct MonthEntryRow: View {
-    let model: AppModel
-    let entry: ResolvedEntry
-    let selected: Bool
-
-    var body: some View {
-        let zone = entry.entry.timeZone
-        let times = "\(Format.time(entry.start, zone: zone)) – \(entry.end.map { Format.time($0, zone: zone) } ?? "now")"
-        HStack(spacing: 4) {
-            Circle()
-                .fill(model.ledger.color(ofProject: entry.entry.projectID))
-                .frame(width: 7, height: 7)
-            Text(model.ledger.projectTitle(entry.entry.projectID))
-                .lineLimit(1)
-            Spacer(minLength: 2)
-            Text(Format.duration(model.duration(of: entry)))
-                .monospacedDigit()
-                .foregroundStyle(.secondary)
-        }
-        .font(.caption)
-        .padding(.horizontal, 3)
-        .frame(height: MonthCalendar.lineHeight)
-        .background {
-            RoundedRectangle(cornerRadius: 4)
-                .fill(selected ? Color.accentColor.opacity(0.25) : Color.clear)
-        }
-        .contentShape(Rectangle())
-        .help(entry.entry.note.isEmpty ? times : "\(times)\n\(entry.entry.note)")
     }
 }
 

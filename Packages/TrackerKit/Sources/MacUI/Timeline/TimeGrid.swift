@@ -68,7 +68,8 @@ struct TimeGrid: View {
                 Text("Double-click to add an entry.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
-                    .padding(8)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
                     .background(.regularMaterial, in: Capsule())
                     .padding(.bottom, 16)
             }
@@ -79,7 +80,7 @@ struct TimeGrid: View {
 
     private func grid(columns: [[DayBlock]], flagged: Set<UUID>, today: LocalDate) -> some View {
         ZStack(alignment: .topLeading) {
-            hourLines
+            HourLines()
             GeometryReader { geometry in
                 let dayWidth = HourGrid.dayWidth(geometry.size.width, days: days.count)
                 ZStack(alignment: .topLeading) {
@@ -115,27 +116,6 @@ struct TimeGrid: View {
         .padding(.vertical, 10)
     }
 
-    private var hourLines: some View {
-        VStack(spacing: 0) {
-            ForEach(0..<24, id: \.self) { hour in
-                HStack(alignment: .top, spacing: 6) {
-                    Text(Format.hour(hour))
-                        .font(.caption)
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                        .frame(width: HourGrid.gutter - 10, alignment: .trailing)
-                        .offset(y: -7)
-                    VStack(spacing: 0) {
-                        Divider()
-                        Spacer(minLength: 0)
-                    }
-                }
-                .frame(height: HourGrid.hourHeight)
-                .id(hour)
-            }
-        }
-    }
-
     /// The week view's headings: each day's weekday, date and total. Click
     /// one to show that day.
     private func dayHeadings(columns: [[DayBlock]], today: LocalDate) -> some View {
@@ -147,20 +127,7 @@ struct TimeGrid: View {
                 Button {
                     openDay?(day)
                 } label: {
-                    VStack(spacing: 1) {
-                        Text(Format.weekday(day))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text("\(day.day)")
-                            .font(.title3.weight(day == today ? .semibold : .regular))
-                            .foregroundStyle(day == today ? Color.accentColor : Color.primary)
-                        Text(total > 0 ? Format.duration(total) : " ")
-                            .font(.caption2)
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
+                    WeekDayHeading(day: day, isToday: day == today, total: total)
                 }
                 .buttonStyle(.plain)
                 .help("Show \(Format.longDay(day))")
@@ -175,13 +142,11 @@ struct TimeGrid: View {
         }
     }
 
+    /// The line at the time now, in the zone "today" is worked out in.
     private func nowLine(dayIndex: Int, dayWidth: CGFloat) -> some View {
-        let second = model.now.local(in: TimeZone.current.identifier).millisecondOfDay / 1000
-        return Rectangle()
-            .fill(Color.red)
-            .frame(width: dayWidth, height: 1.5)
-            .offset(x: HourGrid.gutter + CGFloat(dayIndex) * dayWidth, y: y(second))
-            .allowsHitTesting(false)
+        let second = model.now.local(in: model.environment.timeZone()).millisecondOfDay / 1000
+        return NowLine(width: dayWidth)
+            .offset(x: HourGrid.gutter + CGFloat(dayIndex) * dayWidth, y: y(second) - NowLine.radius)
     }
 
     /// Scrolls so `hour` is at the top. Scrolling while the grid is first

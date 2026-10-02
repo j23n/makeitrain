@@ -73,53 +73,62 @@ struct TimelineScreen: View {
         }
     }
 
+    /// The period's title and moving through periods, as on iPad; in a
+    /// narrow window, such as beside the inspector, on two lines.
     private var header: some View {
-        HStack(spacing: 12) {
-            ControlGroup {
-                Button {
-                    step(by: -1)
-                } label: {
-                    Label("Previous", systemImage: "chevron.left")
-                }
-                .help("Show the previous \(span.rawValue)")
-                Button("Today") {
-                    day = nil
-                }
-                Button {
-                    step(by: 1)
-                } label: {
-                    Label("Next", systemImage: "chevron.right")
-                }
-                .help("Show the next \(span.rawValue)")
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                navigation
+                titleText
+                Spacer(minLength: 8)
+                totalText
+                spanPicker
+                dayPicker
             }
-            .fixedSize()
-            Text(title)
-                .font(.headline)
-            Spacer()
-            Picker("View", selection: $span) {
-                ForEach(TimelineSpan.allCases) { span in
-                    Text(span.title).tag(span)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    navigation
+                    titleText
+                    Spacer(minLength: 8)
+                    totalText
+                }
+                HStack(spacing: 12) {
+                    spanPicker
+                    Spacer(minLength: 8)
+                    dayPicker
                 }
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .fixedSize()
-            Text("\(Format.duration(total)) logged")
-                .monospacedDigit()
-                .foregroundStyle(.secondary)
-            DatePicker(
-                "Day",
-                selection: Binding(
-                    get: { shownDay.pickerDate },
-                    set: { date in go(to: LocalDate(pickerDate: date)) }
-                ),
-                displayedComponents: .date
-            )
-            .labelsHidden()
-            .fixedSize()
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
+    }
+
+    private var navigation: some View {
+        ControlGroup {
+            Button {
+                step(by: -1)
+            } label: {
+                Label("Previous", systemImage: "chevron.left")
+            }
+            .help("Show the previous \(span.rawValue)")
+            Button("Today") {
+                day = nil
+            }
+            .help("Show today")
+            Button {
+                step(by: 1)
+            } label: {
+                Label("Next", systemImage: "chevron.right")
+            }
+            .help("Show the next \(span.rawValue)")
+        }
+        .fixedSize()
+    }
+
+    private var titleText: some View {
+        Text(title)
+            .font(.headline)
+            .lineLimit(1)
     }
 
     private var title: String {
@@ -127,6 +136,43 @@ struct TimelineScreen: View {
         case .day, .week: Format.days(range)
         case .month: Format.month(shownDay)
         }
+    }
+
+    private var totalText: some View {
+        Text("\(Format.duration(total)) logged")
+            .monospacedDigit()
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .fixedSize()
+    }
+
+    private var spanPicker: some View {
+        Picker("View", selection: $span) {
+            ForEach(TimelineSpan.allCases) { span in
+                Text(span.title).tag(span)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .fixedSize()
+        .help("Show a day, a week or a month")
+    }
+
+    /// A field without a stepper, like the entries' dates; clicking it
+    /// opens a calendar.
+    private var dayPicker: some View {
+        DatePicker(
+            "Day",
+            selection: Binding(
+                get: { shownDay.pickerDate },
+                set: { date in go(to: LocalDate(pickerDate: date)) }
+            ),
+            displayedComponents: .date
+        )
+        .datePickerStyle(.compact)
+        .labelsHidden()
+        .fixedSize()
+        .help("Show a day of your choice")
     }
 
     /// The time logged in the period shown.
@@ -187,6 +233,12 @@ struct TimelineScreen: View {
     TimelineScreen(model: PreviewData.model(), span: .month)
         .defaultAppStorage(UserDefaults(suiteName: "TimelinePreview.month")!)
         .frame(width: 1200, height: 760)
+}
+
+#Preview("Week, Narrow") {
+    TimelineScreen(model: PreviewData.model(), span: .week)
+        .defaultAppStorage(UserDefaults(suiteName: "TimelinePreview.narrow")!)
+        .frame(width: 720, height: 700)
 }
 #endif
 #endif

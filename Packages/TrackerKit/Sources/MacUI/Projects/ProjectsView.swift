@@ -83,7 +83,7 @@ struct ProjectsView: View {
         }
         .inspector(isPresented: $showInspector) {
             editor
-                .inspectorColumnWidth(min: 280, ideal: 320, max: 440)
+                .inspectorWidth()
         }
     }
 
@@ -253,6 +253,7 @@ struct ProjectEditor: View {
                 LabeledContent("Color") {
                     HStack(spacing: 6) {
                         ForEach(ProjectColors.palette, id: \.self) { hex in
+                            let chosen = hex.caseInsensitiveCompare(project.color) == .orderedSame
                             Button {
                                 update("Change Color") { $0.color = hex }
                             } label: {
@@ -260,12 +261,15 @@ struct ProjectEditor: View {
                                     .fill(Color(hex: hex))
                                     .frame(width: 16, height: 16)
                                     .overlay {
-                                        if hex.caseInsensitiveCompare(project.color) == .orderedSame {
+                                        if chosen {
                                             Circle().strokeBorder(.primary, lineWidth: 2)
                                         }
                                     }
                             }
                             .buttonStyle(.plain)
+                            .help(ProjectColors.name(of: hex))
+                            .accessibilityLabel(Text(ProjectColors.name(of: hex)))
+                            .accessibilityAddTraits(chosen ? .isSelected : [])
                         }
                     }
                 }

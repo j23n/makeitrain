@@ -4,6 +4,9 @@ import ServiceManagement
 import SwiftUI
 import TrackerKit
 
+/// General settings first, as in other Mac apps, then storage. The first
+/// day of the week is a general setting because the timeline and the
+/// entries' filter use it as well as reports.
 struct SettingsView: View {
     @Bindable var model: AppModel
     @State private var switching = false
@@ -12,37 +15,34 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Keep data in iCloud Drive", isOn: iCloudBinding)
-                    .disabled(switching || (!model.isICloudAvailable && model.storage == .local))
-                Text(storageExplanation)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                HStack {
-                    Button("Show in Finder") {
-                        show(model.dataFolder)
-                    }
-                    Button("Show Backups in Finder") {
-                        show(model.backupsFolder)
-                    }
-                }
-            } header: {
-                Text("Storage")
-            }
-
-            Section {
+                LaunchAtLoginToggle()
                 Picker("First day of the week", selection: $model.firstWeekday) {
                     ForEach(1...7, id: \.self) { day in
                         Text(Calendar.current.weekdaySymbols[day - 1]).tag(day)
                     }
                 }
             } header: {
-                Text("Reports")
+                Text("General")
             }
 
             Section {
-                LaunchAtLoginToggle()
+                Toggle("Keep data in iCloud Drive", isOn: iCloudBinding)
+                    .disabled(switching || (!model.isICloudAvailable && model.storage == .local))
+                LabeledContent("Data folder") {
+                    Button("Show in Finder") {
+                        show(model.dataFolder)
+                    }
+                }
+                LabeledContent("Backups folder") {
+                    Button("Show in Finder") {
+                        show(model.backupsFolder)
+                    }
+                }
             } header: {
-                Text("General")
+                Text("Storage")
+            } footer: {
+                Text(storageExplanation)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

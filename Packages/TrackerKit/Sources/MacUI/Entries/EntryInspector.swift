@@ -19,7 +19,7 @@ struct EntryInspector: View {
                 ContentUnavailableView("No Selection", systemImage: "clock", description: Text("Select an entry to edit it."))
             }
         }
-        .inspectorColumnWidth(min: 260, ideal: 290, max: 440)
+        .inspectorWidth()
     }
 }
 
