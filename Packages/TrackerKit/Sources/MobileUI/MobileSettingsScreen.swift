@@ -66,7 +66,11 @@ struct SettingsForm: View {
                 }
                 .disabled(model.isReadOnly)
             } footer: {
-                Text("Adds the events of each project's calendar as its entries. Choose a project's calendar under Clients & Projects.")
+                // On iPad the projects are in the sidebar, with their
+                // settings on their pages.
+                Text(showsProjects
+                    ? "Adds the events of each project's calendar as its entries. Choose a project's calendar under Clients & Projects."
+                    : "Adds the events of each project's calendar as its entries. To choose a project's calendar, open the project in the sidebar and tap Settings.")
             }
 
             Section {
