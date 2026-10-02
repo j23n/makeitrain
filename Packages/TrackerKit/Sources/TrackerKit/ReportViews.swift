@@ -211,6 +211,8 @@ public struct ReportBreakdown: View {
     @ScaledMetric private var indent: CGFloat = 22
     @ScaledMetric private var markWidth: CGFloat = 14
     @ScaledMetric private var percentWidth: CGFloat = 40
+    /// The names' column, beside the bars; a longer name is shortened.
+    @ScaledMetric private var titleWidth: CGFloat = 240
 
     public init(report: Report, style: Style = .inline) {
         self.init(rows: BreakdownRow.rows(of: report), total: report.total, style: style)
@@ -231,7 +233,7 @@ public struct ReportBreakdown: View {
                     GridRow {
                         title(row)
                             .padding(.leading, row.isNested ? indent : 0)
-                            .frame(maxWidth: 320, alignment: .leading)
+                            .frame(width: titleWidth, alignment: .leading)
                         bar(row)
                             .frame(minWidth: 60)
                         duration(row)
