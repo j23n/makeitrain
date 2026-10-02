@@ -13,6 +13,20 @@ import TrackerCore
 @MainActor
 struct FocusProbe {
     @Test func clickingAStartTime() async {
+        setvbuf(stdout, nil, _IONBF, 0)
+        atexit {
+            print("PROBE exiting\n" + Thread.callStackSymbols.prefix(40).joined(separator: "\n"))
+        }
+        for code in [SIGSEGV, SIGBUS, SIGABRT, SIGILL, SIGTRAP, SIGTERM] {
+            signal(code) { code in
+                print("PROBE signal \(code)\n" + Thread.callStackSymbols.prefix(40).joined(separator: "\n"))
+                _exit(70)
+            }
+        }
+        let terminating = NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: nil) { _ in
+            print("PROBE app will terminate\n" + Thread.callStackSymbols.prefix(40).joined(separator: "\n"))
+        }
+        defer { NotificationCenter.default.removeObserver(terminating) }
         _ = NSApplication.shared
         NSApp.setActivationPolicy(.regular)
         NSApp.finishLaunching()
@@ -106,6 +120,9 @@ struct FocusProbe {
         let end = Date(timeIntervalSinceNow: seconds)
         repeat {
             while let event = NSApp.nextEvent(matching: .any, until: Date(), inMode: .default, dequeue: true) {
+                if event.type != .periodic {
+                    print("PROBE event \(event.type.rawValue)")
+                }
                 NSApp.sendEvent(event)
             }
             RunLoop.main.run(mode: .default, before: Date())

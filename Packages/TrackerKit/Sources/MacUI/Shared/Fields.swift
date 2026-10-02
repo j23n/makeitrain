@@ -137,6 +137,7 @@ struct DateTimeField: NSViewRepresentable {
     let commit: (Date) -> Void
 
     func makeNSView(context: Context) -> DateTimePicker {
+        DateTimePicker.probe?("make, edits on appear \(editsOnAppear)")
         let picker = DateTimePicker()
         picker.datePickerStyle = .textField
         picker.datePickerElements = [.yearMonthDay, .hourMinute]
@@ -193,16 +194,20 @@ final class DateTimePicker: NSDatePicker {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
+        Self.probe?("moved to window \(window != nil), edits on appear \(editsOnAppear)")
         guard editsOnAppear, window != nil else { return }
         editsOnAppear = false
         // Once the window has finished setting up its first responder.
         Task { @MainActor [weak self] in
             guard let self, let window = self.window else { return }
-            window.makeFirstResponder(self)
+            Self.probe?("making first responder")
+            let made = window.makeFirstResponder(self)
+            Self.probe?("made first responder \(made)")
         }
     }
 
     override func becomeFirstResponder() -> Bool {
+        Self.probe?("becoming first responder")
         let became = super.becomeFirstResponder()
         Self.probe?("become \(became), editing \(isEditing)")
         if became, !isEditing {
