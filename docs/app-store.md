@@ -6,16 +6,16 @@ What's in place for submitting the Mac and iOS apps, and what's left to do by ha
 
 | Item | Where |
 | --- | --- |
-| App icons | `Mac/Assets.xcassets/AppIcon.appiconset` (16 to 512 points at 1x and 2x) and `iOS/Assets.xcassets/AppIcon.appiconset` (1024 pixels) |
-| Privacy manifests | `Mac/PrivacyInfo.xcprivacy` and `iOS/PrivacyInfo.xcprivacy` |
-| Sandbox, iCloud and calendars | `Mac/TimeTracker.entitlements` and `iOS/TimeTracker.entitlements` |
-| Calendar access | `NSCalendarsFullAccessUsageDescription` in both `Info.plist` files, shown when the app first asks to read calendars |
-| iCloud Drive folder | `NSUbiquitousContainers` in both `Info.plist` files, so the data shows as "Time Tracker" in Finder and Files |
+| App icons | `App/Assets.xcassets/AppIcon.appiconset`: the Mac's at 16 to 512 points at 1x and 2x, and iOS's at 1024 pixels |
+| Privacy manifest | `App/PrivacyInfo.xcprivacy`, for both platforms |
+| Sandbox, iCloud and calendars | `App/TimeTracker-macOS.entitlements` and `App/TimeTracker-iOS.entitlements`, picked per platform by `CODE_SIGN_ENTITLEMENTS` |
+| Calendar access | `NSCalendarsFullAccessUsageDescription` in `App/Info.plist`, shown when the app first asks to read calendars |
+| iCloud Drive folder | `NSUbiquitousContainers` in `App/Info.plist`, so the data shows as "Time Tracker" in Finder and Files |
 | Category | Productivity (`LSApplicationCategoryType`, Mac) |
 | Encryption | `ITSAppUsesNonExemptEncryption` is `NO` in both apps, so App Store Connect doesn't ask about export compliance |
 | Launch at login | Off until the user turns it on in Settings, as guideline 2.4.5 requires |
 
-Both apps use the bundle identifier `com.j23n.TimeTracker`, so one App Store record can offer them as a universal purchase.
+The Mac and iOS apps are one target with the bundle identifier `com.j23n.TimeTracker`, so one App Store record can offer them as a universal purchase.
 
 ## Privacy
 
@@ -44,9 +44,9 @@ The privacy manifests say the same: no tracking, no tracking domains and no coll
 
 ## Left to do
 
-1. Pick a team for both targets under Signing & Capabilities.
-2. Register the App ID and the iCloud container `iCloud.com.j23n.TimeTracker` in the developer account, and turn on iCloud Documents for the App ID. If the container name changes, change it in both entitlements files, both `Info.plist` files and `AppEnvironment.live(containerIdentifier:)`.
+1. Pick a team for the target under Signing & Capabilities, and check that it shows iCloud for both platforms and the App Sandbox for macOS.
+2. Register the App ID and the iCloud container `iCloud.com.j23n.TimeTracker` in the developer account, and turn on iCloud Documents for the App ID. If the container name changes, change it in both entitlements files, `App/Info.plist` and `AppEnvironment.live(containerIdentifier:)`.
 3. Create the app in App Store Connect with the Mac and iOS platforms, and fill in the description, keywords, support URL and privacy policy URL. A short privacy policy can say what the Privacy section above says.
 4. Take screenshots: the menu bar popover, the timeline, the entries table and a report on the Mac; the timer, entries and a report on iPhone; the timeline, entries and a report on iPad.
 5. Test iCloud on two devices before the first release. [Sync](sync.md) has a checklist.
-6. Archive each scheme in Xcode and upload it from the Organizer.
+6. Archive the `TimeTracker` scheme for Any Mac, and again for Any iOS Device, and upload each archive from the Organizer.

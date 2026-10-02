@@ -6,10 +6,10 @@ Time Tracker is a menu bar app for the Mac, with an iPhone and iPad app that sha
 
 | Path | What it holds |
 | --- | --- |
-| `Mac/`, `iOS/` | The two app targets: entry point, Info.plist, entitlements and assets. They contain almost no code. |
+| `App/` | The app target, which builds for macOS and for iOS: the entry point, which opens the Mac's or iOS's scenes, Info.plist, an entitlements file for each platform, and the assets. It contains almost no code. |
 | `Packages/TrackerKit` | The app layer on Apple platforms. `TrackerKit` has the shared app model, storage, iCloud sync and the views and screen logic both apps use; `MacUI` has the Mac's screens, and `MobileUI` the iPhone's and the iPad's. Every screen has previews with the sample data in `PreviewData`. |
 | `Packages/TrackerCore` | The data model, file format, merging, the timer and overlap rules, reports and the entry filter they share with the entries table, CSV export and import, turning calendar events into entries, and backups. Plain Swift that also builds and tests on Linux. |
-| `TimeTracker.xcodeproj` | The Xcode project, with the `TimeTracker` (macOS) and `TimeTrackerMobile` (iOS) targets. |
+| `TimeTracker.xcodeproj` | The Xcode project, with one multiplatform target and scheme, `TimeTracker`, for the Mac, iPhone and iPad. Settings that differ, such as the entitlements and the Info.plist keys of each platform, are set per SDK. |
 | `docs/` | These documents. |
 
 ## How the pieces fit
@@ -53,7 +53,7 @@ The Mac app has the App Sandbox, iCloud Documents for its own container, read-wr
 
 ## Choices
 
-- Logic lives in the packages, where `swift test` runs it. The app targets stay thin.
+- Logic lives in the packages, where `swift test` runs it. The app target stays thin.
 - TrackerCore has no Apple-only dependencies, so its tests also run on Linux.
 - There's no SwiftData or Core Data, because they store a database rather than readable files.
 - The Mac app uses SwiftUI scenes: `MenuBarExtra` for the popover, a `Window` for the main window, and `Settings`. The Dock icon shows only while the main window or Settings is open.
