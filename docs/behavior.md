@@ -5,9 +5,11 @@ The rules the app follows, whichever screen or device an edit comes from. One ti
 ## Timer
 
 - Starting a timer stops the running one at the same instant, so switching tasks leaves no gap and no overlap.
-- A quick start needs only a note. The entry shows as "Unassigned" until it gets a project. The menu bar's quick start also takes a project and tags, offering the project's tags as you type.
+- A quick start needs only a note. The entry shows as "Unassigned", with an empty ring where a project's color would be, until it gets a project. The menu bar's quick start also takes a project and tags, offering the project's tags as you type.
 - The main window's toolbar has the timer in a capsule: a round button to start a timer without a project, or the running timer's project, note (or tags) and time with a round button to stop it. Its menu starts, or switches to, a recent project and tags. On macOS 26 it has as much space on its left, up to the screen's title, as on its right, up to the screen's buttons, and it's as tall as the toolbar's other items. Earlier versions of macOS center it in the part of the toolbar beside the sidebar.
 - On iPad, every screen but the Timer has the timer in the middle of its toolbar: "Start Timer", or a stop button and the running timer's project and time. Touching and holding "Start Timer" offers the recent projects and tags; tapping the running timer offers them too, with "Started Earlier…" and "Stop at an Earlier Time…".
+- Wherever recent projects and tags are offered, the running timer's are marked and can't be picked: starting them again would only cut the running entry in two.
+- The running timer's entry has a red mark wherever entries are listed: in the Mac's table, on iPhone and iPad, on the timeline and in the month calendar. In the lists and the month calendar, an overlap's warning takes its place.
 - "Started Earlier…" moves the running timer's start back, for work that began before the timer did. This can create an overlap.
 - "Stop at an Earlier Time…" stops the running timer in the past, for a timer left running. There's no idle detection.
 - A stopped entry never runs again; continuing work starts a new entry. That's what lets a stop win over edits made to an out-of-date copy on another device. Undoing a stop is the one exception: it resumes the timer.
@@ -18,7 +20,7 @@ The rules the app follows, whichever screen or device an edit comes from. One ti
 
 - Overlaps are worked out when the data is displayed and never stored. Entries are scanned in order of start while tracking the latest end so far, and an entry overlaps if it starts before that end. That also catches an entry that overlaps an earlier, longer one with a shorter entry in between.
 - A running timer counts as ending now. Deleted entries and entries with no duration are ignored.
-- The entries list shows a warning icon, and its "Overlaps" filter shows only overlapping entries; right-clicking an entry on the Mac, or touching and holding it on iPad, offers its fixes. The timeline gives overlapping blocks an orange edge.
+- The entries list and the month calendar show a warning icon, and the list's "Overlaps" filter shows only overlapping entries; right-clicking an entry on the Mac, or touching and holding it on iPad, offers its fixes. The timeline gives overlapping blocks an orange edge.
 - Each overlap offers a one-click fix, never applied on its own. If the earlier entry ends inside the later one, the fix is "Trim Earlier Entry". If one entry contains the other, it's "Split Entry Around It", which cuts the outer entry into the parts before and after the inner one; that also covers a meeting added in the middle of a running timer. Entries that start at the same moment get no fix.
 
 ## Editing entries
