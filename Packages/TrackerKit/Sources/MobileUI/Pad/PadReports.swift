@@ -321,6 +321,16 @@ struct PadReportsScreen: View {
     }
 }
 
+#Preview("Narrow Window") {
+    NavigationStack {
+        PadReportsScreen(model: PreviewData.model(PreviewData.ownerLedger))
+            .navigationTitle("Reports")
+            .navigationBarTitleDisplayMode(.inline)
+    }
+    .environment(\.horizontalSizeClass, .compact)
+    .frame(width: 420)
+}
+
 #Preview("No Entries") {
     NavigationStack {
         PadReportsScreen(model: PreviewData.model(Ledger()))
