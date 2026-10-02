@@ -1,142 +1,19 @@
 #if os(macOS)
+import AppKit
 import SwiftUI
 import TrackerCore
 import TrackerKit
 
-/// Clients and their projects in an outline, with an inspector to edit,
-/// archive, merge and delete them.
-struct ProjectsView: View {
-    let model: AppModel
-    @Environment(\.undoManager) private var undoManager
-    @State private var selection: ProjectListRow.Kind?
-    @State private var showArchived = false
-    @AppStorage("projects.inspector") private var showInspector = true
-    /// Clients folded away; the rest show their projects.
-    @State private var collapsed: Set<ProjectListRow.Kind> = []
-
-    init(model: AppModel, selection: ProjectListRow.Kind? = nil) {
-        self.model = model
-        _selection = State(initialValue: selection)
-    }
-
-    var body: some View {
-        let rows = ProjectListRow.rows(ledger: model.ledger, resolved: model.resolved, now: model.now, showArchived: showArchived)
-        List(selection: $selection) {
-            ForEach(rows) { row in
-                if let children = row.children {
-                    DisclosureGroup(isExpanded: Binding(
-                        get: { !collapsed.contains(row.id) },
-                        set: { expanded in
-                            if expanded {
-                                collapsed.remove(row.id)
-                            } else {
-                                collapsed.insert(row.id)
-                            }
-                        }
-                    )) {
-                        ForEach(children) { child in
-                            ProjectListRowView(row: child)
-                                .tag(child.id)
-                        }
-                    } label: {
-                        ProjectListRowView(row: row)
-                            .tag(row.id)
-                    }
-                } else {
-                    ProjectListRowView(row: row)
-                        .tag(row.id)
-                }
-            }
-        }
-        .overlay {
-            if rows.isEmpty {
-                ContentUnavailableView(
-                    "No Projects",
-                    systemImage: "folder",
-                    description: Text("Add a client or a project with the buttons in the toolbar.")
-                )
-            }
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Toggle(isOn: $showArchived) {
-                    Label("Show Archived", systemImage: "archivebox")
-                }
-                .help("Show archived clients and projects")
-                Button(action: addClient) {
-                    Label("New Client", systemImage: "person.crop.circle.badge.plus")
-                }
-                .help("Add a client")
-                .disabled(model.isReadOnly)
-                Button(action: addProject) {
-                    Label("New Project", systemImage: "folder.badge.plus")
-                }
-                .help("Add a project, for the selected client if there is one")
-                .disabled(model.isReadOnly)
-                Button {
-                    showInspector.toggle()
-                } label: {
-                    Label("Inspector", systemImage: "sidebar.right")
-                }
-                .help("Show or hide the inspector")
-            }
-        }
-        .inspector(isPresented: $showInspector) {
-            editor
-                .inspectorWidth()
-        }
-    }
-
-    @ViewBuilder
-    private var editor: some View {
-        switch selection {
-        case .client(let id)?:
-            if let client = model.ledger.clients[id], !client.isDeleted {
-                ClientEditor(model: model, client: client)
-                    .id(id)
-            } else {
-                noSelection
-            }
-        case .project(let id)?:
-            if let project = model.ledger.projects[id], !project.isDeleted {
-                ProjectEditor(model: model, project: project)
-                    .id(id)
-            } else {
-                noSelection
-            }
-        case .noClient?, nil:
-            noSelection
-        }
-    }
-
-    private var noSelection: some View {
-        ContentUnavailableView("No Selection", systemImage: "folder", description: Text("Select a client or project to edit it."))
-    }
-
-    private func addClient() {
-        let id = model.addClient(named: "New Client", undoManager: undoManager)
-        selection = .client(id)
-        showInspector = true
-    }
-
-    private func addProject() {
-        var clientID: UUID?
-        switch selection {
-        case .client(let id)?: clientID = id
-        case .project(let id)?: clientID = model.ledger.projects[id]?.clientID
-        case .noClient?, nil: clientID = nil
-        }
-        let id = model.addProject(named: "New Project", client: clientID, color: ProjectColors.next(in: model.ledger), undoManager: undoManager)
-        selection = .project(id)
-        showInspector = true
-    }
-}
+// The settings of a client, a project and a tag, in the inspector of their
+// pages.
 
 /// A client's name and archived state, merging it into another client, and
 /// deleting it.
 struct ClientEditor: View {
     let model: AppModel
     let client: Client
+    /// Shows the client this one was merged into.
+    let merged: (UUID) -> Void
     @Environment(\.undoManager) private var undoManager
     @State private var mergeTarget: Client?
     @State private var confirmingDelete = false
@@ -184,7 +61,9 @@ struct ClientEditor: View {
             presenting: mergeTarget
         ) { target in
             Button("Merge") {
-                try? model.mergeClient(client.id, into: target.id, undoManager: undoManager)
+                if (try? model.mergeClient(client.id, into: target.id, undoManager: undoManager)) != nil {
+                    merged(target.id)
+                }
             }
         } message: { target in
             Text("Every project of “\(client.name)” moves to “\(target.name)”, and “\(client.name)” is deleted.")
@@ -218,18 +97,20 @@ struct ClientEditor: View {
 }
 
 /// A project's settings: its name, client, color and archived state, its
-/// tags, its GitHub repositories and the calendar its events come from, and
-/// merging it into another project or deleting it.
+/// GitHub repositories and the calendar its events come from, and merging
+/// it into another project or deleting it. Its tags and time are on its
+/// page.
 struct ProjectEditor: View {
     let model: AppModel
     let project: Project
+    /// Shows the project this one was merged into.
+    let merged: (UUID) -> Void
     @Environment(\.undoManager) private var undoManager
     @State private var mergeTarget: Project?
     @State private var confirmingDelete = false
     @State private var cantDelete = false
 
     var body: some View {
-        let entries = model.resolved.filter { $0.entry.projectID == project.id }
         let others = model.ledger.projects.values
             .filter { !$0.isDeleted && $0.id != project.id }
             .sorted { model.ledger.projectTitle($0.id).lowercased() < model.ledger.projectTitle($1.id).lowercased() }
@@ -281,11 +162,6 @@ struct ProjectEditor: View {
                 Text("Moving a project to another client moves its history too, including in past reports.")
                     .foregroundStyle(.secondary)
             }
-            Section {
-                LabeledContent("Entries", value: "\(entries.count)")
-                LabeledContent("Time Logged", value: Format.duration(entries.reduce(0) { $0 + model.duration(of: $1) }))
-            }
-            ProjectTagsSection(model: model, project: project)
             RepositoriesSection(model: model, project: project)
             ProjectCalendarSection(model: model, project: project)
             Section {
@@ -306,7 +182,9 @@ struct ProjectEditor: View {
             presenting: mergeTarget
         ) { target in
             Button("Merge") {
-                try? model.mergeProject(project.id, into: target.id, undoManager: undoManager)
+                if (try? model.mergeProject(project.id, into: target.id, undoManager: undoManager)) != nil {
+                    merged(target.id)
+                }
             }
         } message: { target in
             Text("Every entry of “\(project.name)” moves to “\(target.name)”, and “\(project.name)” is deleted.")
@@ -339,25 +217,102 @@ struct ProjectEditor: View {
     }
 }
 
+/// Renames a tag on its project's entries, merging it into another of the
+/// project's tags when given that tag's name, or removes it from them.
+struct TagEditor: View {
+    let model: AppModel
+    /// The tag's project, or nil for the unassigned entries'.
+    let projectID: UUID?
+    let tag: ProjectOverview.Tag
+    /// The project's tags.
+    let projectTags: [String]
+    let renamed: (String) -> Void
+    @Environment(\.undoManager) private var undoManager
+    @State private var mergeInto: String?
+    @State private var confirmingRemove = false
+
+    var body: some View {
+        let project = model.ledger.projectTitle(projectID)
+        Form {
+            Section {
+                LabeledContent("Project") {
+                    ProjectLabel(ledger: model.ledger, projectID: projectID)
+                }
+                CommitField(title: "Name", value: tag.name) { name in
+                    guard let cleaned = Tags.normalize([name]).first, cleaned != tag.name else { return }
+                    if let existing = projectTags.first(where: { Tags.same($0, cleaned) && !Tags.same($0, tag.name) }) {
+                        mergeInto = existing
+                    } else {
+                        rename(to: cleaned)
+                    }
+                }
+                LabeledContent("Entries", value: "\(tag.count)")
+                LabeledContent("Time Logged", value: Format.duration(tag.milliseconds))
+            } footer: {
+                Text("Renaming a tag changes it on this project's entries only. Renaming it to another of the project's tags merges the two.")
+                    .foregroundStyle(.secondary)
+            }
+            if let url = tag.url {
+                Section {
+                    Button("Open \(tag.name) on GitHub") {
+                        NSWorkspace.shared.open(url)
+                    }
+                } footer: {
+                    Text(url.absoluteString)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+            }
+            Section {
+                Button("Remove from the Project's Entries…", role: .destructive) {
+                    confirmingRemove = true
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .disabled(model.isReadOnly)
+        .confirmationDialog(
+            "Merge “\(tag.name)” into “\(mergeInto ?? "")”?",
+            isPresented: Binding(get: { mergeInto != nil }, set: { if !$0 { mergeInto = nil } }),
+            presenting: mergeInto
+        ) { target in
+            Button("Merge") {
+                rename(to: target)
+            }
+        } message: { target in
+            Text("Every entry of \(project) tagged “\(tag.name)” is tagged “\(target)” instead.")
+        }
+        .confirmationDialog("Remove “\(tag.name)” from every entry of \(project)?", isPresented: $confirmingRemove) {
+            Button("Remove", role: .destructive) {
+                model.removeTag(tag.name, fromProject: projectID, undoManager: undoManager)
+            }
+        }
+    }
+
+    private func rename(to name: String) {
+        model.renameTag(tag.name, to: name, inProject: projectID, undoManager: undoManager)
+        renamed(name)
+    }
+}
+
 #if DEBUG
 #Preview("Project") {
-    ProjectsView(model: PreviewData.model(), selection: .project(PreviewData.website))
-        .frame(width: 900, height: 600)
+    let model = PreviewData.model()
+    return ProjectEditor(model: model, project: model.ledger.projects[PreviewData.mobileApp]!) { _ in }
+        .frame(width: 320, height: 760)
 }
 
 #Preview("Client") {
-    ProjectsView(model: PreviewData.model(), selection: .client(PreviewData.acme))
-        .frame(width: 900, height: 600)
+    let model = PreviewData.model()
+    return ClientEditor(model: model, client: model.ledger.clients[PreviewData.acme]!) { _ in }
+        .frame(width: 320, height: 420)
 }
 
-#Preview("Nothing Selected") {
-    ProjectsView(model: PreviewData.model())
-        .frame(width: 900, height: 600)
-}
-
-#Preview("No Projects") {
-    ProjectsView(model: PreviewData.model(Ledger()))
-        .frame(width: 900, height: 600)
+#Preview("Linked Tag") {
+    let model = PreviewData.model()
+    let overview = PreviewData.overview(of: [PreviewData.website], in: model.ledger)
+    return TagEditor(model: model, projectID: PreviewData.website, tag: overview.tag("#42")!, projectTags: overview.tagNames) { _ in }
+        .frame(width: 320, height: 420)
 }
 #endif
 #endif

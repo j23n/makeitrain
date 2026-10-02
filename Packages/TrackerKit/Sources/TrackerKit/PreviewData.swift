@@ -212,6 +212,13 @@ public enum PreviewData {
         return Ledger(clients: clients, projects: projects, entries: entries)
     }()
 
+    /// The overview of some of a ledger's projects, nil for the unassigned
+    /// entries, as their pages show it now, with weeks from Monday.
+    public static func overview(of projects: Set<UUID?>, in ledger: Ledger) -> ProjectOverview {
+        let today = now.local(in: "Europe/Berlin").date
+        return ProjectOverview(projects: projects, ledger: ledger, resolved: ledger.resolvedEntries(), today: today, firstWeekday: 2, now: now)
+    }
+
     /// The sample data with the timer stopped at 15:40.
     public static var stoppedLedger: Ledger {
         var stopped = PreviewData.ledger
