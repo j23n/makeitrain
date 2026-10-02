@@ -70,11 +70,6 @@ public enum Format {
         return Int64(minutes.rounded()) * 60000
     }
 
-    /// Decimal hours, such as "2.42".
-    public static func hours(_ milliseconds: Int64) -> String {
-        String(format: "%.2f", Double(max(0, milliseconds)) / 3_600_000)
-    }
-
     /// The wall-clock time in a time zone, such as "09:15" or "9:15 AM",
     /// following the user's settings.
     public static func time(_ time: Timestamp, zone: String) -> String {
@@ -89,6 +84,16 @@ public enum Format {
     /// A day's weekday, such as "Mon".
     public static func weekday(_ day: LocalDate) -> String {
         noon(of: day).formatted(Date.FormatStyle(timeZone: utc).weekday(.abbreviated))
+    }
+
+    /// A day without its weekday and year, such as "Sep 23".
+    public static func monthDay(_ day: LocalDate) -> String {
+        noon(of: day).formatted(Date.FormatStyle(timeZone: utc).month(.abbreviated).day())
+    }
+
+    /// A month's short name, such as "Sep".
+    public static func shortMonth(_ day: LocalDate) -> String {
+        noon(of: day).formatted(Date.FormatStyle(timeZone: utc).month(.abbreviated))
     }
 
     /// A month and its year, such as "September 2026".

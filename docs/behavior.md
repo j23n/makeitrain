@@ -78,7 +78,9 @@ The rules the app follows, whichever screen or device an edit comes from. One ti
 ## Reports
 
 - A report covers a day, a week, a month or a custom range; the iPhone offers the first three. Weeks start on the day chosen in Settings.
-- Groups: by client, with each client's projects under it, then "No client" and "Unassigned"; by project; or by tag, then "Untagged". An entry with two tags counts in full under each, so tag totals can add up to more than the total.
+- Its figures are the total, the average day worked, which leaves out days without time, how many days had time, and the change from the period before: the day, week or month before, or as many days before a custom range, with the same filters. While a period is under way, its days so far are compared with as many days at the start of the period before, so a week on its Wednesday is held against Monday to Wednesday of the week before. A day's report shows its entries and when its first entry started and its last one ended instead of the average and the days.
+- The chart has a column for each day, stacked by project, with each day's total over it and a dashed line at the average day worked. A range longer than a month has a column for each week, and one longer than about four months a column for each month.
+- Groups: by client, with each client's projects under it, then "No client" and "Unassigned"; by project; or by tag, then "Untagged". A client with one project takes one line, such as "Acme › Website". Each line has its share of the total and a bar for it; a client with several projects has a bar in their colors. An entry with two tags counts in full under each, so tag totals can add up to more than the total.
 - Filters for clients, projects and tags on the Mac and iPad.
 - Every entry counts in full, so the total equals the sum of end minus start over the CSV's rows. Where entries overlap, that time counts twice, and the report says how much: the sum of the durations minus the length of their union, which stays right when three entries overlap.
 - A running timer isn't in the totals or the CSV. Reports show it on its own line, such as "Running: 0:42, not included".

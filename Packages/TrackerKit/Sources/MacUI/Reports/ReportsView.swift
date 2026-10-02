@@ -4,8 +4,9 @@ import TrackerCore
 import TrackerKit
 import UniformTypeIdentifiers
 
-/// Totals for a day, week, month or custom range, grouped and filtered,
-/// with a chart and CSV export.
+/// Totals for a day, week, month or custom range, filtered: the figures
+/// across the top, the time of each day on a chart, and the time by
+/// client, project or tag with a bar for each, with CSV export.
 struct ReportsView: View {
     let model: AppModel
     @State private var period = ReportPeriod.week
@@ -24,15 +25,43 @@ struct ReportsView: View {
         VStack(spacing: 0) {
             controls
             Divider()
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    ReportSummary(report: report, now: model.now, incomplete: model.missingFiles > 0 || !model.issues.isEmpty)
-                    ReportChart(report: report, ledger: model.ledger)
-                        .frame(height: 240)
-                    ReportGroupList(report: report)
+            if model.resolved.isEmpty {
+                ContentUnavailableView(
+                    "No Time Logged Yet",
+                    systemImage: "chart.bar.xaxis",
+                    description: Text("Start a timer in the toolbar or the menu bar, and the time you log adds up here.")
+                )
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        ReportSummary(
+                            report: report,
+                            comparison: ReportComparison(
+                                report,
+                                period: period,
+                                today: model.today,
+                                firstWeekday: model.firstWeekday,
+                                ledger: model.ledger,
+                                resolved: model.resolved,
+                                now: model.now
+                            ),
+                            period: period,
+                            now: model.now,
+                            incomplete: model.missingFiles > 0 || !model.issues.isEmpty
+                        )
+                        // A day's time is in its figures and breakdown;
+                        // a chart of one bar adds nothing.
+                        if report.days.count > 1 {
+                            ReportChart(report: report, ledger: model.ledger, today: model.today, firstWeekday: model.firstWeekday)
+                                .card()
+                        }
+                        breakdown(report)
+                            .card()
+                    }
+                    .padding(24)
+                    .frame(maxWidth: 1200)
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(20)
-                .frame(maxWidth: 900, alignment: .leading)
             }
         }
         .toolbar {
@@ -87,24 +116,49 @@ struct ReportsView: View {
         !clients.isEmpty || !projects.isEmpty || !tags.isEmpty
     }
 
+    /// The time by client, project or tag, with the grouping beside its
+    /// heading.
+    private func breakdown(_ report: Report) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 12) {
+                Text("Breakdown")
+                    .font(.headline)
+                Spacer(minLength: 12)
+                Picker("Group by", selection: $grouping) {
+                    Text("Client").tag(ReportRequest.Grouping.client)
+                    Text("Project").tag(ReportRequest.Grouping.project)
+                    Text("Tag").tag(ReportRequest.Grouping.tag)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+                .help("Group the time by client, project or tag")
+            }
+            if report.groups.isEmpty {
+                Text(isFiltered ? "No time logged on these days matches the filters." : "No time logged on these days.")
+                    .foregroundStyle(.secondary)
+            } else {
+                ReportBreakdown(report: report)
+            }
+        }
+    }
+
     // MARK: Controls
 
-    /// The period and its days, then the grouping and filters; in a narrow
-    /// window on two lines.
+    /// The period and its days, then the filters; in a narrow window on two
+    /// lines.
     private var controls: some View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 12) {
                 periodControls
                 Spacer(minLength: 12)
-                groupingControls
+                filterMenu
             }
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 12) {
                     periodControls
                 }
-                HStack(spacing: 12) {
-                    groupingControls
-                }
+                filterMenu
             }
         }
         .padding(.horizontal, 20)
@@ -160,19 +214,6 @@ struct ReportsView: View {
                 .font(.headline)
                 .lineLimit(1)
         }
-    }
-
-    @ViewBuilder
-    private var groupingControls: some View {
-        Picker("Group by", selection: $grouping) {
-            Text("Client").tag(ReportRequest.Grouping.client)
-            Text("Project").tag(ReportRequest.Grouping.project)
-            Text("Tag").tag(ReportRequest.Grouping.tag)
-        }
-        .fixedSize()
-        .help("Group the time by client, project or tag")
-
-        filterMenu
     }
 
     private var currentTitle: String {
@@ -295,12 +336,17 @@ struct ReportsView: View {
 #if DEBUG
 #Preview("This Week") {
     ReportsView(model: PreviewData.model())
-        .frame(width: 1000, height: 720)
+        .frame(width: 1000, height: 820)
+}
+
+#Preview("A Freelancer's Week") {
+    ReportsView(model: PreviewData.model(PreviewData.ownerLedger))
+        .frame(width: 1000, height: 760)
 }
 
 #Preview("Files Missing") {
     ReportsView(model: PreviewData.model(missingFiles: 3))
-        .frame(width: 1000, height: 720)
+        .frame(width: 1000, height: 820)
 }
 
 #Preview("No Entries") {
@@ -309,8 +355,8 @@ struct ReportsView: View {
 }
 
 #Preview("Narrow") {
-    ReportsView(model: PreviewData.model())
-        .frame(width: 640, height: 720)
+    ReportsView(model: PreviewData.model(PreviewData.ownerLedger))
+        .frame(width: 680, height: 820)
 }
 #endif
 #endif
