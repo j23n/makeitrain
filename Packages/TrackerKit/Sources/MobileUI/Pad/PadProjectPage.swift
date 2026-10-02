@@ -334,6 +334,25 @@ struct TagForm: View {
     }
 }
 
+#Preview("Narrow Window") {
+    NavigationStack {
+        PadProjectPage(model: PreviewData.model(PreviewData.ownerLedger), projectID: PreviewData.quotlify) { _ in }
+            .navigationTitle("Quotlify")
+            .navigationBarTitleDisplayMode(.inline)
+    }
+    .environment(\.horizontalSizeClass, .compact)
+    .frame(width: 420)
+}
+
+#Preview("No Time Yet") {
+    let model = PreviewData.model(Ledger(projects: [Project(id: PreviewData.website, name: "Website redesign", updated: PreviewData.now)]))
+    return NavigationStack {
+        PadProjectPage(model: model, projectID: PreviewData.website) { _ in }
+            .navigationTitle("Website redesign")
+            .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
 #Preview("Client") {
     NavigationStack {
         PadClientPage(model: PreviewData.model(), clientID: PreviewData.acme, select: { _ in }, add: { _ in })

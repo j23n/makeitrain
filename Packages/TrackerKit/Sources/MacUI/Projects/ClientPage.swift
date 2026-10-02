@@ -95,5 +95,16 @@ struct ClientPage: View {
     ClientPage(model: PreviewData.model(PreviewData.ownerLedger), clientID: PreviewData.craftumsoft, select: { _ in }, add: { _ in })
         .frame(width: 1000, height: 640)
 }
+
+#Preview("No Projects") {
+    let model = PreviewData.model(Ledger(clients: [Client(id: PreviewData.acme, name: "Acme", updated: PreviewData.now)]))
+    return ClientPage(model: model, clientID: PreviewData.acme, select: { _ in }, add: { _ in })
+        .frame(width: 1000, height: 560)
+}
+
+#Preview("Narrow") {
+    ClientPage(model: PreviewData.model(), clientID: PreviewData.acme, select: { _ in }, add: { _ in })
+        .frame(width: 680, height: 760)
+}
 #endif
 #endif
