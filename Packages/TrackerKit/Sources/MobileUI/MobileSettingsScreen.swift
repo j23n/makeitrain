@@ -361,6 +361,9 @@ struct MobileClientForm: View {
 struct MobileProjectForm: View {
     let model: AppModel
     let id: UUID
+    /// Whether it lists the project's tags. On iPad they're on the
+    /// project's page.
+    var showsTags = true
     /// What happens once the project is deleted. Unless given, the form
     /// goes back.
     var deleted: (() -> Void)? = nil
@@ -423,7 +426,9 @@ struct MobileProjectForm: View {
                         }
                     }
                 }
-                MobileProjectTagsSection(model: model, project: project)
+                if showsTags {
+                    MobileProjectTagsSection(model: model, project: project)
+                }
                 MobileRepositoriesSection(model: model, project: project)
                 MobileProjectCalendarSection(model: model, project: project)
                 Section {
