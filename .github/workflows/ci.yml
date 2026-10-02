@@ -38,6 +38,3 @@ jobs:
         run: >
           xcodebuild build -project TimeTracker.xcodeproj -scheme TimeTrackerMobile
           -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
-      # PROBE: temporary, where focus goes in the entries table on macOS 26.
-      - name: Focus probe
-        run: swift test --package-path Packages/TrackerKit --filter FocusProbe

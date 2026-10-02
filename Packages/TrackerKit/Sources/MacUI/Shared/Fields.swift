@@ -137,7 +137,6 @@ struct DateTimeField: NSViewRepresentable {
     let commit: (Date) -> Void
 
     func makeNSView(context: Context) -> DateTimePicker {
-        DateTimePicker.probe?("make, edits on appear \(editsOnAppear)")
         let picker = DateTimePicker()
         picker.datePickerStyle = .textField
         picker.datePickerElements = [.yearMonthDay, .hourMinute]
@@ -182,15 +181,11 @@ struct DateTimeField: NSViewRepresentable {
 /// A date picker that says when editing ends and whether the date changed,
 /// and that can start editing as it shows.
 ///
-/// Editing ends when focus moves to something other than the picker and the
-/// calendar it opens, rather than whenever the picker gives up focus: the
-/// calendar is in a window of its own, a child of the picker's, and opening
-/// it takes focus from the picker. Ending editing then took the picker away
-/// from under its calendar, and focus fell to the window's search field.
+/// Editing lasts while focus is on the picker or on the calendar it opens,
+/// rather than ending whenever the picker gives up focus: AppKit shows the
+/// calendar in a child window of the picker's and moves focus into it, and
+/// ending editing then would take the picker away from under its calendar.
 final class DateTimePicker: NSDatePicker {
-    // PROBE: temporary, reports focus changes to a probe test.
-    static var probe: ((String) -> Void)?
-
     var editsOnAppear = false
     /// Called when editing ends, with the new date, or nil when it's the
     /// same as when editing began.
@@ -202,34 +197,23 @@ final class DateTimePicker: NSDatePicker {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        Self.probe?("moved to window \(window != nil), edits on appear \(editsOnAppear)")
         guard editsOnAppear, window != nil else { return }
         editsOnAppear = false
         // Once the window has finished setting up its first responder.
         Task { @MainActor [weak self] in
             guard let self, let window = self.window else { return }
-            Self.probe?("making first responder")
-            let made = window.makeFirstResponder(self)
-            Self.probe?("made first responder \(made)")
+            window.makeFirstResponder(self)
         }
     }
 
     override func becomeFirstResponder() -> Bool {
-        Self.probe?("becoming first responder")
         let became = super.becomeFirstResponder()
-        Self.probe?("become \(became), editing \(isEditing)")
         if became, !isEditing {
             isEditing = true
             original = dateValue
             watchFocus()
         }
         return became
-    }
-
-    override func resignFirstResponder() -> Bool {
-        let resigned = super.resignFirstResponder()
-        Self.probe?("resign \(resigned), editing \(isEditing)")
-        return resigned
     }
 
     /// Ends editing once the window's focus is on something other than this
@@ -262,7 +246,6 @@ final class DateTimePicker: NSDatePicker {
 
     /// Ends editing, unless it has ended already, and says so.
     func finishEditing() {
-        Self.probe?("finish, editing \(isEditing)")
         guard isEditing else { return }
         isEditing = false
         focus?.invalidate()
