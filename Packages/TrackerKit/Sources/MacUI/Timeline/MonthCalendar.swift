@@ -17,20 +17,8 @@ struct MonthCalendar: View {
 
     static let lineHeight: CGFloat = 17
 
-    /// Every week with a day in the month, each starting on `firstWeekday`.
-    static func weeks(of month: LocalDate, firstWeekday: Int) -> [[LocalDate]] {
-        let days = ReportPeriod.month.range(containing: month, firstWeekday: firstWeekday)
-        var start = days.lowerBound.startOfWeek(firstWeekday: firstWeekday)
-        var weeks: [[LocalDate]] = []
-        while start <= days.upperBound {
-            weeks.append((0..<7).map { start.adding(days: $0) })
-            start = start.adding(days: 7)
-        }
-        return weeks
-    }
-
     var body: some View {
-        let weeks = Self.weeks(of: month, firstWeekday: model.firstWeekday)
+        let weeks = MonthGrid.weeks(of: month, firstWeekday: model.firstWeekday)
         let monthDays = ReportPeriod.month.range(containing: month, firstWeekday: model.firstWeekday)
         let shown = (weeks.first?.first ?? month)...(weeks.last?.last ?? month)
         let byDay = Dictionary(grouping: model.resolved.filter { shown.contains($0.entry.day) }) { $0.entry.day }

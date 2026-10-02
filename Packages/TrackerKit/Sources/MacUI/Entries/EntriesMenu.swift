@@ -19,7 +19,7 @@ struct EntriesMenu: View {
     var body: some View {
         let entries = model.resolved.filter { ids.contains($0.id) }
         if !entries.isEmpty {
-            let issues = Self.issues(of: entries, in: model.ledger)
+            let issues = EntryMenuItems.issues(of: entries, in: model.ledger)
             if !issues.isEmpty {
                 ForEach(issues, id: \.self) { issue in
                     Button("Open \(issue.tag) on GitHub") {
@@ -37,7 +37,7 @@ struct EntriesMenu: View {
                     Button("Split Entry…") {
                         sheet = .split(entry.id)
                     }
-                    .disabled(SplitEntrySheet.range(of: entry, now: model.now) == nil)
+                    .disabled(EntrySplit.range(of: entry, now: model.now) == nil)
                     if entry.isRunning {
                         Button("Stop Timer") {
                             model.stopTimer(undoManager: undoManager)
@@ -57,7 +57,7 @@ struct EntriesMenu: View {
                 Button("Set Project…") {
                     sheet = .project(ids)
                 }
-                let projectTags = Self.projectTags(of: entries, in: model.projectTags)
+                let projectTags = EntryMenuItems.projectTags(of: entries, in: model.projectTags)
                 Menu("Add Tag") {
                     ForEach(projectTags, id: \.self) { tag in
                         Button(tag) {
@@ -71,7 +71,7 @@ struct EntriesMenu: View {
                         sheet = .newTag(ids)
                     }
                 }
-                let tags = Self.tags(in: entries)
+                let tags = EntryMenuItems.tags(in: entries)
                 if !tags.isEmpty {
                     Menu("Remove Tag") {
                         ForEach(tags, id: \.self) { tag in
@@ -91,53 +91,6 @@ struct EntriesMenu: View {
             }
             .disabled(model.isReadOnly)
         }
-    }
-
-    /// The tags of the entries' projects, once each, ignoring case: the
-    /// tags to offer for adding. `tags` has each project's, as
-    /// `AppModel.projectTags` keeps them.
-    static func projectTags(of entries: [ResolvedEntry], in tags: [UUID?: [String]]) -> [String] {
-        var seen: Set<String> = []
-        var result: [String] = []
-        for projectID in Set(entries.map(\.entry.projectID)) {
-            for tag in tags[projectID] ?? [] where seen.insert(tag.lowercased()).inserted {
-                result.append(tag)
-            }
-        }
-        return result.sorted(by: Tags.order)
-    }
-
-    /// A tag that refers to an issue or pull request, and its address.
-    struct Issue: Hashable {
-        let tag: String
-        let url: URL
-    }
-
-    /// The issues and pull requests the entries' tags refer to, once each,
-    /// at most ten.
-    static func issues(of entries: [ResolvedEntry], in ledger: Ledger) -> [Issue] {
-        var seen: Set<URL> = []
-        var result: [Issue] = []
-        for entry in entries {
-            for tag in entry.entry.tags {
-                if let url = ledger.issueURL(forTag: tag, projectID: entry.entry.projectID), seen.insert(url).inserted {
-                    result.append(Issue(tag: tag, url: url))
-                }
-            }
-        }
-        return Array(result.sorted { Tags.order($0.tag, $1.tag) }.prefix(10))
-    }
-
-    /// The tags on any of the entries, once each, ignoring case.
-    static func tags(in entries: [ResolvedEntry]) -> [String] {
-        var seen: Set<String> = []
-        var result: [String] = []
-        for entry in entries {
-            for tag in entry.entry.tags where seen.insert(tag.lowercased()).inserted {
-                result.append(tag)
-            }
-        }
-        return result.sorted { $0.lowercased() < $1.lowercased() }
     }
 }
 
@@ -184,36 +137,12 @@ struct SplitEntrySheet: View {
         self.model = model
         self.entry = entry
         self.undoManager = undoManager
-        _time = State(initialValue: Self.suggestedTime(for: entry, now: model.now))
-    }
-
-    /// The times an entry can be split at: at least a minute after its
-    /// start and before its end, or before now while it runs. Nil when it's
-    /// too short to split.
-    static func range(of entry: ResolvedEntry, now: Timestamp) -> ClosedRange<Date>? {
-        let first = entry.start.adding(seconds: 60)
-        let last = (entry.end ?? now).adding(seconds: -60)
-        guard first <= last else { return nil }
-        return first.date...last.date
-    }
-
-    /// The middle of the entry, on a multiple of five minutes if there's
-    /// one inside it.
-    static func suggestedTime(for entry: ResolvedEntry, now: Timestamp) -> Date {
-        guard let range = range(of: entry, now: now) else { return entry.start.date }
-        let middle = entry.start.adding(milliseconds: entry.start.distance(to: entry.end ?? now) / 2)
-        let fiveMinutes: Int64 = 300_000
-        let snapped = Timestamp(milliseconds: (middle.milliseconds + fiveMinutes / 2) / fiveMinutes * fiveMinutes)
-        if range.contains(snapped.date) {
-            return snapped.date
-        }
-        let minute = Timestamp(milliseconds: (middle.milliseconds + 30000) / 60000 * 60000)
-        return min(max(minute.date, range.lowerBound), range.upperBound)
+        _time = State(initialValue: EntrySplit.suggestedTime(for: entry, now: model.now))
     }
 
     var body: some View {
         let zone = entry.entry.timeZone
-        let range = Self.range(of: entry, now: model.now)
+        let range = EntrySplit.range(of: entry, now: model.now)
         let end = entry.end ?? model.now
         let split = Timestamp(time).wholeSeconds
         let spansDays = entry.start.local(in: zone).date != end.local(in: zone).date
@@ -347,7 +276,7 @@ struct NewTagSheet: View {
         let added = tags
         guard !added.isEmpty else { return }
         // Reuse the spelling of a tag the entries' projects have.
-        let known = EntriesMenu.projectTags(of: model.resolved.filter { ids.contains($0.id) }, in: model.projectTags)
+        let known = EntryMenuItems.projectTags(of: model.resolved.filter { ids.contains($0.id) }, in: model.projectTags)
         let spelled = added.map { tag in known.first { Tags.same($0, tag) } ?? tag }
         model.updateEntries(ids, actionName: "Add Tags", undoManager: undoManager) { $0.tags += spelled }
         dismiss()

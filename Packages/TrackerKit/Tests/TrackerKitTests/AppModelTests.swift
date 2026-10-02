@@ -262,6 +262,21 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
         #expect(Set(saved.entries.values.map(\.note)) == ["From the other Mac", "New"])
     }
 
+    @Test func startsOnceWhenSeveralWindowsOpen() async throws {
+        let harness = Harness()
+        defer { harness.cleanUp() }
+        let cloud = FakeCloud(folder: harness.cloudFolder)
+        let model = harness.model(cloud: cloud)
+        await model.start()
+        cloud.finishGathering()
+        await eventually { model.state == .ready }
+
+        // A second window opening doesn't open iCloud again.
+        await model.start()
+        #expect(model.state == .ready)
+        #expect(cloud.isWatching)
+    }
+
     @Test func turningICloudOnMergesAndKeepsTheLocalFolder() async throws {
         let harness = Harness()
         defer { harness.cleanUp() }

@@ -1,8 +1,7 @@
-#if os(macOS)
 import Foundation
 import Testing
 import TrackerCore
-@testable import MacUI
+import TrackerKit
 
 @Suite struct SplitEntryTests {
     let now = DateTimeFormat.parse("2026-09-23T15:40:00+02:00")!
@@ -21,18 +20,17 @@ import TrackerCore
     }
 
     @Test func suggestsTheMiddleOnFiveMinutes() {
-        #expect(SplitEntrySheet.suggestedTime(for: entry("13:00", "17:00"), now: now) == time("15:00"))
-        #expect(SplitEntrySheet.suggestedTime(for: entry("13:00", "14:10"), now: now) == time("13:35"))
+        #expect(EntrySplit.suggestedTime(for: entry("13:00", "17:00"), now: now) == time("15:00"))
+        #expect(EntrySplit.suggestedTime(for: entry("13:00", "14:10"), now: now) == time("13:35"))
         // The running timer counts as ending now.
-        #expect(SplitEntrySheet.suggestedTime(for: entry("14:45", nil), now: now) == time("15:15"))
+        #expect(EntrySplit.suggestedTime(for: entry("14:45", nil), now: now) == time("15:15"))
         // No five minutes inside it: the middle, on a minute.
-        #expect(SplitEntrySheet.suggestedTime(for: entry("09:01", "09:04"), now: now) == time("09:03"))
+        #expect(EntrySplit.suggestedTime(for: entry("09:01", "09:04"), now: now) == time("09:03"))
     }
 
     @Test func splitsOnlyInsideTheEntry() {
-        #expect(SplitEntrySheet.range(of: entry("09:00", "10:00"), now: now) == time("09:01")...time("09:59"))
-        #expect(SplitEntrySheet.range(of: entry("09:00", "09:01"), now: now) == nil)
-        #expect(SplitEntrySheet.range(of: entry("15:39", nil), now: now) == nil)
+        #expect(EntrySplit.range(of: entry("09:00", "10:00"), now: now) == time("09:01")...time("09:59"))
+        #expect(EntrySplit.range(of: entry("09:00", "09:01"), now: now) == nil)
+        #expect(EntrySplit.range(of: entry("15:39", nil), now: now) == nil)
     }
 }
-#endif

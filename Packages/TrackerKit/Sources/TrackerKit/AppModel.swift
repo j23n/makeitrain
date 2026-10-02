@@ -81,6 +81,7 @@ public final class AppModel {
     @ObservationIgnored private var saveTask: Task<Void, Never>?
     @ObservationIgnored private var clockTask: Task<Void, Never>?
     @ObservationIgnored private var lastBackup: LocalDate?
+    @ObservationIgnored private var started = false
 
     private enum Keys {
         static let storage = "storage"
@@ -136,8 +137,11 @@ public final class AppModel {
 
     // MARK: - Loading and saving
 
-    /// Opens the chosen storage and starts the clock. Call once at launch.
+    /// Opens the chosen storage and starts the clock, at launch. On iPad
+    /// each window asks for this as it opens; only the first time counts.
     public func start() async {
+        guard !started else { return }
+        started = true
         startClock()
         await open(storage)
     }

@@ -3,21 +3,6 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 
-/// How much of the calendar the timeline shows.
-enum TimelineSpan: String, CaseIterable, Identifiable {
-    case day, week, month
-
-    var id: Self { self }
-
-    var title: String {
-        switch self {
-        case .day: "Day"
-        case .week: "Week"
-        case .month: "Month"
-        }
-    }
-}
-
 /// The timeline: a day or a week of entries on an hour grid, or a month as
 /// a calendar, with an inspector for the selected entry.
 struct TimelineScreen: View {
@@ -41,11 +26,7 @@ struct TimelineScreen: View {
 
     /// The days of the period shown.
     private var range: ClosedRange<LocalDate> {
-        switch span {
-        case .day: shownDay...shownDay
-        case .week: ReportPeriod.week.range(containing: shownDay, firstWeekday: model.firstWeekday)
-        case .month: ReportPeriod.month.range(containing: shownDay, firstWeekday: model.firstWeekday)
-        }
+        span.range(around: shownDay, firstWeekday: model.firstWeekday)
     }
 
     /// The days of the week shown.
@@ -158,16 +139,7 @@ struct TimelineScreen: View {
 
     /// Moves to the previous or next day, week or month.
     private func step(by steps: Int) {
-        switch span {
-        case .day:
-            go(to: shownDay.adding(days: steps))
-        case .week:
-            go(to: shownDay.adding(days: 7 * steps))
-        case .month:
-            // The same day of the month, or the month's last day if it's shorter.
-            let month = ReportPeriod.month.shift(range, by: steps, firstWeekday: model.firstWeekday)
-            go(to: LocalDate(year: month.lowerBound.year, month: month.lowerBound.month, day: min(shownDay.day, month.upperBound.day)))
-        }
+        go(to: span.day(shownDay, movedBy: steps, firstWeekday: model.firstWeekday))
     }
 
     private func go(to date: LocalDate) {

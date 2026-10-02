@@ -113,7 +113,7 @@ struct EntryEditor: View {
                 Button("Split Entry…") {
                     splitting = true
                 }
-                .disabled(SplitEntrySheet.range(of: entry, now: model.now) == nil)
+                .disabled(EntrySplit.range(of: entry, now: model.now) == nil)
                 Button("Delete Entry", role: .destructive) {
                     model.deleteEntries([entry.id], undoManager: undoManager)
                 }
@@ -158,28 +158,6 @@ struct OverlapSection: View {
                     }
                 }
             }
-        }
-    }
-}
-
-extension AppModel {
-    /// What an overlap is with, seen from one of its entries, such as
-    /// "0:30 overlap with Globex › Brand refresh at 15:30".
-    func overlapDescription(_ overlap: Overlap, from id: UUID) -> String {
-        let otherID = overlap.earlier == id ? overlap.later : overlap.earlier
-        let other = resolved.first { $0.id == otherID }.map {
-            "\(ledger.projectTitle($0.entry.projectID)) at \(Format.time($0.start, zone: $0.entry.timeZone))"
-        }
-        return "\(Format.duration(overlap.duration)) overlap with \(other ?? "another entry")"
-    }
-}
-
-extension OverlapFix {
-    /// The fix, as a button names it.
-    var title: String {
-        switch self {
-        case .trimEarlier: "Trim Earlier Entry"
-        case .split: "Split Entry Around It"
         }
     }
 }

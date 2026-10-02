@@ -3,83 +3,6 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 
-/// A client or project in the outline, with the time logged to it.
-struct ProjectListRow: Identifiable, Hashable {
-    enum Kind: Hashable {
-        case client(UUID)
-        case noClient
-        case project(UUID)
-    }
-
-    var id: Kind
-    var title: String
-    var color: String?
-    var archived: Bool
-    var milliseconds: Int64
-    var children: [ProjectListRow]?
-
-    /// Projects without a client come first under "No client", then each
-    /// client with its projects. Archived ones only when asked for.
-    static func rows(ledger: Ledger, resolved: [ResolvedEntry], now: Timestamp, showArchived: Bool) -> [ProjectListRow] {
-        var time: [UUID: Int64] = [:]
-        for entry in resolved {
-            if let projectID = entry.entry.projectID {
-                time[projectID, default: 0] += entry.duration(now: now)
-            }
-        }
-        let clients = ledger.liveClients()
-        let clientIDs = Set(clients.map(\.id))
-        let projects = ledger.projects.values
-            .filter { !$0.isDeleted }
-            .sorted { a, b in
-                let (nameA, nameB) = (a.name.lowercased(), b.name.lowercased())
-                return nameA != nameB ? nameA < nameB : a.id.uuidString < b.id.uuidString
-            }
-
-        func projectRows(where belongs: (Project) -> Bool) -> [ProjectListRow] {
-            projects.filter { belongs($0) && (showArchived || !$0.archived) }.map { project in
-                ProjectListRow(
-                    id: .project(project.id),
-                    title: project.name,
-                    color: project.color,
-                    archived: project.archived,
-                    milliseconds: time[project.id] ?? 0,
-                    children: nil
-                )
-            }
-        }
-        func totalTime(where belongs: (Project) -> Bool) -> Int64 {
-            projects.filter(belongs).reduce(0) { $0 + (time[$1.id] ?? 0) }
-        }
-
-        var result: [ProjectListRow] = []
-        let noClient: (Project) -> Bool = { project in project.clientID.map { !clientIDs.contains($0) } ?? true }
-        let unfiled = projectRows(where: noClient)
-        if !unfiled.isEmpty {
-            result.append(ProjectListRow(
-                id: .noClient,
-                title: "No client",
-                color: nil,
-                archived: false,
-                milliseconds: totalTime(where: noClient),
-                children: unfiled
-            ))
-        }
-        for client in clients where showArchived || !client.archived {
-            let children = projectRows { $0.clientID == client.id }
-            result.append(ProjectListRow(
-                id: .client(client.id),
-                title: client.name,
-                color: nil,
-                archived: client.archived,
-                milliseconds: totalTime { $0.clientID == client.id },
-                children: children.isEmpty ? nil : children
-            ))
-        }
-        return result
-    }
-}
-
 /// Clients and their projects in an outline, with an inspector to edit,
 /// archive, merge and delete them.
 struct ProjectsView: View {
@@ -206,32 +129,6 @@ struct ProjectsView: View {
         let id = model.addProject(named: "New Project", client: clientID, color: ProjectColors.next(in: model.ledger), undoManager: undoManager)
         selection = .project(id)
         showInspector = true
-    }
-}
-
-/// A client or project with its color and the time logged to it.
-struct ProjectListRowView: View {
-    let row: ProjectListRow
-
-    var body: some View {
-        HStack(spacing: 8) {
-            if let color = row.color {
-                Circle()
-                    .fill(Color(hex: color))
-                    .frame(width: 9, height: 9)
-            }
-            Text(row.title)
-                .foregroundStyle(row.archived ? .secondary : .primary)
-            if row.archived {
-                Text("Archived")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
-            Text(Format.duration(row.milliseconds))
-                .monospacedDigit()
-                .foregroundStyle(.secondary)
-        }
     }
 }
 

@@ -1,8 +1,7 @@
-#if os(macOS)
 import Foundation
 import Testing
 import TrackerCore
-@testable import MacUI
+import TrackerKit
 
 @Suite struct EntriesFilterTests {
     /// A Wednesday.
@@ -76,4 +75,3 @@ import TrackerCore
         #expect(filter.entryFilter.tags == design)
     }
 }
-#endif
