@@ -175,6 +175,7 @@ struct PadTimelineScreen: View {
         .pickerStyle(.segmented)
         .labelsHidden()
         .fixedSize()
+        .help("Show a day, a week or a month")
     }
 
     private var dayPicker: some View {
@@ -188,6 +189,7 @@ struct PadTimelineScreen: View {
         )
         .labelsHidden()
         .fixedSize()
+        .help("Show a day of your choice")
     }
 
     /// The time logged in the period shown.
@@ -304,7 +306,7 @@ struct PadTimeGrid: View {
 
     private func grid(columns: [[DayBlock]], flagged: Set<UUID>, today: LocalDate) -> some View {
         ZStack(alignment: .topLeading) {
-            hourLines
+            HourLines()
             GeometryReader { geometry in
                 let dayWidth = HourGrid.dayWidth(geometry.size.width, days: days.count)
                 ZStack(alignment: .topLeading) {
@@ -343,27 +345,6 @@ struct PadTimeGrid: View {
         .padding(.vertical, 10)
     }
 
-    private var hourLines: some View {
-        VStack(spacing: 0) {
-            ForEach(0..<24, id: \.self) { hour in
-                HStack(alignment: .top, spacing: 6) {
-                    Text(Format.hour(hour))
-                        .font(.caption)
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                        .frame(width: HourGrid.gutter - 10, alignment: .trailing)
-                        .offset(y: -7)
-                    VStack(spacing: 0) {
-                        Divider()
-                        Spacer(minLength: 0)
-                    }
-                }
-                .frame(height: HourGrid.hourHeight)
-                .id(hour)
-            }
-        }
-    }
-
     /// The week view's headings: each day's weekday, date and total. Tap one
     /// to show that day.
     private func dayHeadings(columns: [[DayBlock]], today: LocalDate) -> some View {
@@ -375,20 +356,7 @@ struct PadTimeGrid: View {
                 Button {
                     openDay?(day)
                 } label: {
-                    VStack(spacing: 1) {
-                        Text(Format.weekday(day))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text("\(day.day)")
-                            .font(.title3.weight(day == today ? .semibold : .regular))
-                            .foregroundStyle(day == today ? Color.accentColor : Color.primary)
-                        Text(total > 0 ? Format.duration(total) : " ")
-                            .font(.caption2)
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
+                    WeekDayHeading(day: day, isToday: day == today, total: total)
                 }
                 .buttonStyle(.plain)
                 .help("Show \(Format.longDay(day))")
@@ -403,13 +371,11 @@ struct PadTimeGrid: View {
         }
     }
 
+    /// The line at the time now, in the zone "today" is worked out in.
     private func nowLine(dayIndex: Int, dayWidth: CGFloat) -> some View {
-        let second = model.now.local(in: TimeZone.current.identifier).millisecondOfDay / 1000
-        return Rectangle()
-            .fill(Color.red)
-            .frame(width: dayWidth, height: 1.5)
-            .offset(x: HourGrid.gutter + CGFloat(dayIndex) * dayWidth, y: HourGrid.y(second))
-            .allowsHitTesting(false)
+        let second = model.now.local(in: model.environment.timeZone()).millisecondOfDay / 1000
+        return NowLine(width: dayWidth)
+            .offset(x: HourGrid.gutter + CGFloat(dayIndex) * dayWidth, y: HourGrid.y(second) - NowLine.radius)
     }
 
     /// Scrolls so `hour` is at the top. Scrolling while the grid is first
@@ -549,8 +515,6 @@ struct PadMonthCalendar: View {
     @Binding var sheet: EntriesSheet?
     let openDay: (LocalDate) -> Void
 
-    static let lineHeight: CGFloat = 20
-
     var body: some View {
         let weeks = MonthGrid.weeks(of: month, firstWeekday: model.firstWeekday)
         let monthDays = ReportPeriod.month.range(containing: month, firstWeekday: model.firstWeekday)
@@ -613,28 +577,25 @@ struct PadMonthDayCell: View {
     @Binding var sheet: EntriesSheet?
     let openDay: (LocalDate) -> Void
     @Environment(\.undoManager) private var undoManager
+    /// The height of an entry's line, and of the day's number above the
+    /// lines, which grow with Dynamic Type.
+    @ScaledMetric(relativeTo: .caption) private var lineHeight: CGFloat = 20
+    @ScaledMetric(relativeTo: .callout) private var headerHeight: CGFloat = 34
 
     var body: some View {
         let total = entries.reduce(Int64(0)) { $0 + model.duration(of: $1) }
+        let flagged = model.overlaps.flagged
         // The lines under the day's number, one of them for "more" when not
         // every entry fits.
-        let lines = max(0, Int((height - 34) / PadMonthCalendar.lineHeight))
+        let lines = max(0, Int((height - headerHeight) / lineHeight))
         let shownCount = entries.count > lines ? max(lines - 1, 0) : entries.count
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Button {
                     openDay(day)
                 } label: {
-                    Text("\(day.day)")
-                        .font(.callout.weight(isToday ? .semibold : .regular))
-                        .foregroundStyle(isToday ? Color.white : inMonth ? Color.primary : Color.secondary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background {
-                            if isToday {
-                                Capsule().fill(Color.accentColor)
-                            }
-                        }
+                    DayNumber(day, font: .callout, isToday: isToday, dimmed: !inMonth)
+                        .padding(.vertical, 1)
                 }
                 .buttonStyle(.plain)
                 .help("Show \(Format.longDay(day))")
@@ -648,15 +609,21 @@ struct PadMonthDayCell: View {
             }
             .padding(.bottom, 3)
             ForEach(entries.prefix(shownCount)) { entry in
-                MonthEntryRow(model: model, entry: entry, selected: selection == entry.id)
-                    .onTapGesture {
-                        selection = entry.id
+                MonthEntryRow(
+                    model: model,
+                    entry: entry,
+                    flagged: flagged.contains(entry.id),
+                    selected: selection == entry.id,
+                    height: lineHeight
+                )
+                .onTapGesture {
+                    selection = entry.id
+                }
+                .contextMenu {
+                    EntriesMenu(model: model, ids: [entry.id], undoManager: undoManager, sheet: $sheet) { copies in
+                        selection = copies.first
                     }
-                    .contextMenu {
-                        EntriesMenu(model: model, ids: [entry.id], undoManager: undoManager, sheet: $sheet) { copies in
-                            selection = copies.first
-                        }
-                    }
+                }
             }
             if shownCount < entries.count {
                 Button("\(entries.count - shownCount) more") {
@@ -677,36 +644,6 @@ struct PadMonthDayCell: View {
         .onTapGesture(count: 2) {
             openDay(day)
         }
-    }
-}
-
-/// An entry in the month calendar: its project's color and title, and how
-/// long it ran.
-struct MonthEntryRow: View {
-    let model: AppModel
-    let entry: ResolvedEntry
-    let selected: Bool
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Circle()
-                .fill(model.ledger.color(ofProject: entry.entry.projectID))
-                .frame(width: 7, height: 7)
-            Text(model.ledger.projectTitle(entry.entry.projectID))
-                .lineLimit(1)
-            Spacer(minLength: 2)
-            Text(Format.duration(model.duration(of: entry)))
-                .monospacedDigit()
-                .foregroundStyle(.secondary)
-        }
-        .font(.caption)
-        .padding(.horizontal, 3)
-        .frame(height: PadMonthCalendar.lineHeight)
-        .background {
-            RoundedRectangle(cornerRadius: 4)
-                .fill(selected ? Color.accentColor.opacity(0.25) : Color.clear)
-        }
-        .contentShape(Rectangle())
     }
 }
 

@@ -274,12 +274,11 @@ private struct PadRunningTimer: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Circle()
-                .fill(model.ledger.color(ofProject: running.entry.projectID))
-                .frame(width: 8, height: 8)
+            ProjectDot(ledger: model.ledger, projectID: running.entry.projectID)
             Text(model.ledger.projectTitle(running.entry.projectID))
                 .lineLimit(1)
                 .frame(maxWidth: 220)
+                .foregroundStyle(running.entry.projectID == nil ? .secondary : .primary)
             Text(Format.duration(model.duration(of: running)))
                 .fontWeight(.semibold)
                 .monospacedDigit()

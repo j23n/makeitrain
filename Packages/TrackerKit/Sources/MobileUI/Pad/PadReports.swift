@@ -31,6 +31,7 @@ struct PadReportsScreen: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .frame(maxWidth: 360)
+                .help("Group the time by client, project or tag")
                 ReportGroupList(report: report)
             }
             .padding(24)
@@ -88,6 +89,7 @@ struct PadReportsScreen: View {
             .pickerStyle(.segmented)
             .labelsHidden()
             .frame(maxWidth: 420)
+            .help("Show a day, a week, a month or days of your choice")
 
             if period == .custom {
                 HStack(spacing: 8) {
@@ -107,7 +109,7 @@ struct PadReportsScreen: View {
                             .labelStyle(.iconOnly)
                     }
                     .keyboardShortcut(.leftArrow, modifiers: .command)
-                    .help("Previous \(period.rawValue)")
+                    .help("Show the previous \(period.rawValue)")
                     Text(Format.days(currentRange))
                         .font(.headline)
                         .lineLimit(1)
@@ -118,12 +120,13 @@ struct PadReportsScreen: View {
                             .labelStyle(.iconOnly)
                     }
                     .keyboardShortcut(.rightArrow, modifiers: .command)
-                    .help("Next \(period.rawValue)")
+                    .help("Show the next \(period.rawValue)")
                     if !currentRange.contains(model.today) {
                         Button(currentTitle) {
                             range = nil
                         }
                         .keyboardShortcut("t", modifiers: .command)
+                        .help("Show \(currentTitle.lowercased())")
                     }
                 }
                 .buttonStyle(.bordered)
