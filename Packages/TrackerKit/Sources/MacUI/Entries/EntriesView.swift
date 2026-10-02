@@ -281,12 +281,10 @@ struct EntryStatusIcon: View {
 
     var body: some View {
         if row.flagged {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
+            OverlapIcon()
                 .help("Overlaps another entry. Right-click for a fix.")
         } else if row.entry.isRunning {
-            Image(systemName: "record.circle")
-                .foregroundStyle(.red)
+            RunningIcon()
                 .help("Running")
         }
     }
