@@ -75,28 +75,38 @@ final class FocusProbe: XCTestCase {
         }
 
         print("PROBE clicking a day in the calendar")
-        if let panel = NSApp.windows.first(where: { $0.parent === window && $0.isVisible }),
-           let calendar = Self.findAll(NSDatePicker.self, in: panel.contentView).last {
-            print("PROBE calendar \(type(of: calendar)) in \(type(of: panel)) style \(calendar.datePickerStyle.rawValue) frame \(calendar.frame)")
-            let day = calendar.convert(NSPoint(x: calendar.bounds.midX, y: calendar.bounds.midY + 10), to: nil)
-            click(at: day, in: panel)
-            for (index, step) in [0.1, 0.5, 2.0].enumerated() {
-                pump(step)
-                log("after clicking a day, step \(index) (\(step) s)", window, table: table)
+        if let panel = NSApp.windows.first(where: { $0.parent === window && $0.isVisible }) {
+            let pickers = Self.findAll(NSDatePicker.self, in: panel.contentView)
+            for picker in pickers {
+                print("PROBE calendar picker style \(picker.datePickerStyle.rawValue) frame \(picker.frame) date \(picker.dateValue)")
+            }
+            if let calendar = pickers.first(where: { $0.datePickerStyle == .clockAndCalendar }) {
+                // A day in the middle of the month's grid.
+                let day = calendar.convert(NSPoint(x: calendar.bounds.midX, y: calendar.bounds.midY), to: nil)
+                click(at: day, in: panel)
+                for (index, step) in [0.1, 0.5, 2.0].enumerated() {
+                    pump(step)
+                    log("after clicking a day, step \(index) (\(step) s)", window, table: table)
+                }
+                print("PROBE field's date now \(Self.find(DateTimePicker.self, in: window.contentView)?.dateValue.description ?? "-")")
             }
         } else {
             print("PROBE no calendar")
         }
 
-        print("PROBE clicking another entry's note")
         if let noteColumn = table.tableColumns.firstIndex(where: { $0.title == "Note" }) {
             let note = table.frameOfCell(atColumn: noteColumn, row: 2)
-            click(at: table.convert(NSPoint(x: note.minX + 20, y: note.midY), to: nil), in: window)
-            for (index, step) in [0.1, 0.5, 2.0].enumerated() {
-                pump(step)
-                log("after clicking a note, step \(index) (\(step) s)", window, table: table)
+            let point = table.convert(NSPoint(x: note.minX + 20, y: note.midY), to: nil)
+            for attempt in 1...2 {
+                print("PROBE clicking another entry's note, \(attempt)")
+                click(at: point, in: window)
+                for (index, step) in [0.1, 0.5, 2.0].enumerated() {
+                    pump(step)
+                    log("after clicking a note \(attempt), step \(index) (\(step) s)", window, table: table)
+                }
             }
         }
+        print("PROBE start of the first entry now \(model.resolved.last.map { "\($0.start.date)" } ?? "-")")
 
         observation.invalidate()
         DateTimePicker.probe = nil

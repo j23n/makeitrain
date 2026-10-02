@@ -246,14 +246,18 @@ final class DateTimePicker: NSDatePicker {
         }
     }
 
-    /// Whether `responder` is this picker or in its calendar, which AppKit
-    /// shows in a child window of the picker's.
+    /// Whether `responder` is this picker, or its calendar's window or a
+    /// view in it. AppKit shows the calendar in a child window of the
+    /// picker's, and while it closes, that window has the focus for a moment
+    /// before the picker gets it back.
     private func holdsFocus(_ responder: NSResponder, in window: NSWindow) -> Bool {
         if responder === self {
             return true
         }
-        guard let view = responder as? NSView, let owner = view.window else { return false }
-        return owner !== window && owner.parent === window
+        guard let owner = (responder as? NSWindow) ?? (responder as? NSView)?.window, owner !== window else {
+            return false
+        }
+        return owner.parent === window
     }
 
     /// Ends editing, unless it has ended already, and says so.
