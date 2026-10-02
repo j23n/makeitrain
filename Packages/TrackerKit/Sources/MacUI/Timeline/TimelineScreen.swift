@@ -52,7 +52,7 @@ struct TimelineScreen: View {
             }
         }
         .inspector(isPresented: $showInspector) {
-            EntryInspector(model: model, id: selection) { copy in
+            EntryInspector(model: model, id: selection, days: range, title: title) { copy in
                 selection = copy
             }
         }

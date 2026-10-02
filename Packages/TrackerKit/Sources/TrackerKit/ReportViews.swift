@@ -311,6 +311,69 @@ public struct ReportBreakdown: View {
     }
 }
 
+/// What some entries add up to, for an inspector with nothing selected in
+/// it, such as the days the timeline shows: their total and how many there
+/// are, their time by project with a bar for each, and a hint at what to
+/// do. The running timer counts as far as it has run.
+public struct PeriodSummary: View {
+    let title: String
+    let entries: [ResolvedEntry]
+    let ledger: Ledger
+    let now: Timestamp
+    let hint: String
+
+    /// `title` names the entries, such as their days.
+    public init(title: String, entries: [ResolvedEntry], ledger: Ledger, now: Timestamp, hint: String) {
+        self.title = title
+        self.entries = entries
+        self.ledger = ledger
+        self.now = now
+        self.hint = hint
+    }
+
+    public var body: some View {
+        let times = self.times
+        let total = times.values.reduce(0, +)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.headline)
+                    DurationText(total, size: 34)
+                    Text(entries.count == 1 ? "1 entry" : "\(entries.count.formatted()) entries")
+                        .foregroundStyle(.secondary)
+                    if entries.contains(where: \.isRunning) {
+                        Label {
+                            Text("With the running timer")
+                        } icon: {
+                            RunningIcon()
+                        }
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    }
+                }
+                if total > 0 {
+                    ReportBreakdown(rows: BreakdownRow.projects(times, ledger: ledger), total: total, style: .stacked)
+                }
+                Text(hint)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// Each project's time, nil's for the unassigned entries.
+    private var times: [UUID?: Int64] {
+        var times: [UUID?: Int64] = [:]
+        for entry in entries {
+            times[entry.entry.projectID, default: 0] += entry.duration(now: now)
+        }
+        return times
+    }
+}
+
 /// A CSV file for the save dialog.
 public struct CSVDocument: FileDocument {
     public static var readableContentTypes: [UTType] { [.commaSeparatedText] }
@@ -419,5 +482,18 @@ struct PreviewReport {
 #Preview("No Time") {
     PreviewReport(Ledger()).page()
         .frame(width: 900, height: 640)
+}
+
+#Preview("Summary of a Week") {
+    let week = LocalDate(year: 2026, month: 9, day: 21)...LocalDate(year: 2026, month: 9, day: 27)
+    let entries = PreviewData.ledger.resolvedEntries().filter { week.contains($0.entry.day) }
+    return PeriodSummary(
+        title: Format.days(week),
+        entries: entries,
+        ledger: PreviewData.ledger,
+        now: PreviewData.now,
+        hint: "Select an entry to edit it."
+    )
+    .frame(width: 300, height: 560)
 }
 #endif

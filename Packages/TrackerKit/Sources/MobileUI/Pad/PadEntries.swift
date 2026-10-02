@@ -100,7 +100,13 @@ struct PadEntriesScreen: View {
                     })
                     .id(id)
                 } else {
-                    ContentUnavailableView("No Selection", systemImage: "clock", description: Text("Tap an entry to edit it."))
+                    PeriodSummary(
+                        title: summaryTitle,
+                        entries: entries,
+                        ledger: model.ledger,
+                        now: model.now,
+                        hint: "Tap an entry to edit it."
+                    )
                 }
             }
         }
@@ -112,6 +118,14 @@ struct PadEntriesScreen: View {
                 showInspector = true
             }
         }
+    }
+
+    /// What the entries shown are, for the inspector's summary of them,
+    /// such as "This Week" or "Sep 2 – 5, 2026, Filtered".
+    private var summaryTitle: String {
+        let days = filter.period == .custom ? filter.range.map(Format.days) ?? filter.period.title : filter.period.title
+        let narrowed = !filter.clients.isEmpty || !filter.projects.isEmpty || !filter.tags.isEmpty || filter.overlapsOnly || !search.isEmpty
+        return narrowed ? "\(days), Filtered" : days
     }
 
     private var noMatches: String {
