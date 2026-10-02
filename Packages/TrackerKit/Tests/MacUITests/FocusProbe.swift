@@ -2,31 +2,27 @@
 import AppKit
 import Foundation
 import SwiftUI
-import Testing
 import TrackerCore
+import XCTest
 @testable import MacUI
 @testable import TrackerKit
 
 /// PROBE, temporary: where keyboard focus goes when a start time in the
 /// entries table is clicked and its calendar opens, printed to the log.
-@Suite(.serialized)
-@MainActor
-struct FocusProbe {
-    @Test func clickingAStartTime() async {
+///
+/// An XCTest rather than a Swift Testing test: XCTest calls it on the main
+/// thread outside the main queue, so spinning the run loop here lets work
+/// queued on the main actor run, as it does in the app.
+final class FocusProbe: XCTestCase {
+    func testClickingAStartTime() {
         setvbuf(stdout, nil, _IONBF, 0)
-        atexit {
-            print("PROBE exiting\n" + Thread.callStackSymbols.prefix(40).joined(separator: "\n"))
+        MainActor.assumeIsolated {
+            probe()
         }
-        for code in [SIGSEGV, SIGBUS, SIGABRT, SIGILL, SIGTRAP, SIGTERM] {
-            signal(code) { code in
-                print("PROBE signal \(code)\n" + Thread.callStackSymbols.prefix(40).joined(separator: "\n"))
-                _exit(70)
-            }
-        }
-        let terminating = NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: nil) { _ in
-            print("PROBE app will terminate\n" + Thread.callStackSymbols.prefix(40).joined(separator: "\n"))
-        }
-        defer { NotificationCenter.default.removeObserver(terminating) }
+    }
+
+    @MainActor
+    private func probe() {
         _ = NSApplication.shared
         NSApp.setActivationPolicy(.regular)
         NSApp.finishLaunching()
@@ -41,7 +37,7 @@ struct FocusProbe {
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         window.setContentSize(CGSize(width: 1200, height: 740))
         window.makeKeyAndOrderFront(nil)
-        await pump(1.5)
+        pump(1.5)
         log("shown", window)
 
         DateTimePicker.probe = { print("PROBE picker \($0)") }
@@ -67,14 +63,14 @@ struct FocusProbe {
         print("PROBE clicking at \(point) in cell \(cell)")
         click(at: point, in: window)
         for (index, step) in [0.05, 0.1, 0.25, 0.5, 1.0, 2.0].enumerated() {
-            await pump(step)
+            pump(step)
             log("after click, step \(index) (\(step) s)", window, table: table)
         }
 
         print("PROBE clicking the field again")
         click(at: point, in: window)
         for (index, step) in [0.1, 0.5, 2.0].enumerated() {
-            await pump(step)
+            pump(step)
             log("after second click, step \(index) (\(step) s)", window, table: table)
         }
 
@@ -83,7 +79,7 @@ struct FocusProbe {
             let month = picker.convert(NSPoint(x: 12, y: picker.bounds.midY), to: nil)
             click(at: month, in: window)
             for (index, step) in [0.1, 0.5, 2.0].enumerated() {
-                await pump(step)
+                pump(step)
                 log("after clicking the month, step \(index) (\(step) s)", window, table: table)
             }
         }
@@ -94,6 +90,7 @@ struct FocusProbe {
         window.contentViewController = nil
     }
 
+    @MainActor
     private func click(at point: NSPoint, in window: NSWindow) {
         let time = ProcessInfo.processInfo.systemUptime
         for (type, pressure) in [(NSEvent.EventType.leftMouseDown, Float(1)), (.leftMouseUp, Float(0))] {
@@ -113,10 +110,10 @@ struct FocusProbe {
         }
     }
 
-    /// Handles events and lets SwiftUI and the main actor's other work
-    /// catch up, for `seconds`. It sleeps between turns, since work queued
-    /// on the main actor can't run while this test runs.
-    private func pump(_ seconds: Double) async {
+    /// Handles events, and runs the run loop, which runs what's queued on
+    /// the main actor, for `seconds`.
+    @MainActor
+    private func pump(_ seconds: Double) {
         let end = Date(timeIntervalSinceNow: seconds)
         repeat {
             while let event = NSApp.nextEvent(matching: .any, until: Date(), inMode: .default, dequeue: true) {
@@ -125,11 +122,11 @@ struct FocusProbe {
                 }
                 NSApp.sendEvent(event)
             }
-            RunLoop.main.run(mode: .default, before: Date())
-            try? await Task.sleep(for: .milliseconds(10))
+            RunLoop.main.run(mode: .default, before: Date(timeIntervalSinceNow: 0.01))
         } while Date() < end
     }
 
+    @MainActor
     private func log(_ label: String, _ window: NSWindow, table: NSTableView? = nil) {
         let windows = NSApp.windows.filter(\.isVisible).map { other in
             "\(type(of: other))\(other === window ? " (main)" : "")\(other.isKeyWindow ? " (key)" : "") level \(other.level.rawValue) parent \(other.parent.map { "\(type(of: $0))" } ?? "none")"
@@ -139,6 +136,7 @@ struct FocusProbe {
         print("PROBE \(label): active \(NSApp.isActive), main key \(window.isKeyWindow), first responder \(Self.describe(window.firstResponder)), selected rows \(selected), pickers \(pickers), windows \(windows)")
     }
 
+    @MainActor
     static func describe(_ responder: NSResponder?) -> String {
         guard let responder else { return "nil" }
         if let text = responder as? NSTextView, text.isFieldEditor {
@@ -150,10 +148,12 @@ struct FocusProbe {
         return String(describing: type(of: responder))
     }
 
+    @MainActor
     static func find<T: NSView>(_ type: T.Type, in view: NSView?) -> T? {
         findAll(type, in: view).first
     }
 
+    @MainActor
     static func findAll<T: NSView>(_ type: T.Type, in view: NSView?) -> [T] {
         guard let view else { return [] }
         var found: [T] = []
