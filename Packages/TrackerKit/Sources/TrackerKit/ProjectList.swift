@@ -92,9 +92,7 @@ public struct ProjectListRowView: View {
     public var body: some View {
         HStack(spacing: 8) {
             if let color = row.color {
-                Circle()
-                    .fill(Color(hex: color))
-                    .frame(width: 9, height: 9)
+                ProjectDot(color: Color(hex: color))
             }
             Text(row.title)
                 .foregroundStyle(row.archived ? .secondary : .primary)
@@ -108,5 +106,6 @@ public struct ProjectListRowView: View {
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
         }
+        .accessibilityElement(children: .combine)
     }
 }

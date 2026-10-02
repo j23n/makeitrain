@@ -15,13 +15,67 @@ public struct ProjectLabel: View {
 
     public var body: some View {
         HStack(spacing: 6) {
-            Circle()
-                .fill(ledger.color(ofProject: projectID))
-                .frame(width: 8, height: 8)
+            ProjectDot(ledger: ledger, projectID: projectID)
             Text(ledger.projectTitle(projectID))
                 .lineLimit(1)
                 .foregroundStyle(projectID == nil ? .secondary : .primary)
         }
+    }
+}
+
+/// A project's color as a dot, or a ring for no project, as pickers show
+/// "No Project". The ring keeps unassigned entries apart from a gray
+/// project. The dot grows with Dynamic Type, like the text beside it.
+public struct ProjectDot: View {
+    let color: Color?
+    @ScaledMetric private var size: CGFloat
+
+    /// `color` nil draws the ring.
+    public init(color: Color?, size: CGFloat = 8, relativeTo textStyle: Font.TextStyle = .body) {
+        self.color = color
+        _size = ScaledMetric(wrappedValue: size, relativeTo: textStyle)
+    }
+
+    /// The dot of an entry's project.
+    public init(ledger: Ledger, projectID: UUID?, size: CGFloat = 8, relativeTo textStyle: Font.TextStyle = .body) {
+        self.init(color: projectID.map { ledger.color(ofProject: $0) }, size: size, relativeTo: textStyle)
+    }
+
+    public var body: some View {
+        Group {
+            if let color {
+                Circle()
+                    .fill(color)
+            } else {
+                Circle()
+                    .strokeBorder(.secondary, lineWidth: 1)
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+}
+
+/// The warning on an entry that overlaps another, wherever entries are
+/// listed.
+public struct OverlapIcon: View {
+    public init() {}
+
+    public var body: some View {
+        Image(systemName: "exclamationmark.triangle.fill")
+            .foregroundStyle(.orange)
+            .accessibilityLabel(Text("Overlaps another entry"))
+    }
+}
+
+/// The mark on the running timer's entry, wherever entries are listed.
+public struct RunningIcon: View {
+    public init() {}
+
+    public var body: some View {
+        Image(systemName: "record.circle")
+            .foregroundStyle(.red)
+            .accessibilityLabel(Text("Running"))
     }
 }
 
@@ -71,7 +125,9 @@ public struct TagList: View {
     }
 }
 
-/// One tag, in a capsule. A tag linked to an issue is tinted.
+/// One tag, in a capsule. A tag linked to an issue is tinted, on the
+/// background's color, so the tint stays readable on a timeline block in
+/// its project's color or in a selected row.
 struct TagCapsule: View {
     let tag: String
     let linked: Bool
@@ -83,7 +139,16 @@ struct TagCapsule: View {
             .foregroundStyle(linked ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
-            .background(Capsule().fill(linked ? AnyShapeStyle(Color.accentColor.opacity(0.15)) : AnyShapeStyle(.quaternary)))
+            .background {
+                if linked {
+                    Capsule()
+                        .fill(Color.accentColor.opacity(0.15))
+                        .background(.background, in: Capsule())
+                } else {
+                    Capsule()
+                        .fill(.quaternary)
+                }
+            }
     }
 }
 
@@ -185,12 +250,31 @@ public struct CommitField: View {
     Form {
         ProjectLabel(ledger: PreviewData.ledger, projectID: PreviewData.website)
         ProjectLabel(ledger: PreviewData.ledger, projectID: PreviewData.internalWork)
+        ProjectLabel(ledger: PreviewData.ledger, projectID: PreviewData.admin)
         ProjectLabel(ledger: PreviewData.ledger, projectID: nil)
+        HStack {
+            OverlapIcon()
+            RunningIcon()
+        }
         TagList(tags: ["design", "client-call"])
         TagList(tags: ["design", "#42"], links: ["#42": URL(string: "https://github.com/acme/website/issues/42")!])
         TagList(tags: ["design", "client-call", "#42", "#57", "research", "workshop", "follow-up"], wraps: true)
             .frame(width: 200, alignment: .leading)
         CommitField(title: "Note", value: "Wireframe review, round 2") { _ in }
     }
+}
+
+#Preview("Tags on Colors") {
+    let links = ["#42": URL(string: "https://github.com/acme/website/issues/42")!]
+    return VStack(alignment: .leading, spacing: 8) {
+        ForEach(ProjectColors.palette, id: \.self) { hex in
+            TagList(tags: ["design", "#42"], links: links, interactive: false)
+                .padding(6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(hex: hex).opacity(0.22))
+        }
+    }
+    .padding()
+    .frame(width: 240)
 }
 #endif

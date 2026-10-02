@@ -82,5 +82,6 @@ public struct TagRowView: View {
                 .foregroundStyle(.secondary)
                 .frame(minWidth: 50, alignment: .trailing)
         }
+        .accessibilityElement(children: .combine)
     }
 }

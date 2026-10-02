@@ -31,6 +31,17 @@ public enum ProjectColors {
             used.filter { $0 == a }.count < used.filter { $0 == b }.count
         } ?? palette[0]
     }
+
+    /// A palette color's name, such as "Blue", for VoiceOver and tooltips;
+    /// the hex string for a color that isn't in the palette.
+    public static func name(of hex: String) -> String {
+        names[hex.uppercased()] ?? hex
+    }
+
+    private static let names = [
+        "#4F7CAC": "Blue", "#C0504D": "Red", "#9BBB59": "Green", "#8064A2": "Purple",
+        "#F79646": "Orange", "#4BACC6": "Teal", "#D4A017": "Gold", "#7F7F7F": "Gray",
+    ]
 }
 
 extension Ledger {

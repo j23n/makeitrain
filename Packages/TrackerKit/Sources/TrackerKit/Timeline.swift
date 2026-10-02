@@ -245,19 +245,19 @@ public struct TimelineBlock: View {
                 .strokeBorder(selected ? color : Color.clear, lineWidth: 1.5)
         }
         .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private func content(detailLines: Int, showsTags: Bool) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 4) {
                 if flagged {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
+                    OverlapIcon()
                         .help("Overlaps another entry")
                 }
                 if running {
-                    Image(systemName: "record.circle")
-                        .foregroundStyle(.red)
+                    RunningIcon()
                 }
                 Text(title)
                     .fontWeight(.medium)
@@ -289,3 +289,252 @@ extension TimelineBlock {
         return resolved.entry.note.isEmpty ? times : "\(times)  \(resolved.entry.note)"
     }
 }
+
+// MARK: - Grid and calendar parts
+
+/// The hours down an hour grid's left side, each with a line across the
+/// grid. Each hour's row has the hour as its id, to scroll to.
+public struct HourLines: View {
+    public init() {}
+
+    public var body: some View {
+        VStack(spacing: 0) {
+            ForEach(0..<24, id: \.self) { hour in
+                HStack(alignment: .top, spacing: 6) {
+                    Text(Format.hour(hour))
+                        .font(.caption)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .frame(width: HourGrid.gutter - 10, alignment: .trailing)
+                        .offset(y: -7)
+                    VStack(spacing: 0) {
+                        Divider()
+                        Spacer(minLength: 0)
+                    }
+                }
+                .frame(height: HourGrid.hourHeight)
+                .id(hour)
+            }
+        }
+    }
+}
+
+/// The time now on an hour grid: a red line across today's column, with a
+/// dot where it starts, as Calendar draws it.
+public struct NowLine: View {
+    let width: CGFloat
+
+    /// The dot's radius, which is also how far the line's middle is below
+    /// the view's top.
+    public static let radius: CGFloat = 4
+
+    public init(width: CGFloat) {
+        self.width = width
+    }
+
+    public var body: some View {
+        ZStack(alignment: .leading) {
+            Rectangle()
+                .fill(Color.red)
+                .frame(width: width, height: 1.5)
+            Circle()
+                .fill(Color.red)
+                .frame(width: 2 * Self.radius, height: 2 * Self.radius)
+                .offset(x: -Self.radius)
+        }
+        .frame(width: width, height: 2 * Self.radius, alignment: .leading)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+/// A day's number in a calendar: white on an accent capsule when it's
+/// today, as Calendar marks it, and dimmed when it's outside the month
+/// shown.
+public struct DayNumber: View {
+    let day: LocalDate
+    let font: Font
+    let isToday: Bool
+    let dimmed: Bool
+
+    public init(_ day: LocalDate, font: Font, isToday: Bool, dimmed: Bool = false) {
+        self.day = day
+        self.font = font
+        self.isToday = isToday
+        self.dimmed = dimmed
+    }
+
+    public var body: some View {
+        Text("\(day.day)")
+            .font(font.weight(isToday ? .semibold : .regular))
+            .foregroundStyle(isToday ? Color.white : dimmed ? Color.secondary : Color.primary)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 1)
+            .background {
+                if isToday {
+                    Capsule()
+                        .fill(Color.accentColor)
+                }
+            }
+    }
+}
+
+/// A day's heading over its column in the week view: its weekday, its
+/// number, and the time logged on it.
+public struct WeekDayHeading: View {
+    let day: LocalDate
+    let isToday: Bool
+    let total: Int64
+
+    public init(day: LocalDate, isToday: Bool, total: Int64) {
+        self.day = day
+        self.isToday = isToday
+        self.total = total
+    }
+
+    public var body: some View {
+        VStack(spacing: 1) {
+            Text(Format.weekday(day))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            DayNumber(day, font: .title3, isToday: isToday)
+            Text(total > 0 ? Format.duration(total) : " ")
+                .font(.caption2)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
+    }
+}
+
+/// An entry in a month calendar: its project's color and title, the
+/// warning or the running mark the entries list shows, and how long it
+/// ran. Its tooltip has its times and note.
+public struct MonthEntryRow: View {
+    let model: AppModel
+    let entry: ResolvedEntry
+    let flagged: Bool
+    let selected: Bool
+    let height: CGFloat
+
+    public init(model: AppModel, entry: ResolvedEntry, flagged: Bool, selected: Bool, height: CGFloat) {
+        self.model = model
+        self.entry = entry
+        self.flagged = flagged
+        self.selected = selected
+        self.height = height
+    }
+
+    public var body: some View {
+        let zone = entry.entry.timeZone
+        let times = "\(Format.time(entry.start, zone: zone)) – \(entry.end.map { Format.time($0, zone: zone) } ?? "now")"
+        HStack(spacing: 4) {
+            ProjectDot(ledger: model.ledger, projectID: entry.entry.projectID, size: 7, relativeTo: .caption)
+            Text(model.ledger.projectTitle(entry.entry.projectID))
+                .lineLimit(1)
+                .foregroundStyle(entry.entry.projectID == nil ? .secondary : .primary)
+            Spacer(minLength: 2)
+            if flagged {
+                OverlapIcon()
+                    .imageScale(.small)
+            } else if entry.isRunning {
+                RunningIcon()
+                    .imageScale(.small)
+            }
+            Text(Format.duration(model.duration(of: entry)))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+        }
+        .font(.caption)
+        .padding(.horizontal, 3)
+        .frame(height: height)
+        .background {
+            RoundedRectangle(cornerRadius: 4)
+                .fill(selected ? Color.accentColor.opacity(0.25) : Color.clear)
+        }
+        .contentShape(Rectangle())
+        .help(entry.entry.note.isEmpty ? times : "\(times)\n\(entry.entry.note)")
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+#if DEBUG
+#Preview("Blocks") {
+    let links = ["#42": URL(string: "https://github.com/acme/website/issues/42")!]
+    return HStack(alignment: .top, spacing: 8) {
+        TimelineBlock(
+            title: "Acme › Website redesign",
+            detail: "10:00 – 12:30  Hero section",
+            tags: ["design", "#42"],
+            links: links,
+            color: Color(hex: "#4F7CAC"),
+            flagged: false,
+            selected: false,
+            running: false
+        )
+        .frame(width: 170, height: 110)
+        TimelineBlock(
+            title: "Globex › Brand refresh",
+            detail: "15:30 – 16:30  Call with Globex",
+            tags: ["client-call"],
+            color: Color(hex: "#9BBB59"),
+            flagged: true,
+            selected: true,
+            running: false
+        )
+        .frame(width: 170, height: 60)
+        TimelineBlock(
+            title: "Unassigned",
+            detail: "14:45 – now  Landing page copy",
+            color: .gray,
+            flagged: false,
+            selected: false,
+            running: true
+        )
+        .frame(width: 170, height: 40)
+    }
+    .padding()
+}
+
+#Preview("Calendar Parts") {
+    let model = PreviewData.model()
+    let today = model.today
+    let entries = model.resolved.filter { $0.entry.day >= today.adding(days: -1) }
+    return VStack(alignment: .leading, spacing: 16) {
+        HStack(spacing: 0) {
+            WeekDayHeading(day: today.adding(days: -1), isToday: false, total: 27_900_000)
+            WeekDayHeading(day: today, isToday: true, total: 20_400_000)
+            WeekDayHeading(day: today.adding(days: 1), isToday: false, total: 0)
+        }
+        HStack {
+            DayNumber(today.adding(days: -1), font: .callout, isToday: false)
+            DayNumber(today, font: .callout, isToday: true)
+            DayNumber(today.adding(days: 9), font: .callout, isToday: false, dimmed: true)
+        }
+        NowLine(width: 220)
+            .padding(.leading, NowLine.radius)
+        VStack(spacing: 0) {
+            ForEach(entries) { entry in
+                MonthEntryRow(
+                    model: model,
+                    entry: entry,
+                    flagged: model.overlaps.flagged.contains(entry.id),
+                    selected: entry.id == PreviewData.entry("Kickoff with the new team"),
+                    height: 18
+                )
+            }
+        }
+        .frame(width: 220)
+        ScrollView {
+            HourLines()
+        }
+        .frame(height: 160)
+    }
+    .padding()
+    .frame(width: 320)
+}
+#endif

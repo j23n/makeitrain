@@ -57,9 +57,7 @@ public struct ProjectChoiceLabel: View {
         switch choice {
         case .noProject:
             HStack(spacing: 6) {
-                Circle()
-                    .strokeBorder(.secondary, lineWidth: 1)
-                    .frame(width: 8, height: 8)
+                ProjectDot(color: nil)
                 Text("No Project")
                     .foregroundStyle(.secondary)
             }

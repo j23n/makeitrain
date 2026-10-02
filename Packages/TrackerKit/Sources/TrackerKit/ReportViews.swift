@@ -11,6 +11,8 @@ public struct ReportSummary: View {
     let report: Report
     let now: Timestamp
     let incomplete: Bool
+    /// The total's size, which grows with Dynamic Type like a large title.
+    @ScaledMetric(relativeTo: .largeTitle) private var totalSize: CGFloat = 34
 
     /// `incomplete` says some data files are still downloading or can't be
     /// read, so the totals may be missing entries.
@@ -24,7 +26,7 @@ public struct ReportSummary: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Text(Format.duration(report.total))
-                    .font(.system(size: 34, weight: .semibold, design: .rounded))
+                    .font(.system(size: totalSize, weight: .semibold, design: .rounded))
                     .monospacedDigit()
                 Text(detail)
                     .foregroundStyle(.secondary)
@@ -146,11 +148,14 @@ public struct ReportGroupList: View {
     }
 
     public var body: some View {
+        // Grouped by project, "Unassigned" has the ring of no project, so its
+        // title lines up with the projects' titles.
+        let byProject = report.request.grouping == .project
         VStack(spacing: 0) {
             ForEach(report.groups) { group in
-                ReportGroupRow(group: group, total: report.total, indented: false)
+                ReportGroupRow(group: group, total: report.total, indented: false, hasDot: byProject || group.color != nil)
                 ForEach(group.children) { child in
-                    ReportGroupRow(group: child, total: report.total, indented: true)
+                    ReportGroupRow(group: child, total: report.total, indented: true, hasDot: true)
                 }
             }
         }
@@ -161,14 +166,17 @@ struct ReportGroupRow: View {
     let group: ReportGroup
     let total: Int64
     let indented: Bool
+    /// Whether the row starts with its project's dot, or the ring of no
+    /// project.
+    let hasDot: Bool
+    @ScaledMetric private var indent: CGFloat = 22
+    @ScaledMetric private var percentWidth: CGFloat = 44
 
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                if let color = group.color {
-                    Circle()
-                        .fill(Color(hex: color))
-                        .frame(width: 8, height: 8)
+                if hasDot {
+                    ProjectDot(color: group.color.map { Color(hex: $0) })
                 }
                 Text(group.title)
                     .fontWeight(indented ? .regular : .medium)
@@ -179,10 +187,11 @@ struct ReportGroupRow: View {
                 Text(Format.percent(group.milliseconds, of: total))
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
-                    .frame(width: 44, alignment: .trailing)
+                    .frame(width: percentWidth, alignment: .trailing)
             }
-            .padding(.leading, indented ? 22 : 0)
+            .padding(.leading, indented ? indent : 0)
             .padding(.vertical, 7)
+            .accessibilityElement(children: .combine)
             Divider()
         }
     }
@@ -237,6 +246,16 @@ public struct CSVFile: Transferable {
         .padding()
     }
     .frame(width: 640, height: 720)
+}
+
+#Preview("By Project") {
+    let week = LocalDate(year: 2026, month: 9, day: 21)...LocalDate(year: 2026, month: 9, day: 27)
+    let report = Report(ReportRequest(range: week, grouping: .project), ledger: PreviewData.ledger, now: PreviewData.now)
+    return ScrollView {
+        ReportGroupList(report: report)
+            .padding()
+    }
+    .frame(width: 640, height: 320)
 }
 
 #Preview("By Tag, Incomplete") {
