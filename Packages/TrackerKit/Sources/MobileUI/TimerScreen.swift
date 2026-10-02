@@ -3,33 +3,48 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 
-/// The running timer, a quick start, and recent combinations to switch to.
+/// The iPhone's Timer tab.
 struct TimerScreen: View {
     let model: AppModel
-    @Environment(\.undoManager) private var undoManager
-    @State private var note = ""
-    @State private var projectID: UUID?
-    @State private var adjusting: Adjustment?
-
-    enum Adjustment: String, Identifiable {
-        case start, stop
-
-        var id: Self { self }
-    }
 
     var body: some View {
         NavigationStack {
-            List {
+            TimerList(model: model)
+                .navigationTitle("Timer")
+        }
+    }
+}
+
+/// Moving the running timer's start back, or stopping it at an earlier time.
+enum TimerAdjustment: String, Identifiable {
+    case start, stop
+
+    var id: Self { self }
+}
+
+/// The running timer, a quick start, and recent combinations to switch to,
+/// for the iPhone's Timer tab and the iPad's Timer screen.
+struct TimerList: View {
+    let model: AppModel
+    /// Whether it says what's wrong with storage. On iPad the sidebar does.
+    var showsNotices = true
+    @Environment(\.undoManager) private var undoManager
+    @State private var note = ""
+    @State private var projectID: UUID?
+    @State private var adjusting: TimerAdjustment?
+
+    var body: some View {
+        List {
+            if showsNotices {
                 MobileNotices(model: model)
-                runningSection
-                quickStart
-                recentSection
             }
-            .navigationTitle("Timer")
-            .sheet(item: $adjusting) { adjustment in
-                if let running = model.running {
-                    AdjustTimeSheet(model: model, running: running, adjustment: adjustment)
-                }
+            runningSection
+            quickStart
+            recentSection
+        }
+        .sheet(item: $adjusting) { adjustment in
+            if let running = model.running {
+                AdjustTimeSheet(model: model, running: running, adjustment: adjustment)
             }
         }
     }
@@ -127,12 +142,12 @@ struct TimerScreen: View {
 struct AdjustTimeSheet: View {
     let model: AppModel
     let running: ResolvedEntry
-    let adjustment: TimerScreen.Adjustment
+    let adjustment: TimerAdjustment
     @Environment(\.dismiss) private var dismiss
     @Environment(\.undoManager) private var undoManager
     @State private var time: Date
 
-    init(model: AppModel, running: ResolvedEntry, adjustment: TimerScreen.Adjustment) {
+    init(model: AppModel, running: ResolvedEntry, adjustment: TimerAdjustment) {
         self.model = model
         self.running = running
         self.adjustment = adjustment

@@ -49,6 +49,15 @@ public enum CSVExport {
         return "\u{FEFF}" + lines.joined(separator: "\r\n") + "\r\n"
     }
 
+    /// The name for a file of entries: "Time Entries" and the days from the
+    /// first entry to the last, such as "Time Entries 2025-03-04 to
+    /// 2026-09-30". Nil when there are no entries.
+    public static func fileName(for entries: [ResolvedEntry]) -> String? {
+        let days = entries.map(\.entry.day)
+        guard let first = days.min(), let last = days.max() else { return nil }
+        return first == last ? "Time Entries \(first)" : "Time Entries \(first) to \(last)"
+    }
+
     /// Decimal hours with four decimals, rounded half up, such as "2.4167".
     static func hours(_ milliseconds: Int64) -> String {
         let tenThousandths = (max(0, milliseconds) * 10000 + 1_800_000) / 3_600_000

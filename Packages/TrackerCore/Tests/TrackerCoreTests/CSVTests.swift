@@ -97,6 +97,22 @@ import Testing
         ])
     }
 
+    @Test func namesTheFileOfEntriesForTheDaysItCovers() {
+        func entries(_ starts: [(String, String)]) -> [ResolvedEntry] {
+            Ledger(entries: starts.map { start, zone in
+                TimeEntry(start: t(start), end: t(start).adding(seconds: 3600), timeZone: zone, updated: now)
+            }).resolvedEntries()
+        }
+        #expect(CSVExport.fileName(for: []) == nil)
+        #expect(CSVExport.fileName(for: entries([("2026-09-23T09:00:00+02:00", "Europe/Berlin")])) == "Time Entries 2026-09-23")
+        #expect(CSVExport.fileName(for: entries([
+            ("2026-09-23T09:00:00+02:00", "Europe/Berlin"),
+            ("2025-03-04T09:00:00+01:00", "Europe/Berlin"),
+            // Its own day, though it's October 1 in UTC.
+            ("2026-09-30T22:00:00-04:00", "America/New_York"),
+        ])) == "Time Entries 2025-03-04 to 2026-09-30")
+    }
+
     @Test func roundsHoursToFourDecimals() {
         #expect(CSVExport.hours(0) == "0.0000")
         #expect(CSVExport.hours(1000) == "0.0003")

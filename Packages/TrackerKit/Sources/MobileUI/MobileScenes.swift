@@ -5,7 +5,8 @@ import TrackerKit
 import UIKit
 
 /// The iPhone and iPad app's scene. It saves when the app goes to the
-/// background and brings the clock up to date when it comes back.
+/// background and brings the clock up to date when it comes back. An iPad
+/// can open it in several windows, which share the data.
 public struct MobileScenes: Scene {
     @State private var model = AppModel(environment: .live())
     @Environment(\.scenePhase) private var scenePhase
@@ -16,6 +17,9 @@ public struct MobileScenes: Scene {
         WindowGroup {
             MobileRoot(model: model)
                 .task { await model.start() }
+        }
+        .commands {
+            PadCommands()
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -48,8 +52,21 @@ public struct MobileScenes: Scene {
     }
 }
 
-/// The tabs.
+/// The iPhone's tabs, or the iPad's sidebar.
 struct MobileRoot: View {
+    let model: AppModel
+
+    var body: some View {
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            PadRoot(model: model)
+        } else {
+            PhoneTabs(model: model)
+        }
+    }
+}
+
+/// The iPhone's tabs.
+struct PhoneTabs: View {
     let model: AppModel
 
     var body: some View {
@@ -107,6 +124,10 @@ struct MobileNotices: View {
 #if DEBUG
 #Preview("App") {
     MobileRoot(model: PreviewData.model())
+}
+
+#Preview("iPhone") {
+    PhoneTabs(model: PreviewData.model())
 }
 
 #Preview("No Data") {

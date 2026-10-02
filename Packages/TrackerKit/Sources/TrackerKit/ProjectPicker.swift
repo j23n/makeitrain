@@ -359,7 +359,7 @@ public struct ProjectPicker: View {
 
     public var body: some View {
         NavigationLink {
-            ProjectChooserList(ledger: ledger, current: selection, title: title) { projectID in
+            ProjectChooserList(ledger: ledger, current: ProjectChoice(selection), title: title) { projectID in
                 selection = projectID
             }
         } label: {
@@ -370,17 +370,27 @@ public struct ProjectPicker: View {
     }
 }
 
-/// The projects with a search field, for choosing one.
-struct ProjectChooserList: View {
+/// The projects with a search field, for choosing one. Choosing one goes
+/// back, or closes the sheet it's the first screen of.
+public struct ProjectChooserList: View {
     let ledger: Ledger
-    let current: UUID?
+    let current: ProjectChoice?
     let title: String
     let choose: (UUID?) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
 
-    var body: some View {
-        let options = ProjectChoice.options(in: ledger, matching: query, current: current)
+    /// `current` is checked, if there is one, as when several entries with
+    /// different projects are chosen for.
+    public init(ledger: Ledger, current: ProjectChoice?, title: String, choose: @escaping (UUID?) -> Void) {
+        self.ledger = ledger
+        self.current = current
+        self.title = title
+        self.choose = choose
+    }
+
+    public var body: some View {
+        let options = ProjectChoice.options(in: ledger, matching: query, current: current?.projectID)
         List(options) { option in
             Button {
                 choose(option.projectID)
@@ -389,7 +399,7 @@ struct ProjectChooserList: View {
                 HStack {
                     ProjectChoiceLabel(ledger: ledger, choice: option)
                     Spacer()
-                    if option.projectID == current {
+                    if option == current {
                         Image(systemName: "checkmark")
                             .foregroundStyle(.tint)
                     }
@@ -440,7 +450,7 @@ struct ProjectChooserList: View {
 #if os(iOS)
 #Preview("Chooser") {
     NavigationStack {
-        ProjectChooserList(ledger: PreviewData.ledger, current: PreviewData.website, title: "Project") { _ in }
+        ProjectChooserList(ledger: PreviewData.ledger, current: .project(PreviewData.website), title: "Project") { _ in }
     }
 }
 #endif

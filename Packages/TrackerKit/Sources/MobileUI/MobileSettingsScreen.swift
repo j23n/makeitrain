@@ -4,10 +4,28 @@ import TrackerCore
 import TrackerKit
 import UniformTypeIdentifiers
 
-/// iCloud, the first day of the week, clients and projects, and importing
-/// entries from calendars and CSV files.
+/// The iPhone's Settings tab.
 struct MobileSettingsScreen: View {
+    let model: AppModel
+
+    var body: some View {
+        NavigationStack {
+            SettingsForm(model: model)
+                .navigationTitle("Settings")
+        }
+    }
+}
+
+/// iCloud, the first day of the week, clients and projects, and importing
+/// entries from calendars and CSV files, for the iPhone's Settings tab and
+/// the iPad's Settings screen.
+struct SettingsForm: View {
     @Bindable var model: AppModel
+    /// Whether it links to the clients and projects. On iPad they're in the
+    /// sidebar.
+    var showsProjects = true
+    /// Saves every entry as a CSV file, where there's a way to, as on iPad.
+    var exportAll: (() -> Void)? = nil
     @State private var switching = false
     @State private var switchError: String?
     @State private var importing = false
@@ -16,71 +34,79 @@ struct MobileSettingsScreen: View {
     @State private var importingEvents = false
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Toggle("Keep Data in iCloud Drive", isOn: iCloudBinding)
-                        .disabled(switching || (!model.isICloudAvailable && model.storage == .local))
-                } footer: {
-                    Text(storageExplanation)
-                }
+        Form {
+            Section {
+                Toggle("Keep Data in iCloud Drive", isOn: iCloudBinding)
+                    .disabled(switching || (!model.isICloudAvailable && model.storage == .local))
+            } footer: {
+                Text(storageExplanation)
+            }
 
+            if showsProjects {
                 Section {
                     NavigationLink("Clients & Projects") {
                         MobileProjectsScreen(model: model)
                     }
                 }
+            }
 
-                Section("Reports") {
-                    Picker("First Day of the Week", selection: $model.firstWeekday) {
-                        ForEach(1...7, id: \.self) { day in
-                            Text(Calendar.current.weekdaySymbols[day - 1]).tag(day)
-                        }
+            Section("Reports") {
+                Picker("First Day of the Week", selection: $model.firstWeekday) {
+                    ForEach(1...7, id: \.self) { day in
+                        Text(Calendar.current.weekdaySymbols[day - 1]).tag(day)
                     }
                 }
+            }
 
+            Section {
+                Button("Import Calendar Events…") {
+                    importingEvents = true
+                }
+                .disabled(model.isReadOnly)
+            } footer: {
+                Text("Adds the events of each project's calendar as its entries. Choose a project's calendar under Clients & Projects.")
+            }
+
+            Section {
+                Button("Import CSV…") {
+                    importing = true
+                }
+                .disabled(model.isReadOnly)
+            } footer: {
+                Text("Adds entries from a CSV file, such as one exported from this app or another time tracker.")
+            }
+
+            if let exportAll {
                 Section {
-                    Button("Import Calendar Events…") {
-                        importingEvents = true
-                    }
-                    .disabled(model.isReadOnly)
+                    Button("Export All Entries…", action: exportAll)
+                        .disabled(!model.resolved.contains { !$0.isRunning })
                 } footer: {
-                    Text("Adds the events of each project's calendar as its entries. Choose a project's calendar under Clients & Projects.")
-                }
-
-                Section {
-                    Button("Import CSV…") {
-                        importing = true
-                    }
-                    .disabled(model.isReadOnly)
-                } footer: {
-                    Text("Adds entries from a CSV file, such as one exported from this app or another time tracker.")
+                    Text("Saves every entry as a CSV file, with the columns of a report's.")
                 }
             }
-            .navigationTitle("Settings")
-            .alert("Couldn't Switch Storage", isPresented: Binding(get: { switchError != nil }, set: { if !$0 { switchError = nil } })) {
-                Button("OK") { switchError = nil }
-            } message: {
-                Text(switchError ?? "")
+        }
+        .alert("Couldn't Switch Storage", isPresented: Binding(get: { switchError != nil }, set: { if !$0 { switchError = nil } })) {
+            Button("OK") { switchError = nil }
+        } message: {
+            Text(switchError ?? "")
+        }
+        .fileImporter(isPresented: $importing, allowedContentTypes: [.commaSeparatedText, .tabSeparatedText, .plainText]) { result in
+            do {
+                importRequest = try model.importRequest(forFileAt: result.get())
+            } catch {
+                importError = error.localizedDescription
             }
-            .fileImporter(isPresented: $importing, allowedContentTypes: [.commaSeparatedText, .tabSeparatedText, .plainText]) { result in
-                do {
-                    importRequest = try model.importRequest(forFileAt: result.get())
-                } catch {
-                    importError = error.localizedDescription
-                }
-            }
-            .sheet(item: $importRequest) { request in
-                MobileImportSheet(model: model, request: request)
-            }
-            .sheet(isPresented: $importingEvents) {
-                MobileCalendarImportSheet(model: model)
-            }
-            .alert("Couldn't Import the File", isPresented: Binding(get: { importError != nil }, set: { if !$0 { importError = nil } })) {
-                Button("OK") { importError = nil }
-            } message: {
-                Text(importError ?? "")
-            }
+        }
+        .sheet(item: $importRequest) { request in
+            MobileImportSheet(model: model, request: request)
+        }
+        .sheet(isPresented: $importingEvents) {
+            MobileCalendarImportSheet(model: model)
+        }
+        .alert("Couldn't Import the File", isPresented: Binding(get: { importError != nil }, set: { if !$0 { importError = nil } })) {
+            Button("OK") { importError = nil }
+        } message: {
+            Text(importError ?? "")
         }
     }
 
@@ -254,9 +280,13 @@ struct MobileProjectsScreen: View {
     }
 }
 
+/// A client's name and archived state, and deleting it.
 struct MobileClientForm: View {
     let model: AppModel
     let id: UUID
+    /// What happens once the client is deleted. Unless given, the form goes
+    /// back.
+    var deleted: (() -> Void)? = nil
     @Environment(\.undoManager) private var undoManager
     @Environment(\.dismiss) private var dismiss
     @State private var confirmingDelete = false
@@ -291,7 +321,11 @@ struct MobileClientForm: View {
                 Button("Delete Client", role: .destructive) {
                     do {
                         try model.deleteClient(id, undoManager: undoManager)
-                        dismiss()
+                        if let deleted {
+                            deleted()
+                        } else {
+                            dismiss()
+                        }
                     } catch {
                         cantDelete = true
                     }
@@ -315,9 +349,14 @@ struct MobileClientForm: View {
     }
 }
 
+/// A project's name, client, color and archived state, its tags, GitHub
+/// repositories and calendar, and deleting it.
 struct MobileProjectForm: View {
     let model: AppModel
     let id: UUID
+    /// What happens once the project is deleted. Unless given, the form
+    /// goes back.
+    var deleted: (() -> Void)? = nil
     @Environment(\.undoManager) private var undoManager
     @Environment(\.dismiss) private var dismiss
     @State private var confirmingDelete = false
@@ -384,7 +423,11 @@ struct MobileProjectForm: View {
                 Button("Delete Project", role: .destructive) {
                     do {
                         try model.deleteProject(id, undoManager: undoManager)
-                        dismiss()
+                        if let deleted {
+                            deleted()
+                        } else {
+                            dismiss()
+                        }
                     } catch {
                         cantDelete = true
                     }

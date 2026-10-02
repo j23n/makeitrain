@@ -68,18 +68,10 @@ struct EntriesExport: ViewModifier {
 
     private func save() {
         let entries = model.resolved.filter { !$0.isRunning }
-        guard let name = Self.fileName(for: entries) else { return }
+        guard let name = CSVExport.fileName(for: entries) else { return }
         document = CSVDocument(data: CSVExport.data(for: entries, ledger: model.ledger))
         fileName = name
         saving = true
-    }
-
-    /// "Time Entries" and the days from the first entry to the last, or nil
-    /// when there are no entries.
-    static func fileName(for entries: [ResolvedEntry]) -> String? {
-        let days = entries.map(\.entry.day)
-        guard let first = days.min(), let last = days.max() else { return nil }
-        return first == last ? "Time Entries \(first)" : "Time Entries \(first) to \(last)"
     }
 }
 #endif

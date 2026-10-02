@@ -50,7 +50,9 @@ struct EntriesScreen: View {
             .searchable(text: $search, prompt: "Notes, projects and tags")
             .navigationTitle("Entries")
             .navigationDestination(for: UUID.self) { id in
-                EntryForm(model: model, id: id)
+                EntryForm(model: model, id: id, select: { copy in
+                    path = [copy]
+                })
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -152,13 +154,20 @@ struct MobileEntryRow: View {
     }
 }
 
-/// Edits one entry. Times are shown and edited in its own time zone.
+/// Edits one entry, on the iPhone's Entries tab and in the iPad's
+/// inspectors. Times are shown and edited in its own time zone.
 struct EntryForm: View {
     let model: AppModel
     let id: UUID
+    /// Shows another entry, such as the copy "Duplicate Entry" makes.
+    var select: ((UUID) -> Void)? = nil
+    /// What happens once the entry is deleted. Unless given, the form goes
+    /// back.
+    var deleted: (() -> Void)? = nil
     @Environment(\.undoManager) private var undoManager
     @Environment(\.dismiss) private var dismiss
     @State private var confirmingDelete = false
+    @State private var splitting = false
 
     var body: some View {
         if let entry = model.resolved.first(where: { $0.id == id }) {
@@ -234,7 +243,14 @@ struct EntryForm: View {
                         in: entry.start.date...,
                         displayedComponents: [.date, .hourAndMinute]
                     )
-                    LabeledContent("Duration", value: Format.duration(entry.start.distance(to: end)))
+                    LabeledContent("Duration") {
+                        CommitField(title: "Duration", value: Format.duration(entry.start.distance(to: end))) { text in
+                            guard let duration = Format.parseDuration(text) else { return }
+                            update("Change Duration") { $0.end = $0.start.adding(milliseconds: duration) }
+                        }
+                        .multilineTextAlignment(.trailing)
+                        .keyboardType(.numbersAndPunctuation)
+                    }
                 } else {
                     LabeledContent("Duration", value: Format.duration(model.duration(of: entry)))
                     Button("Stop Timer") {
@@ -251,18 +267,37 @@ struct EntryForm: View {
             overlapSection(entry)
 
             Section {
+                if let select {
+                    Button("Duplicate Entry") {
+                        if let copy = model.duplicateEntries([id], undoManager: undoManager).first {
+                            select(copy)
+                        }
+                    }
+                    .disabled(entry.isRunning)
+                }
+                Button("Split Entry…") {
+                    splitting = true
+                }
+                .disabled(EntrySplit.range(of: entry, now: model.now) == nil)
                 Button("Delete Entry", role: .destructive) {
                     confirmingDelete = true
                 }
             }
         }
         .disabled(model.isReadOnly)
+        .sheet(isPresented: $splitting) {
+            SplitEntrySheet(model: model, entry: entry)
+        }
         .navigationTitle(entry.entry.day.year == model.today.year ? Format.day(entry.entry.day) : Format.longDay(entry.entry.day))
         .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("Delete this entry?", isPresented: $confirmingDelete, titleVisibility: .visible) {
             Button("Delete Entry", role: .destructive) {
                 model.deleteEntries([id], undoManager: undoManager)
-                dismiss()
+                if let deleted {
+                    deleted()
+                } else {
+                    dismiss()
+                }
             }
         }
     }
@@ -273,15 +308,15 @@ struct EntryForm: View {
         if !overlaps.isEmpty {
             Section("Overlaps") {
                 ForEach(overlaps, id: \.self) { overlap in
-                    let otherID = overlap.earlier == entry.id ? overlap.later : overlap.earlier
-                    let other = model.resolved.first { $0.id == otherID }
                     VStack(alignment: .leading, spacing: 6) {
-                        Label(
-                            "\(Format.duration(overlap.duration)) with \(other.map { model.ledger.projectTitle($0.entry.projectID) } ?? "another entry")",
-                            systemImage: "exclamationmark.triangle.fill"
-                        )
+                        Label {
+                            Text(model.overlapDescription(overlap, from: entry.id))
+                        } icon: {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                        }
                         if let fix = overlap.fix {
-                            Button(fix.isSplit ? "Split Entry Around It" : "Trim Earlier Entry") {
+                            Button(fix.title) {
                                 model.apply(fix, undoManager: undoManager)
                             }
                         }
@@ -293,13 +328,6 @@ struct EntryForm: View {
 
     private func update(_ actionName: String, _ change: (inout TimeEntry) -> Void) {
         model.updateEntries([id], actionName: actionName, undoManager: undoManager, change)
-    }
-}
-
-extension OverlapFix {
-    var isSplit: Bool {
-        if case .split = self { return true }
-        return false
     }
 }
 
