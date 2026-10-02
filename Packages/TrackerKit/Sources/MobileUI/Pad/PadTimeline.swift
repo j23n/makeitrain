@@ -30,6 +30,18 @@ struct PadTimelineScreen: View {
         span.range(around: shownDay, firstWeekday: model.firstWeekday)
     }
 
+    /// What the inspector says to do with no entry selected. In the month's
+    /// calendar a day's number opens the day, where a double-tap on the
+    /// hour grid adds an entry.
+    private var summaryHint: String {
+        switch span {
+        case .day, .week:
+            "Tap an entry to edit it, and tap empty space to come back here. Double-tap empty space to add an entry."
+        case .month:
+            "Tap an entry to edit it, and tap empty space to come back here. Tap a day's number to see it on its own."
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             header
@@ -63,7 +75,7 @@ struct PadTimelineScreen: View {
                         entries: model.resolved.filter { range.contains($0.entry.day) },
                         ledger: model.ledger,
                         now: model.now,
-                        hint: "Tap an entry to edit it, and tap empty space to come back here. Double-tap empty space to add an entry."
+                        hint: summaryHint
                     )
                 }
             }
@@ -655,6 +667,10 @@ struct PadMonthDayCell: View {
         .contentShape(Rectangle())
         .onTapGesture(count: 2) {
             openDay(day)
+        }
+        // Back to the inspector's summary of the month, as on the Mac.
+        .onTapGesture {
+            selection = nil
         }
     }
 }

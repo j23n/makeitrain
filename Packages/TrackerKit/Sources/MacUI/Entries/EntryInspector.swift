@@ -12,6 +12,8 @@ struct EntryInspector: View {
     let days: ClosedRange<LocalDate>
     /// Their name, such as "Sep 21 – 27, 2026".
     let title: String
+    /// What to do on the timeline, under the summary.
+    let hint: String
     /// Selects another entry, such as a copy just made.
     let select: (UUID) -> Void
 
@@ -26,7 +28,7 @@ struct EntryInspector: View {
                     entries: model.resolved.filter { days.contains($0.entry.day) },
                     ledger: model.ledger,
                     now: model.now,
-                    hint: "Select an entry to edit it, and press Escape or click empty space to come back here. Double-click empty space to add an entry."
+                    hint: hint
                 )
             }
         }
@@ -177,32 +179,32 @@ struct OverlapSection: View {
 private let previewWeek = LocalDate(year: 2026, month: 9, day: 21)...LocalDate(year: 2026, month: 9, day: 27)
 
 #Preview("Entry") {
-    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Wireframe review, round 2"), days: previewWeek, title: Format.days(previewWeek)) { _ in }
+    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Wireframe review, round 2"), days: previewWeek, title: Format.days(previewWeek), hint: TimelineScreen.hint(for: .week)) { _ in }
         .frame(width: 300, height: 640)
 }
 
 #Preview("Overlap") {
-    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Call with Globex"), days: previewWeek, title: Format.days(previewWeek)) { _ in }
+    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Call with Globex"), days: previewWeek, title: Format.days(previewWeek), hint: TimelineScreen.hint(for: .week)) { _ in }
         .frame(width: 300, height: 640)
 }
 
 #Preview("Running Timer") {
-    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Landing page copy"), days: previewWeek, title: Format.days(previewWeek)) { _ in }
+    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Landing page copy"), days: previewWeek, title: Format.days(previewWeek), hint: TimelineScreen.hint(for: .week)) { _ in }
         .frame(width: 300, height: 640)
 }
 
 #Preview("Recorded in New York") {
-    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Client visit"), days: previewWeek, title: Format.days(previewWeek)) { _ in }
+    EntryInspector(model: PreviewData.model(), id: PreviewData.entry("Client visit"), days: previewWeek, title: Format.days(previewWeek), hint: TimelineScreen.hint(for: .week)) { _ in }
         .frame(width: 300, height: 640)
 }
 
 #Preview("Nothing Selected") {
-    EntryInspector(model: PreviewData.model(), id: nil, days: previewWeek, title: Format.days(previewWeek)) { _ in }
+    EntryInspector(model: PreviewData.model(), id: nil, days: previewWeek, title: Format.days(previewWeek), hint: TimelineScreen.hint(for: .week)) { _ in }
         .frame(width: 300, height: 640)
 }
 
 #Preview("A Freelancer's Week, Nothing Selected") {
-    EntryInspector(model: PreviewData.model(PreviewData.ownerLedger), id: nil, days: previewWeek, title: Format.days(previewWeek)) { _ in }
+    EntryInspector(model: PreviewData.model(PreviewData.ownerLedger), id: nil, days: previewWeek, title: Format.days(previewWeek), hint: TimelineScreen.hint(for: .week)) { _ in }
         .frame(width: 300, height: 640)
 }
 #endif
