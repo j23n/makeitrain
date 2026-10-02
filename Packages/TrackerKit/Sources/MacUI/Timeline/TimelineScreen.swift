@@ -138,12 +138,18 @@ struct TimelineScreen: View {
         }
     }
 
+    /// The time logged, which matters more than the words around it.
     private var totalText: some View {
-        Text("\(Format.duration(total)) logged")
-            .monospacedDigit()
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
-            .fixedSize()
+        HStack(spacing: 4) {
+            Text(Format.duration(total))
+                .fontWeight(.semibold)
+                .monospacedDigit()
+            Text("logged")
+                .foregroundStyle(.secondary)
+        }
+        .lineLimit(1)
+        .fixedSize()
+        .accessibilityElement(children: .combine)
     }
 
     private var spanPicker: some View {
