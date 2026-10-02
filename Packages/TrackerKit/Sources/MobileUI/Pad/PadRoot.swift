@@ -4,44 +4,83 @@ import TrackerCore
 import TrackerKit
 import UniformTypeIdentifiers
 
-/// The screens in the iPad's sidebar.
-enum PadScreen: String, CaseIterable, Identifiable {
-    case timer, timeline, entries, reports, projects, tags, settings
+/// What an iPad window shows: one of its screens, or the page of a client,
+/// a project, or the entries without a project.
+enum PadItem: Hashable {
+    case timer, timeline, entries, reports, settings
+    case client(UUID)
+    case project(UUID)
+    case unassigned
 
-    var id: Self { self }
+    /// The screens, in the sidebar's and the Go menu's order.
+    static let screens: [PadItem] = [.timer, .timeline, .entries, .reports, .settings]
 
-    var title: String {
+    /// How the window remembers it, such as "reports" or "project:" and the
+    /// project's id.
+    var key: String {
         switch self {
-        case .timer: "Timer"
-        case .timeline: "Timeline"
-        case .entries: "Entries"
-        case .reports: "Reports"
-        case .projects: "Clients & Projects"
-        case .tags: "Tags"
-        case .settings: "Settings"
+        case .timer: "timer"
+        case .timeline: "timeline"
+        case .entries: "entries"
+        case .reports: "reports"
+        case .settings: "settings"
+        case .client(let id): "client:\(id.uuidString)"
+        case .project(let id): "project:\(id.uuidString)"
+        case .unassigned: "unassigned"
         }
     }
 
-    var icon: String {
+    /// The item a key stands for, or nil for one that's gone, such as the
+    /// screens that projects' pages replaced.
+    init?(key: String) {
+        if let screen = Self.screens.first(where: { $0.key == key }) {
+            self = screen
+            return
+        }
+        if key == "unassigned" {
+            self = .unassigned
+            return
+        }
+        let parts = key.split(separator: ":", maxSplits: 1).map(String.init)
+        guard parts.count == 2, let id = UUID(uuidString: parts[1]) else { return nil }
+        switch parts[0] {
+        case "client": self = .client(id)
+        case "project": self = .project(id)
+        default: return nil
+        }
+    }
+
+    /// A screen's name and symbol; nil for a page.
+    var screen: (title: String, icon: String)? {
         switch self {
-        case .timer: "stopwatch"
-        case .timeline: "calendar.day.timeline.left"
-        case .entries: "list.bullet.rectangle"
-        case .reports: "chart.bar.xaxis"
-        case .projects: "folder"
-        case .tags: "tag"
-        case .settings: "gear"
+        case .timer: (title: "Timer", icon: "stopwatch")
+        case .timeline: (title: "Timeline", icon: "calendar.day.timeline.left")
+        case .entries: (title: "Entries", icon: "list.bullet.rectangle")
+        case .reports: (title: "Reports", icon: "chart.bar.xaxis")
+        case .settings: (title: "Settings", icon: "gear")
+        case .client, .project, .unassigned: nil
         }
     }
 }
 
-/// An iPad window: the screens in a sidebar, as on the Mac, with the timer
-/// in each screen's toolbar, and the File menu's imports and export. In a
-/// narrow window the sidebar is a list to pick a screen from.
+/// A client or project to add, named in an alert.
+enum PadNewRecord: Hashable {
+    case client
+    /// A project, for a client or none.
+    case project(UUID?)
+}
+
+/// An iPad window: the screens, clients and projects in a sidebar, as on
+/// the Mac, with the timer in each screen's toolbar, and the File menu's
+/// imports and export. In a narrow window the sidebar is a list to pick
+/// from.
 struct PadRoot: View {
     let model: AppModel
-    @SceneStorage("pad.screen") private var savedScreen = PadScreen.timeline
-    @State private var screen: PadScreen?
+    @SceneStorage("pad.screen") private var saved = "timeline"
+    @State private var selection: PadItem?
+    @Environment(\.undoManager) private var undoManager
+    @State private var adding: PadNewRecord?
+    @State private var newName = ""
     @State private var importing = false
     @State private var importRequest: ImportRequest?
     @State private var importError: String?
@@ -53,27 +92,21 @@ struct PadRoot: View {
 
     var body: some View {
         NavigationSplitView {
-            List(selection: $screen) {
-                Section {
-                    ForEach(PadScreen.allCases.filter { $0 != .settings }) { item in
-                        Label(item.title, systemImage: item.icon)
-                            .tag(item)
-                    }
-                }
-                Section {
-                    Label(PadScreen.settings.title, systemImage: PadScreen.settings.icon)
-                        .tag(PadScreen.settings)
-                }
-                MobileNotices(model: model)
+            PadSidebar(model: model, selection: $selection) { record in
+                startAdding(record)
             }
             .navigationTitle("Time Tracker")
         } detail: {
-            // The screen last shown until the sidebar's selection is set, so
+            // The item last shown until the sidebar's selection is set, so
             // the window doesn't open empty. In a narrow window, the
             // selection alone decides whether the screen or the sidebar shows.
-            let shown = screen ?? savedScreen
+            let shown = selection ?? PadItem(key: saved) ?? .timeline
             NavigationStack {
-                PadScreenView(model: model, screen: shown, files: files)
+                PadScreenView(model: model, item: shown, files: files) { item in
+                    selection = item
+                } add: { record in
+                    startAdding(record)
+                }
             }
             .id(shown)
             // Here rather than beside the import, so the two file dialogs
@@ -90,7 +123,7 @@ struct PadRoot: View {
             }
         }
         .focusedSceneValue(\.padFiles, files)
-        .focusedSceneValue(\.padScreen, $screen)
+        .focusedSceneValue(\.padScreen, $selection)
         .fileImporter(isPresented: $importing, allowedContentTypes: [.commaSeparatedText, .tabSeparatedText, .plainText]) { result in
             do {
                 importRequest = try model.importRequest(forFileAt: result.get())
@@ -104,6 +137,17 @@ struct PadRoot: View {
         .sheet(isPresented: $importingEvents) {
             MobileCalendarImportSheet(model: model)
         }
+        .alert(
+            adding == .client ? "New Client" : "New Project",
+            isPresented: Binding(get: { adding != nil }, set: { if !$0 { adding = nil } }),
+            presenting: adding
+        ) { record in
+            TextField("Name", text: $newName)
+            Button("Add") {
+                add(record)
+            }
+            Button("Cancel", role: .cancel) {}
+        }
         .alert("Couldn't Import the File", isPresented: Binding(get: { importError != nil }, set: { if !$0 { importError = nil } })) {
             Button("OK") { importError = nil }
         } message: {
@@ -115,13 +159,13 @@ struct PadRoot: View {
             Text(exportError ?? "")
         }
         .onAppear {
-            if screen == nil {
-                screen = savedScreen
+            if selection == nil {
+                selection = PadItem(key: saved) ?? .timeline
             }
         }
-        .onChange(of: screen) { _, newScreen in
-            if let newScreen {
-                savedScreen = newScreen
+        .onChange(of: selection) { _, newSelection in
+            if let newSelection {
+                saved = newSelection.key
             }
         }
     }
@@ -144,24 +188,169 @@ struct PadRoot: View {
         exportName = name
         exporting = true
     }
+
+    private func startAdding(_ record: PadNewRecord) {
+        newName = ""
+        adding = record
+    }
+
+    /// Adds the client or project named, and shows its page.
+    private func add(_ record: PadNewRecord) {
+        let name = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return }
+        switch record {
+        case .client:
+            selection = .client(model.addClient(named: name, undoManager: undoManager))
+        case .project(let clientID):
+            selection = .project(model.addProject(named: name, client: clientID, color: ProjectColors.next(in: model.ledger), undoManager: undoManager))
+        }
+    }
 }
 
-/// A screen in the iPad's detail column, with its title, and the timer in
-/// its toolbar on every screen but the Timer's.
+/// The iPad's sidebar: the timer, the timeline, the entries and the
+/// reports; then each client with its projects under it, the projects
+/// without a client and the entries without a project, each opening its
+/// page; the archived clients and projects, folded away; and Settings. Its
+/// toolbar's menu adds a client or a project.
+struct PadSidebar: View {
+    let model: AppModel
+    @Binding var selection: PadItem?
+    /// Asks for a new client's or project's name.
+    let add: (PadNewRecord) -> Void
+    @State private var showsArchived = false
+    @ScaledMetric private var indent: CGFloat = 18
+
+    var body: some View {
+        let tree = ProjectTree(ledger: model.ledger)
+        List(selection: $selection) {
+            Section {
+                ForEach(PadItem.screens.filter { $0 != .settings }, id: \.self) { item in
+                    screenRow(item)
+                }
+            }
+            Section("Projects") {
+                ForEach(tree.clients) { branch in
+                    clientRow(branch.client)
+                    ForEach(branch.projects) { project in
+                        projectRow(project, title: project.name)
+                            .padding(.leading, indent)
+                    }
+                }
+                ForEach(tree.unfiled) { project in
+                    projectRow(project, title: project.name)
+                }
+                if model.resolved.contains(where: { $0.entry.projectID == nil }) {
+                    Label {
+                        Text("Unassigned")
+                    } icon: {
+                        ProjectDot(color: nil, size: 10)
+                    }
+                    .tag(PadItem.unassigned)
+                }
+                if tree.clients.isEmpty, tree.unfiled.isEmpty {
+                    Button {
+                        add(.project(nil))
+                    } label: {
+                        Label("New Project", systemImage: "plus")
+                    }
+                    .disabled(model.isReadOnly)
+                }
+            }
+            if !tree.archivedClients.isEmpty || !tree.archivedProjects.isEmpty {
+                Section {
+                    DisclosureGroup(isExpanded: $showsArchived) {
+                        ForEach(tree.archivedClients) { branch in
+                            clientRow(branch.client)
+                            ForEach(branch.projects) { project in
+                                projectRow(project, title: project.name)
+                                    .padding(.leading, indent)
+                            }
+                        }
+                        ForEach(tree.archivedProjects) { project in
+                            projectRow(project, title: model.ledger.projectTitle(project.id))
+                        }
+                    } label: {
+                        Label("Archived", systemImage: "archivebox")
+                    }
+                }
+            }
+            Section {
+                screenRow(.settings)
+            }
+            MobileNotices(model: model)
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button {
+                        add(.project(selectedClient))
+                    } label: {
+                        Label("New Project", systemImage: "folder.badge.plus")
+                    }
+                    Button {
+                        add(.client)
+                    } label: {
+                        Label("New Client", systemImage: "briefcase")
+                    }
+                } label: {
+                    Label("New", systemImage: "plus")
+                }
+                .disabled(model.isReadOnly)
+                .help("Add a project or a client")
+            }
+        }
+    }
+
+    private func screenRow(_ item: PadItem) -> some View {
+        Label(item.screen?.title ?? "", systemImage: item.screen?.icon ?? "")
+            .tag(item)
+    }
+
+    private func clientRow(_ client: Client) -> some View {
+        Label(client.name, systemImage: "briefcase")
+            .tag(PadItem.client(client.id))
+    }
+
+    private func projectRow(_ project: Project, title: String) -> some View {
+        Label {
+            Text(title)
+        } icon: {
+            ProjectDot(color: Color(hex: project.color), size: 10)
+        }
+        .tag(PadItem.project(project.id))
+    }
+
+    /// The client a new project goes to: the one shown, or the shown
+    /// project's.
+    private var selectedClient: UUID? {
+        switch selection {
+        case .client(let id)?: id
+        case .project(let id)?: model.ledger.projects[id]?.clientID
+        default: nil
+        }
+    }
+}
+
+/// A screen or page in the iPad's detail column, with its title, and the
+/// timer in its toolbar everywhere but on the Timer.
 struct PadScreenView: View {
     let model: AppModel
-    let screen: PadScreen
+    let item: PadItem
     let files: PadFileActions
+    /// Shows another screen or page.
+    let select: (PadItem) -> Void
+    /// Asks for a new client's or project's name.
+    let add: (PadNewRecord) -> Void
     @State private var adjusting: TimerAdjustment?
 
     var body: some View {
         content
-            .navigationTitle(screen.title)
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarRole(.editor)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    if screen != .timer {
+                    if item != .timer {
                         PadTimerControl(model: model, adjusting: $adjusting)
                     }
                 }
@@ -173,9 +362,19 @@ struct PadScreenView: View {
             }
     }
 
+    /// The screen's name, or the client's or project's.
+    private var title: String {
+        switch item {
+        case .client(let id): model.ledger.clients[id]?.name ?? "Client"
+        case .project(let id): model.ledger.projects[id]?.name ?? "Project"
+        case .unassigned: "Unassigned"
+        default: item.screen?.title ?? ""
+        }
+    }
+
     @ViewBuilder
     private var content: some View {
-        switch screen {
+        switch item {
         case .timer:
             TimerList(model: model, showsNotices: false)
         case .timeline:
@@ -184,12 +383,14 @@ struct PadScreenView: View {
             PadEntriesScreen(model: model)
         case .reports:
             PadReportsScreen(model: model)
-        case .projects:
-            PadProjectsScreen(model: model)
-        case .tags:
-            PadTagsScreen(model: model)
         case .settings:
             SettingsForm(model: model, showsProjects: false, exportAll: files.exportAll)
+        case .client(let id):
+            PadClientPage(model: model, clientID: id, select: select, add: add)
+        case .project(let id):
+            PadProjectPage(model: model, projectID: id, select: select)
+        case .unassigned:
+            PadProjectPage(model: model, projectID: nil, select: select)
         }
     }
 }
@@ -376,7 +577,7 @@ struct PadFileActionsKey: FocusedValueKey {
 }
 
 struct PadScreenKey: FocusedValueKey {
-    typealias Value = Binding<PadScreen?>
+    typealias Value = Binding<PadItem?>
 }
 
 extension FocusedValues {
@@ -386,8 +587,8 @@ extension FocusedValues {
         set { self[PadFileActionsKey.self] = newValue }
     }
 
-    /// The screen the focused iPad window shows.
-    var padScreen: Binding<PadScreen?>? {
+    /// What the focused iPad window shows.
+    var padScreen: Binding<PadItem?>? {
         get { self[PadScreenKey.self] }
         set { self[PadScreenKey.self] = newValue }
     }
@@ -395,7 +596,7 @@ extension FocusedValues {
 
 /// The iPad's menu commands, in the menu bar and, with a keyboard, in the
 /// list that holding Command shows: File › Import CSV…, Import Calendar
-/// Events… and Export CSV…, and the screens under Go, with ⌘1 to ⌘7.
+/// Events… and Export CSV…, and the screens under Go, with ⌘1 to ⌘5.
 struct PadCommands: Commands {
     @FocusedValue(\.padFiles) private var files
     @FocusedBinding(\.padScreen) private var screen
@@ -418,8 +619,8 @@ struct PadCommands: Commands {
             .disabled(files == nil)
         }
         CommandMenu("Go") {
-            ForEach(Array(PadScreen.allCases.enumerated()), id: \.element) { index, item in
-                Button(item.title) {
+            ForEach(Array(PadItem.screens.enumerated()), id: \.element) { index, item in
+                Button(item.screen?.title ?? "") {
                     screen = item
                 }
                 .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
@@ -435,6 +636,10 @@ struct PadCommands: Commands {
 
 #Preview("iPad, No Data") {
     PadRoot(model: PreviewData.model(Ledger()))
+}
+
+#Preview("iPad, a Freelancer's Data") {
+    PadRoot(model: PreviewData.model(PreviewData.ownerLedger))
 }
 
 #Preview("Toolbar Timer") {

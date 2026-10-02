@@ -38,7 +38,7 @@ The privacy manifests say the same: no tracking, no tracking domains and no coll
 >
 > On iPad the app has a sidebar like the Mac's main window, with the timer in each screen's toolbar. On iPhone it has tabs.
 >
-> Calendar access is optional. In a project's settings under Clients & Projects, the user picks the client's calendar; File › Import Calendar Events… (Settings › Import Calendar Events… on iPhone and iPad) then adds that calendar's events as time entries. Nothing leaves the device.
+> Calendar access is optional. In a project's settings, the user picks the client's calendar; File › Import Calendar Events… (Settings › Import Calendar Events… on iPhone and iPad) then adds that calendar's events as time entries. Nothing leaves the device.
 >
 > Projects can list GitHub repositories. Tags like #123 then open that issue on github.com in the browser; the app itself makes no network requests.
 

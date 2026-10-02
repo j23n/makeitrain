@@ -57,6 +57,166 @@ public struct ClientBadge: View {
     }
 }
 
+/// The heading of a project's or client's page: its badge, its name, a line
+/// about it, and buttons at its end.
+public struct PageHeader<Badge: View, Actions: View>: View {
+    let title: String
+    let subtitle: String
+    let archived: Bool
+    let badge: Badge
+    let actions: Actions
+
+    public init(
+        _ title: String,
+        subtitle: String,
+        archived: Bool = false,
+        @ViewBuilder badge: () -> Badge,
+        @ViewBuilder actions: () -> Actions
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.archived = archived
+        self.badge = badge()
+        self.actions = actions()
+    }
+
+    public var body: some View {
+        HStack(spacing: 14) {
+            badge
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 8) {
+                    Text(title)
+                        .font(.title.weight(.semibold))
+                        .lineLimit(1)
+                    if archived {
+                        Text("Archived")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .background(.quaternary, in: Capsule())
+                    }
+                }
+                Text(subtitle)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 16)
+            actions
+        }
+    }
+}
+
+/// Starts a timer for a project, or for no project, or stops the timer
+/// while it's the project's. An archived project's can't be started.
+public struct ProjectTimerButton: View {
+    let model: AppModel
+    let projectID: UUID?
+    @Environment(\.undoManager) private var undoManager
+
+    public init(model: AppModel, projectID: UUID?) {
+        self.model = model
+        self.projectID = projectID
+    }
+
+    public var body: some View {
+        Group {
+            if let running = model.running, running.entry.projectID == projectID {
+                Button {
+                    model.stopTimer(undoManager: undoManager)
+                } label: {
+                    Label("Stop Timer", systemImage: "stop.fill")
+                }
+                .tint(.red)
+                .help("Stop the timer")
+            } else {
+                Button {
+                    model.startTimer(Combination(projectID: projectID, tags: []), undoManager: undoManager)
+                } label: {
+                    Label("Start Timer", systemImage: "play.fill")
+                }
+                .disabled(projectID.map { model.ledger.isArchived(project: $0) } ?? false)
+                .help(help)
+            }
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .disabled(model.isReadOnly)
+    }
+
+    private var help: String {
+        let what = projectID.map { "one for \(model.ledger.projectTitle($0))" } ?? "one without a project"
+        return model.running == nil ? "Start \(what)" : "Stop the running timer and start \(what)"
+    }
+}
+
+/// A client's projects on a panel, each with its time in all and a bar for
+/// it, opening its page when clicked.
+public struct ClientProjectList: View {
+    let projects: [Project]
+    let overview: ProjectOverview
+    let ledger: Ledger
+    let open: (UUID) -> Void
+    @ScaledMetric private var nameWidth: CGFloat = 200
+    @ScaledMetric private var figureWidth: CGFloat = 90
+
+    /// `overview` is the client's, with each project's time.
+    public init(projects: [Project], overview: ProjectOverview, ledger: Ledger, open: @escaping (UUID) -> Void) {
+        self.projects = projects
+        self.overview = overview
+        self.ledger = ledger
+        self.open = open
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Projects")
+                .font(.headline)
+                .padding(.bottom, 6)
+            if projects.isEmpty {
+                Text("No projects yet. Add one with New Project.")
+                    .foregroundStyle(.secondary)
+            }
+            let maximum = projects.map { overview.projects[$0.id] ?? 0 }.max() ?? 0
+            ForEach(projects) { project in
+                let time = overview.projects[project.id] ?? 0
+                Button {
+                    open(project.id)
+                } label: {
+                    HStack(spacing: 12) {
+                        HStack(spacing: 8) {
+                            ProjectDot(color: Color(hex: project.color))
+                            Text(project.name)
+                                .lineLimit(1)
+                            if ledger.isArchived(project: project.id) {
+                                Text("Archived")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .frame(width: nameWidth, alignment: .leading)
+                        ShareBar(time, of: maximum, color: Color(hex: project.color))
+                        Text(Format.duration(time))
+                            .fontWeight(.medium)
+                            .monospacedDigit()
+                            .lineLimit(1)
+                            .frame(width: figureWidth, alignment: .trailing)
+                        Image(systemName: "chevron.right")
+                            .foregroundStyle(.tertiary)
+                            .accessibilityHidden(true)
+                    }
+                    .padding(.vertical, 5)
+                    .padding(.horizontal, 8)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Show \(project.name)")
+            }
+        }
+        .card()
+    }
+}
+
 /// The time of a project or client this week, this month and in all, with
 /// how many entries make it up and since when.
 public struct ProjectFigures: View {

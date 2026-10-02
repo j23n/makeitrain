@@ -17,7 +17,6 @@ struct ProjectPage: View {
     let projectID: UUID?
     /// Shows another page, such as the project this one was merged into.
     let select: (SidebarItem) -> Void
-    @Environment(\.undoManager) private var undoManager
     /// The selected tag's id.
     @State private var selectedTag: String?
     @State private var showsInspector = false
@@ -101,55 +100,10 @@ struct ProjectPage: View {
 
     /// The project's color and name, its client, and its timer.
     private var header: some View {
-        HStack(spacing: 14) {
+        PageHeader(name, subtitle: subtitle, archived: archived) {
             ProjectBadge(name: name, color: projectID == nil ? nil : color)
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 8) {
-                    Text(name)
-                        .font(.title.weight(.semibold))
-                        .lineLimit(1)
-                    if archived {
-                        Text("Archived")
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 2)
-                            .background(.quaternary, in: Capsule())
-                    }
-                }
-                Text(subtitle)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: 16)
-            timerButton
-        }
-    }
-
-    /// Starts a timer for the project, or stops it while it runs.
-    @ViewBuilder
-    private var timerButton: some View {
-        if let running = model.running, running.entry.projectID == projectID {
-            Button {
-                model.stopTimer(undoManager: undoManager)
-            } label: {
-                Label("Stop Timer", systemImage: "stop.fill")
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(.red)
-            .controlSize(.large)
-            .disabled(model.isReadOnly)
-            .help("Stop the timer")
-        } else {
-            Button {
-                model.startTimer(Combination(projectID: projectID, tags: []), undoManager: undoManager)
-            } label: {
-                Label("Start Timer", systemImage: "play.fill")
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .disabled(model.isReadOnly || archived)
-            .help(model.running == nil ? "Start a timer for \(name)" : "Stop the running timer and start one for \(name)")
+        } actions: {
+            ProjectTimerButton(model: model, projectID: projectID)
         }
     }
 

@@ -21,7 +21,7 @@ GitHub Actions runs both on macOS, runs TrackerCore on Linux too, and builds bot
 
 ## Previews
 
-Every screen has SwiftUI previews, in Debug builds only. They show a week of sample data, `PreviewData` in TrackerKit: two clients, a running timer, an overlap, an unassigned entry, an entry recorded in New York and an archived project, with "now" fixed at Wednesday, September 23, 2026, 15:40 in Berlin. The previews read no files, and edits made in a live preview go to a temporary folder.
+Every screen has SwiftUI previews, in Debug builds only. They show a week of sample data, `PreviewData` in TrackerKit: two clients, a running timer, an overlap, an unassigned entry, an entry recorded in New York and an archived project, with "now" fixed at Wednesday, September 23, 2026, 15:40 in Berlin. Some also show a freelancer's three months, two clients with a project each, hundreds of hours and dozens of tags that refer to issues, written like `GrundRiss/#131`, to see long totals and long lists of tags. The previews read no files, and edits made in a live preview go to a temporary folder.
 
 To see them, open `TimeTracker.xcodeproj`, choose the `TimeTracker` scheme for the Mac screens or `TimeTrackerMobile` for iOS, open a view's file from the TrackerKit package, and show the canvas (Editor › Canvas, ⌥⌘↩). The iPad's screens are in `MobileUI/Pad`; pick an iPad as the canvas's device to see them at their size.
 
