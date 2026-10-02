@@ -58,7 +58,13 @@ struct PadTimelineScreen: View {
                     })
                     .id(id)
                 } else {
-                    ContentUnavailableView("No Selection", systemImage: "clock", description: Text("Tap an entry to edit it."))
+                    PeriodSummary(
+                        title: title,
+                        entries: model.resolved.filter { range.contains($0.entry.day) },
+                        ledger: model.ledger,
+                        now: model.now,
+                        hint: "Tap an entry to edit it, and tap empty space to come back here. Double-tap empty space to add an entry."
+                    )
                 }
             }
         }

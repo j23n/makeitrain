@@ -63,6 +63,9 @@ struct TimeGrid: View {
             guard let selection, !model.isReadOnly else { return }
             model.deleteEntries([selection], undoManager: undoManager)
         }
+        .onExitCommand {
+            selection = nil
+        }
         .overlay(alignment: .bottom) {
             if columns.allSatisfy(\.isEmpty) {
                 Text("Double-click to add an entry.")
@@ -90,6 +93,11 @@ struct TimeGrid: View {
                             .frame(width: dayWidth, height: HourGrid.hourHeight * 24)
                             .onTapGesture(count: 2) { location in
                                 addEntry(on: day, atY: location.y)
+                            }
+                            // Back to the inspector's summary of the days, as
+                            // on iPad.
+                            .onTapGesture {
+                                selection = nil
                             }
                             .offset(x: HourGrid.gutter + CGFloat(index) * dayWidth)
                     }

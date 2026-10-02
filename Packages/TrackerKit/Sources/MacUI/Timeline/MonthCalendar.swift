@@ -68,6 +68,9 @@ struct MonthCalendar: View {
             guard let selection, !model.isReadOnly else { return }
             model.deleteEntries([selection], undoManager: undoManager)
         }
+        .onExitCommand {
+            selection = nil
+        }
     }
 }
 
@@ -140,6 +143,10 @@ struct MonthDayCell: View {
         .contentShape(Rectangle())
         .onTapGesture(count: 2) {
             openDay(day)
+        }
+        // Back to the inspector's summary of the month.
+        .onTapGesture {
+            selection = nil
         }
     }
 }
