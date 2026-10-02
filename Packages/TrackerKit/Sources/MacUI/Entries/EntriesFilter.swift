@@ -249,11 +249,16 @@ struct EntriesSummary: View {
         let total = rows.reduce(Int64(0)) { sum, row in
             sum + (row.entry.end.map { max(0, row.start.distance(to: $0)) } ?? model.duration(of: row.entry))
         }
-        Text("\(rows.count == 1 ? "1 entry" : "\(rows.count.formatted()) entries") · \(Format.duration(total))")
-            .monospacedDigit()
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
-            .help("The entries shown and their time")
+        HStack(spacing: 6) {
+            Text(rows.count == 1 ? "1 entry" : "\(rows.count.formatted()) entries")
+                .foregroundStyle(.secondary)
+            Text(Format.duration(total))
+                .fontWeight(.semibold)
+        }
+        .monospacedDigit()
+        .lineLimit(1)
+        .help("The entries shown and their time")
+        .accessibilityElement(children: .combine)
     }
 }
 

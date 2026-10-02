@@ -455,12 +455,17 @@ struct PadEntriesSummary: View {
         let total = entries.reduce(Int64(0)) { sum, entry in
             sum + (entry.end.map { max(0, entry.start.distance(to: $0)) } ?? model.duration(of: entry))
         }
-        Text("\(entries.count == 1 ? "1 entry" : "\(entries.count.formatted()) entries") · \(Format.duration(total))")
-            .font(.subheadline)
-            .monospacedDigit()
-            .foregroundStyle(.secondary)
-            .lineLimit(1)
-            .fixedSize()
+        HStack(spacing: 6) {
+            Text(entries.count == 1 ? "1 entry" : "\(entries.count.formatted()) entries")
+                .foregroundStyle(.secondary)
+            Text(Format.duration(total))
+                .fontWeight(.semibold)
+        }
+        .font(.subheadline)
+        .monospacedDigit()
+        .lineLimit(1)
+        .fixedSize()
+        .accessibilityElement(children: .combine)
     }
 }
 
