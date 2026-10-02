@@ -7,7 +7,7 @@ Time Tracker is a menu bar app for the Mac, with an iPhone and iPad app that sha
 | Path | What it holds |
 | --- | --- |
 | `Mac/`, `iOS/` | The two app targets: entry point, Info.plist, entitlements and assets. They contain almost no code. |
-| `Packages/TrackerKit` | The app layer on Apple platforms. `TrackerKit` has the shared app model, storage, iCloud sync and the views both apps use; `MacUI` and `MobileUI` have each app's screens. Every screen has previews with the sample data in `PreviewData`. |
+| `Packages/TrackerKit` | The app layer on Apple platforms. `TrackerKit` has the shared app model, storage, iCloud sync and the views and screen logic both apps use; `MacUI` has the Mac's screens, and `MobileUI` the iPhone's and the iPad's. Every screen has previews with the sample data in `PreviewData`. |
 | `Packages/TrackerCore` | The data model, file format, merging, the timer and overlap rules, reports and the entry filter they share with the entries table, CSV export and import, turning calendar events into entries, and backups. Plain Swift that also builds and tests on Linux. |
 | `TimeTracker.xcodeproj` | The Xcode project, with the `TimeTracker` (macOS) and `TimeTrackerMobile` (iOS) targets. |
 | `docs/` | These documents. |
@@ -40,9 +40,12 @@ The Mac app:
 - **Main window:** a sidebar with the **Timeline** by day, week or month (drag to move and resize, double-click to add), the **Entries** table, edited in place and filtered by period, client, project, tag and overlaps, **Reports** with a chart and CSV export, **Clients & Projects**, where each project's inspector has its tags, GitHub repositories and calendar, and **Tags** by project. The toolbar has the timer, to start, stop or switch it, between the title and the screen's buttons. File › Import CSV… adds entries from a CSV file, File › Import Calendar Events… adds the events of calendars linked to projects, and File › Export CSV… saves every entry as a CSV file.
 - **Settings:** iCloud, the first day of the week, launch at login, and buttons that show the data and the backups in Finder.
 
-The iOS app has four tabs: **Timer**, **Entries** by day with a form to edit each, **Reports** with the CSV in the share sheet, and **Settings** with clients and projects, each with its tags, GitHub repositories and calendar, and calendar and CSV import.
+The iOS app is one app for iPhone and iPad, with a layout for each:
 
-Views both apps use live in `TrackerKit`: the report summary, chart and groups, the project label and picker, tag capsules, and a text field that commits on Return or when it loses focus, so typing doesn't make an undo step per keystroke.
+- **iPhone:** four tabs: **Timer**, **Entries** by day with a form to edit each, **Reports** with the CSV in the share sheet, and **Settings** with clients and projects, each with its tags, GitHub repositories and calendar, and calendar and CSV import.
+- **iPad:** the Mac's main window, made for touch: a sidebar with the **Timer**, the **Timeline** by day, week or month (tap a block to select it, then drag it or its handles; double-tap to add), **Entries** by day under the Mac's filter bar, **Reports** with days of your choice and filters, **Clients & Projects**, **Tags** and **Settings**. The selected entry, project or tag is edited in an inspector beside the list, or in a sheet in a narrow window. Every screen but the Timer has the timer in its toolbar. The File menu imports and exports, as on the Mac, and Go has the screens. Each window has its own screen; all of them share the one app model.
+
+Views and logic both apps use live in `TrackerKit`: the report summary, chart and groups, the project label and picker, tag capsules, a text field that commits on Return or when it loses focus, so typing doesn't make an undo step per keystroke, the timeline's blocks, the hour grid's measurements and the arithmetic of dragging on it, the entries filter, the context menu's items, and the Tags and Clients & Projects lists.
 
 ## Permissions
 
@@ -55,3 +58,4 @@ The Mac app has the App Sandbox, iCloud Documents for its own container, read-wr
 - There's no SwiftData or Core Data, because they store a database rather than readable files.
 - The Mac app uses SwiftUI scenes: `MenuBarExtra` for the popover, a `Window` for the main window, and `Settings`. The Dock icon shows only while the main window or Settings is open.
 - The minimum versions are macOS 14 and iOS 17, the first with `@Observable` and SwiftUI's inspector.
+- The iPad's layout is picked by the device, not by the window's width, so resizing a window in Split View or Stage Manager doesn't swap the whole interface; a narrow iPad window shows the sidebar as a list to pick a screen from, and inspectors as sheets.

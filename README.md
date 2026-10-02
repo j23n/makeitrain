@@ -23,12 +23,12 @@ GitHub Actions runs both on macOS, runs TrackerCore on Linux too, and builds bot
 
 Every screen has SwiftUI previews, in Debug builds only. They show a week of sample data, `PreviewData` in TrackerKit: two clients, a running timer, an overlap, an unassigned entry, an entry recorded in New York and an archived project, with "now" fixed at Wednesday, September 23, 2026, 15:40 in Berlin. The previews read no files, and edits made in a live preview go to a temporary folder.
 
-To see them, open `TimeTracker.xcodeproj`, choose the `TimeTracker` scheme for the Mac screens or `TimeTrackerMobile` for iOS, open a view's file from the TrackerKit package, and show the canvas (Editor › Canvas, ⌥⌘↩).
+To see them, open `TimeTracker.xcodeproj`, choose the `TimeTracker` scheme for the Mac screens or `TimeTrackerMobile` for iOS, open a view's file from the TrackerKit package, and show the canvas (Editor › Canvas, ⌥⌘↩). The iPad's screens are in `MobileUI/Pad`; pick an iPad as the canvas's device to see them at their size.
 
 ## Layout
 
 - `Mac/` and `iOS/` are the app targets. They hold little more than the entry point, entitlements and assets.
-- `Packages/TrackerKit` has the app model, storage, iCloud sync and the views both apps share (`TrackerKit`), and each app's screens (`MacUI`, `MobileUI`).
+- `Packages/TrackerKit` has the app model, storage, iCloud sync and the views both apps share (`TrackerKit`), and each app's screens: the Mac's (`MacUI`), and the iPhone's and iPad's (`MobileUI`).
 - `Packages/TrackerCore` has the data model, file format, merging and rules. It builds on Linux as well.
 
 ## Docs

@@ -1,6 +1,6 @@
 # App Store
 
-What's in place for submitting the Mac and iOS apps, and what's left to do by hand.
+What's in place for submitting the Mac and iOS apps, and what's left to do by hand. The iOS app runs on iPhone and iPad, with a layout for each.
 
 ## In the project
 
@@ -36,7 +36,9 @@ The privacy manifests say the same: no tracking, no tracking domains and no coll
 >
 > Launch at login is off until the user turns it on in Settings.
 >
-> Calendar access is optional. In a project's settings under Clients & Projects, the user picks the client's calendar; File › Import Calendar Events… (Settings › Import Calendar Events… on iOS) then adds that calendar's events as time entries. Nothing leaves the device.
+> On iPad the app has a sidebar like the Mac's main window, with the timer in each screen's toolbar. On iPhone it has tabs.
+>
+> Calendar access is optional. In a project's settings under Clients & Projects, the user picks the client's calendar; File › Import Calendar Events… (Settings › Import Calendar Events… on iPhone and iPad) then adds that calendar's events as time entries. Nothing leaves the device.
 >
 > Projects can list GitHub repositories. Tags like #123 then open that issue on github.com in the browser; the app itself makes no network requests.
 
@@ -45,6 +47,6 @@ The privacy manifests say the same: no tracking, no tracking domains and no coll
 1. Pick a team for both targets under Signing & Capabilities.
 2. Register the App ID and the iCloud container `iCloud.com.j23n.TimeTracker` in the developer account, and turn on iCloud Documents for the App ID. If the container name changes, change it in both entitlements files, both `Info.plist` files and `AppEnvironment.live(containerIdentifier:)`.
 3. Create the app in App Store Connect with the Mac and iOS platforms, and fill in the description, keywords, support URL and privacy policy URL. A short privacy policy can say what the Privacy section above says.
-4. Take screenshots: the menu bar popover, the timeline, the entries table and a report on the Mac; the timer, entries and a report on iPhone and iPad.
+4. Take screenshots: the menu bar popover, the timeline, the entries table and a report on the Mac; the timer, entries and a report on iPhone; the timeline, entries and a report on iPad.
 5. Test iCloud on two devices before the first release. [Sync](sync.md) has a checklist.
 6. Archive each scheme in Xcode and upload it from the Organizer.

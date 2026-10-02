@@ -7,6 +7,7 @@ The rules the app follows, whichever screen or device an edit comes from. One ti
 - Starting a timer stops the running one at the same instant, so switching tasks leaves no gap and no overlap.
 - A quick start needs only a note. The entry shows as "Unassigned" until it gets a project. The menu bar's quick start also takes a project and tags, offering the project's tags as you type.
 - The main window's toolbar has the timer in a capsule: a round button to start a timer without a project, or the running timer's project, note (or tags) and time with a round button to stop it. Its menu starts, or switches to, a recent project and tags. On macOS 26 it has as much space on its left, up to the screen's title, as on its right, up to the screen's buttons, and it's as tall as the toolbar's other items. Earlier versions of macOS center it in the part of the toolbar beside the sidebar.
+- On iPad, every screen but the Timer has the timer in the middle of its toolbar: "Start Timer", or a stop button and the running timer's project and time. Touching and holding "Start Timer" offers the recent projects and tags; tapping the running timer offers them too, with "Started Earlier…" and "Stop at an Earlier Time…".
 - "Started Earlier…" moves the running timer's start back, for work that began before the timer did. This can create an overlap.
 - "Stop at an Earlier Time…" stops the running timer in the past, for a timer left running. There's no idle detection.
 - A stopped entry never runs again; continuing work starts a new entry. That's what lets a stop win over edits made to an out-of-date copy on another device. Undoing a stop is the one exception: it resumes the timer.
@@ -17,16 +18,18 @@ The rules the app follows, whichever screen or device an edit comes from. One ti
 
 - Overlaps are worked out when the data is displayed and never stored. Entries are scanned in order of start while tracking the latest end so far, and an entry overlaps if it starts before that end. That also catches an entry that overlaps an earlier, longer one with a shorter entry in between.
 - A running timer counts as ending now. Deleted entries and entries with no duration are ignored.
-- The entries table shows a warning icon, and its "Overlaps" filter shows only overlapping entries; right-clicking an entry offers its fixes. The timeline gives overlapping blocks an orange edge.
+- The entries list shows a warning icon, and its "Overlaps" filter shows only overlapping entries; right-clicking an entry on the Mac, or touching and holding it on iPad, offers its fixes. The timeline gives overlapping blocks an orange edge.
 - Each overlap offers a one-click fix, never applied on its own. If the earlier entry ends inside the later one, the fix is "Trim Earlier Entry". If one entry contains the other, it's "Split Entry Around It", which cuts the outer entry into the parts before and after the inner one; that also covers a meeting added in the middle of a running timer. Entries that start at the same moment get no fix.
 
 ## Editing entries
 
-- On the Mac, the bar over the entries table narrows it to a period (today, this or last week or month, this year, or days of your choice), to clients and projects, to entries with any of some tags, and to overlaps, and shows how many entries that leaves and their total time. The tags offered are those of the projects chosen, or of all projects. "Today" and the other periods move on as the days pass; days of your choice stay. An entry is on the day it starts, in its own time zone, as in reports. The search field in the toolbar narrows it further, by note, project or tag.
+- On the Mac and iPad, the bar over the entries narrows them to a period (today, this or last week or month, this year, or days of your choice), to clients and projects, to entries with any of some tags, and to overlaps, and shows how many entries that leaves and their total time. The tags offered are those of the projects chosen, or of all projects. "Today" and the other periods move on as the days pass; days of your choice stay. An entry is on the day it starts, in its own time zone, as in reports. The search field in the toolbar narrows it further, by note, project or tag. On iPad the entries are listed by day, newest first, and the one tapped is edited in the inspector beside the list.
 - On the Mac, the entries table is edited in place, and every row shows its values as text, whatever the pointer has passed over. Start and end are in the entry's own time zone, with the zone's name next to the start when it isn't the Mac's. Clicking one makes it a field to type over, with no stepper, where clicking the date opens a calendar; Return finishes, Escape puts back what it was, and the change is made when editing ends. Clicking the tags makes them tokens to edit the same way. The end's tooltip says how long the entry is. Click the project to choose another, and the note to type over it. On the timeline, the selected entry is edited in the inspector, which also takes a duration.
+- On iPhone, an entry is edited in its own form, and on iPad in the inspector, or in a sheet in a narrow window. The form also takes a duration, duplicates the entry and splits it.
 - A start can't be after the end, nor the running timer's after now, and an end can't be before the start.
-- The timeline shows a day or a week on an hour grid, or a month as a calendar. The grid opens at 7:00, or at the hour of an earlier entry on the days shown. Blocks show the project, times and note, and the tags when the block has room for them. On the grid, drag a block to move it, in the week view to another day too; drag its top or bottom edge to change its start or end; double-click empty space to add an hour. Click a day's heading in the week view, or double-click a day in the month view, to see it on its own.
-- Right-clicking entries, in the table or on the timeline, offers "Open #123 on GitHub" for tags that refer to issues, "Duplicate", "Split Entry…", the entry's overlap fixes, "Set Project…", "Add Tag", "Remove Tag" and "Delete". All but splitting and the overlap fixes work on every selected entry at once.
+- The timeline shows a day or a week on an hour grid, or a month as a calendar. The grid opens at 7:00, or at the hour of an earlier entry on the days shown. Blocks show the project, times and note, and the tags when the block has room for them. On the Mac's grid, drag a block to move it, in the week view to another day too; drag its top or bottom edge to change its start or end; double-click empty space to add an hour. Click a day's heading in the week view, or double-click a day in the month view, to see it on its own.
+- On iPad, tap a block to select it, which shows a handle on its top and bottom edges. Drag the selected block to move it, in the week view to another day too, or a handle to change its start or end; there's a tick for each five minutes. Only the selected block moves, so a swipe across the others scrolls. Double-tap empty space to add an hour, and tap a day's heading in the week view, or a day's number in the month view, to see it on its own.
+- Right-clicking entries on the Mac, in the table or on the timeline, offers "Open #123 on GitHub" for tags that refer to issues, "Duplicate", "Split Entry…", the entry's overlap fixes, "Set Project…", "Add Tag", "Remove Tag" and "Delete". All but splitting and the overlap fixes work on every selected entry at once. Touching and holding an entry on iPad offers the same for that entry.
 - "Duplicate" puts a copy right after the entry, with the same project, tags, note and length, so it doesn't overlap the original. Copies of several entries keep their order and follow the last one. The running timer isn't copied. The copy is selected, ready to move.
 - "Split Entry…" cuts an entry in two at a time inside it, suggesting the middle, on five minutes. Both parts keep the project, tags and note. Splitting the running timer stops the first part there and keeps the second running.
 
@@ -40,13 +43,13 @@ The rules the app follows, whichever screen or device an edit comes from. One ti
 - Another device may still log time to a project deleted here. An entry pointing at a deleted project shows that project as archived, and so does a project whose client was deleted.
 - "Merge Into…" moves every entry of one project to another, or every project of one client to another, and deletes the first. It's for when two devices each added "Acme".
 - Entries point at the project, not the client, so moving a project to another client moves its history too, including in past reports.
-- A project's settings, in the inspector under Clients & Projects on the Mac and in the project's form on iOS, show its tags, its GitHub repositories and the calendar its events come from on this device.
+- A project's settings, in the inspector under Clients & Projects on the Mac and iPad and in the project's form on iPhone, show its tags, its GitHub repositories and the calendar its events come from on this device.
 
 ## Tags
 
 - Tags are free text on each entry. Extra spaces are trimmed, matching ignores case, and `;` is dropped, because it separates tags in the CSV.
 - Each project has its own tags: the ones on its entries, and for entries without a project, theirs. Typing a tag suggests the entry's project's tags with their existing spelling, and "Add Tag" offers them. An entry moved to another project takes its tags along.
-- The Tags screen lists each project's tags under the project. Renaming a tag changes it on that project's entries only, and renaming it to another of the project's tags merges the two. A tag can also be removed from the project's entries.
+- The Tags screen, on the Mac and iPad, lists each project's tags under the project. Renaming a tag changes it on that project's entries only, and renaming it to another of the project's tags merges the two. A tag can also be removed from the project's entries.
 - Reports filter and group by tag name across projects.
 
 ## GitHub
@@ -67,16 +70,16 @@ The rules the app follows, whichever screen or device an edit comes from. One ti
 
 ## Reports
 
-- A report covers a day, a week, a month or a custom range; the iOS app offers the first three. Weeks start on the day chosen in Settings.
+- A report covers a day, a week, a month or a custom range; the iPhone offers the first three. Weeks start on the day chosen in Settings.
 - Groups: by client, with each client's projects under it, then "No client" and "Unassigned"; by project; or by tag, then "Untagged". An entry with two tags counts in full under each, so tag totals can add up to more than the total.
-- Filters for clients, projects and tags on the Mac.
+- Filters for clients, projects and tags on the Mac and iPad.
 - Every entry counts in full, so the total equals the sum of end minus start over the CSV's rows. Where entries overlap, that time counts twice, and the report says how much: the sum of the durations minus the length of their union, which stays right when three entries overlap.
 - A running timer isn't in the totals or the CSV. Reports show it on its own line, such as "Running: 0:42, not included".
 - While iCloud files are still downloading or a file can't be read, reports say their totals may be incomplete.
 
 ## CSV export
 
-The CSV has the entries behind the report: the same range and filters, one row each, whatever the grouping. On the Mac, File › Export CSV… saves every entry the same way, from the first day to the last.
+The CSV has the entries behind the report: the same range and filters, one row each, whatever the grouping. On the Mac and iPad, File › Export CSV… saves every entry the same way, from the first day to the last, and so does Settings › Export All Entries… on iPad.
 
 ```csv
 date,start,end,hours,client,project,tags,note
@@ -88,11 +91,11 @@ date,start,end,hours,client,project,tags,note
 - `date` is the entry's day in its own time zone. `start` and `end` are ISO 8601 with the entry's own offset.
 - `hours` has four decimals, because spreadsheets can't add up the ISO times. The column adds up to within seconds of the report total.
 - Tags are joined with `;`. A project without a client has an empty client cell; an unassigned entry has empty client and project cells.
-- On the Mac the file is saved through the save dialog, which gives the sandboxed app access to the chosen file. On iOS it goes to the share sheet.
+- On the Mac the file is saved through the save dialog, which gives the sandboxed app access to the chosen file. On iPhone and iPad a report's CSV goes to the share sheet, and every entry's is saved through the iPad's document picker.
 
 ## CSV import
 
-File › Import CSV… on the Mac, also in the Entries toolbar, and Settings › Import CSV… on iOS add entries from a CSV file. A summary shows what the file adds before anything changes, and the whole import is one step to undo.
+File › Import CSV… on the Mac and iPad, also in the Mac's Entries toolbar, and Settings › Import CSV… on iPhone and iPad add entries from a CSV file. A summary shows what the file adds before anything changes, and the whole import is one step to undo.
 
 - The app's own CSV reads back as it was exported. Detailed exports from other time trackers work too: columns are found by their headings, such as `start`, `end`, `start date`, `start time`, `end date`, `end time`, `date`, `duration`, `hours`, `client`, `project`, `tags`, and `note` or `description`. Commas, semicolons and tabs all separate fields.
 - Date-times with an offset keep their wall-clock time: an entry recorded in New York still shows at its New York time. Times without an offset are read in the device's time zone, and so are times in UTC, ending in Z, since they don't say where the work was done. An end time earlier than the start is on the next day, unless an end date says otherwise.
@@ -105,9 +108,9 @@ File › Import CSV… on the Mac, also in the Entries toolbar, and Settings ›
 
 ## Calendar import
 
-Each project can have a calendar on each device, chosen in the project's settings under Clients & Projects, on the Mac and on iOS; one calendar per client. File › Import Calendar Events… on the Mac, also in the Entries toolbar's Import menu, and Settings › Import Calendar Events… on iOS then add the events of linked calendars as entries. A summary shows what the import adds before anything changes, and the whole import is one step to undo.
+Each project can have a calendar on each device, chosen in the project's settings under Clients & Projects, on the Mac, iPhone and iPad; one calendar per client. File › Import Calendar Events… on the Mac and iPad, also in the Mac's Entries toolbar's Import menu, and Settings › Import Calendar Events… on iPhone and iPad then add the events of linked calendars as entries. A summary shows what the import adds before anything changes, and the whole import is one step to undo.
 
-- The app reads the calendars the Mac or iPhone has: every account in Internet Accounts, such as iCloud, Google or Exchange, and calendars subscribed to by link. It reads only linked calendars, and only when importing or showing a project's settings.
+- The app reads the calendars the Mac, iPhone or iPad has: every account in Internet Accounts, such as iCloud, Google or Exchange, and calendars subscribed to by link. It reads only linked calendars, and only when importing or showing a project's settings.
 - Links are kept on each device, because each device identifies calendars differently and may have other accounts. A link follows its calendar when the calendar's id changes, as after its account is removed and added back, by the calendar's title and account.
 - The import takes the events that start on the days chosen, from the start of this week through today unless changed. Each becomes an entry for the calendar's project, with the event's title as the note and no tags, recorded in the device's time zone.
 - Events that aren't time spent working are left out, and the summary counts them by reason: all-day events, cancelled events, declined invitations, events shown as free or out of office, events that take no time or last more than a day, and events that haven't ended yet.
@@ -117,4 +120,4 @@ Each project can have a calendar on each device, chosen in the project's setting
 
 ## Undo
 
-Every edit can be undone and redone from the Edit menu, or by shaking an iPhone. An undo is saved and synced like any other edit.
+Every edit can be undone and redone from the Edit menu, with ⌘Z and ⇧⌘Z on an iPad with a keyboard, or by shaking an iPhone. An undo is saved and synced like any other edit.
