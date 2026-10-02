@@ -12,7 +12,7 @@ import TrackerCore
 @Suite(.serialized)
 @MainActor
 struct FocusProbe {
-    @Test func clickingAStartTime() {
+    @Test func clickingAStartTime() async {
         _ = NSApplication.shared
         NSApp.setActivationPolicy(.regular)
         NSApp.finishLaunching()
@@ -27,7 +27,7 @@ struct FocusProbe {
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         window.setContentSize(CGSize(width: 1200, height: 740))
         window.makeKeyAndOrderFront(nil)
-        pump(1.5)
+        await pump(1.5)
         log("shown", window)
 
         DateTimePicker.probe = { print("PROBE picker \($0)") }
@@ -53,15 +53,25 @@ struct FocusProbe {
         print("PROBE clicking at \(point) in cell \(cell)")
         click(at: point, in: window)
         for (index, step) in [0.05, 0.1, 0.25, 0.5, 1.0, 2.0].enumerated() {
-            pump(step)
-            log("after click, step \(index) (\(step) s)", window)
+            await pump(step)
+            log("after click, step \(index) (\(step) s)", window, table: table)
         }
 
         print("PROBE clicking the field again")
         click(at: point, in: window)
         for (index, step) in [0.1, 0.5, 2.0].enumerated() {
-            pump(step)
-            log("after second click, step \(index) (\(step) s)", window)
+            await pump(step)
+            log("after second click, step \(index) (\(step) s)", window, table: table)
+        }
+
+        print("PROBE clicking the field's month")
+        if let picker = Self.find(DateTimePicker.self, in: window.contentView) {
+            let month = picker.convert(NSPoint(x: 12, y: picker.bounds.midY), to: nil)
+            click(at: month, in: window)
+            for (index, step) in [0.1, 0.5, 2.0].enumerated() {
+                await pump(step)
+                log("after clicking the month, step \(index) (\(step) s)", window, table: table)
+            }
         }
 
         observation.invalidate()
@@ -89,23 +99,27 @@ struct FocusProbe {
         }
     }
 
-    /// Handles events and lets SwiftUI catch up, for `seconds`.
-    private func pump(_ seconds: Double) {
+    /// Handles events and lets SwiftUI and the main actor's other work
+    /// catch up, for `seconds`. It sleeps between turns, since work queued
+    /// on the main actor can't run while this test runs.
+    private func pump(_ seconds: Double) async {
         let end = Date(timeIntervalSinceNow: seconds)
         repeat {
-            if let event = NSApp.nextEvent(matching: .any, until: Date(timeIntervalSinceNow: 0.01), inMode: .default, dequeue: true) {
+            while let event = NSApp.nextEvent(matching: .any, until: Date(), inMode: .default, dequeue: true) {
                 NSApp.sendEvent(event)
             }
             RunLoop.main.run(mode: .default, before: Date())
+            try? await Task.sleep(for: .milliseconds(10))
         } while Date() < end
     }
 
-    private func log(_ label: String, _ window: NSWindow) {
+    private func log(_ label: String, _ window: NSWindow, table: NSTableView? = nil) {
         let windows = NSApp.windows.filter(\.isVisible).map { other in
             "\(type(of: other))\(other === window ? " (main)" : "")\(other.isKeyWindow ? " (key)" : "") level \(other.level.rawValue) parent \(other.parent.map { "\(type(of: $0))" } ?? "none")"
         }
         let pickers = Self.findAll(DateTimePicker.self, in: window.contentView).map { "editing \($0.isEditing)" }
-        print("PROBE \(label): active \(NSApp.isActive), main key \(window.isKeyWindow), first responder \(Self.describe(window.firstResponder)), pickers \(pickers), windows \(windows)")
+        let selected = table.map { "\(Array($0.selectedRowIndexes))" } ?? "-"
+        print("PROBE \(label): active \(NSApp.isActive), main key \(window.isKeyWindow), first responder \(Self.describe(window.firstResponder)), selected rows \(selected), pickers \(pickers), windows \(windows)")
     }
 
     static func describe(_ responder: NSResponder?) -> String {
