@@ -29,6 +29,18 @@ struct TimelineScreen: View {
         span.range(around: shownDay, firstWeekday: model.firstWeekday)
     }
 
+    /// What the inspector says to do with no entry selected. The month's
+    /// calendar opens a day on a double-click, where the hour grid adds an
+    /// entry.
+    static func hint(for span: TimelineSpan) -> String {
+        switch span {
+        case .day, .week:
+            "Select an entry to edit it, and press Escape or click empty space to come back here. Double-click empty space to add an entry."
+        case .month:
+            "Select an entry to edit it, and press Escape or click empty space to come back here. Double-click a day to see it on its own."
+        }
+    }
+
     /// The days of the week shown.
     private var weekDays: [LocalDate] {
         let start = range.lowerBound
@@ -52,7 +64,7 @@ struct TimelineScreen: View {
             }
         }
         .inspector(isPresented: $showInspector) {
-            EntryInspector(model: model, id: selection, days: range, title: title) { copy in
+            EntryInspector(model: model, id: selection, days: range, title: title, hint: Self.hint(for: span)) { copy in
                 selection = copy
             }
         }
