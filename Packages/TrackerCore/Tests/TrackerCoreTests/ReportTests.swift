@@ -232,4 +232,84 @@ import Testing
         #expect(ReportPeriod.month.shift(january, by: -1, firstWeekday: 2) == december)
         #expect(ReportPeriod.month.shift(january, by: 1, firstWeekday: 2) == february)
     }
+
+    // MARK: Figures
+
+    /// How a report of `request` compares with the period before it, as of
+    /// `today`.
+    func comparison(_ entries: [TimeEntry], _ request: ReportRequest, _ period: ReportPeriod, today: LocalDate) -> ReportComparison {
+        var ledger = ledger
+        for entry in entries { ledger.merge(entry) }
+        let report = Report(request, ledger: ledger, now: now)
+        return ReportComparison(report, period: period, today: today, firstWeekday: 2, ledger: ledger, resolved: ledger.resolvedEntries(), now: now)
+    }
+
+    @Test func averagesTheDaysWithTimeLogged() {
+        let result = report([
+            entry(1, website, "21T09:00", "21T12:00"),
+            entry(2, app, "21T13:00", "21T14:00"),
+            entry(3, website, "23T09:00", "23T11:00"),
+            // The running timer counts on no day.
+            entry(4, app, "25T16:00", nil),
+        ], ReportRequest(range: days(21, 27)))
+
+        #expect(result.daysWorked == 2)
+        #expect(result.averagePerDayWorked == 3 * hour)
+        #expect(report([], ReportRequest(range: days(21, 27))).daysWorked == 0)
+        #expect(report([], ReportRequest(range: days(21, 27))).averagePerDayWorked == 0)
+    }
+
+    @Test func comparesAPastWeekWithTheWholeWeekBefore() {
+        let result = comparison([
+            entry(1, website, "14T09:00", "14T13:00"),
+            entry(2, website, "19T09:00", "19T13:00"),
+            entry(3, website, "21T09:00", "21T15:00"),
+        ], ReportRequest(range: days(21, 27)), .week, today: date(2026, 9, 30))
+
+        #expect(result.previousRange == days(14, 20))
+        #expect(result.previousTotal == 8 * hour)
+        #expect(result.total == 6 * hour)
+        #expect(!result.isPartial)
+        #expect(result.percent == -25)
+    }
+
+    @Test func comparesAWeekUnderWayWithAsManyDaysOfTheWeekBefore() {
+        // On Wednesday the 23rd: Monday to Wednesday against Monday to
+        // Wednesday of the week before, leaving out its Thursday.
+        let result = comparison([
+            entry(1, website, "14T09:00", "14T11:00"),
+            entry(2, website, "16T09:00", "16T11:00"),
+            entry(3, website, "17T09:00", "17T14:00"),
+            entry(4, website, "21T09:00", "21T14:00"),
+            entry(5, website, "23T09:00", "23T10:00"),
+        ], ReportRequest(range: days(21, 27)), .week, today: date(2026, 9, 23))
+
+        #expect(result.previousRange == days(14, 16))
+        #expect(result.previousTotal == 4 * hour)
+        #expect(result.total == 6 * hour)
+        #expect(result.isPartial)
+        #expect(result.percent == 50)
+    }
+
+    @Test func comparesAMonthUnderWayWithTheMonthBeforeAtMost() {
+        let march = date(2027, 3, 1)...date(2027, 3, 31)
+        let result = comparison([], ReportRequest(range: march), .month, today: date(2027, 3, 30))
+
+        #expect(result.previousRange == date(2027, 2, 1)...date(2027, 2, 28))
+        #expect(result.isPartial)
+        // Nothing logged before has no percentage.
+        #expect(result.percent == nil)
+    }
+
+    @Test func comparesWithTheSameFiltersAndAsManyDaysBeforeACustomRange() {
+        let result = comparison([
+            entry(1, website, "07T09:00", "07T10:00"),
+            entry(2, app, "08T09:00", "08T12:00"),
+            entry(3, website, "10T09:00", "10T11:00"),
+        ], ReportRequest(range: days(10, 12), projects: [website]), .custom, today: date(2026, 9, 30))
+
+        #expect(result.previousRange == days(7, 9))
+        #expect(result.previousTotal == hour)
+        #expect(result.percent == 100)
+    }
 }
