@@ -365,10 +365,12 @@ public struct ProjectTagList: View {
                 selection = selected ? nil : tag.id
             } label: {
                 HStack(spacing: 12) {
+                    // As wide as `width` where there's room, narrower in a
+                    // narrow window, so the bar keeps some.
                     Text(title)
                         .lineLimit(1)
                         .truncationMode(.middle)
-                        .frame(width: width, alignment: .leading)
+                        .frame(minWidth: min(60, width), maxWidth: width, alignment: .leading)
                     ShareBar(tag.milliseconds, of: maximum, color: color)
                     Text(Format.duration(tag.milliseconds))
                         .fontWeight(.medium)
@@ -406,7 +408,8 @@ public struct ProjectTagList: View {
         HStack(spacing: 12) {
             Text("Untagged")
                 .foregroundStyle(.secondary)
-                .frame(width: nameWidth, alignment: .leading)
+                .lineLimit(1)
+                .frame(minWidth: 60, maxWidth: nameWidth, alignment: .leading)
             ShareBar(overview.untagged, of: maximum, color: .gray)
             Text(Format.duration(overview.untagged))
                 .foregroundStyle(.secondary)
