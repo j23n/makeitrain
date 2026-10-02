@@ -74,13 +74,27 @@ final class FocusProbe: XCTestCase {
             log("after second click, step \(index) (\(step) s)", window, table: table)
         }
 
-        print("PROBE clicking the field's month")
-        if let picker = Self.find(DateTimePicker.self, in: window.contentView) {
-            let month = picker.convert(NSPoint(x: 12, y: picker.bounds.midY), to: nil)
-            click(at: month, in: window)
+        print("PROBE clicking a day in the calendar")
+        if let panel = NSApp.windows.first(where: { $0.parent === window && $0.isVisible }),
+           let calendar = Self.findAll(NSDatePicker.self, in: panel.contentView).last {
+            print("PROBE calendar \(type(of: calendar)) in \(type(of: panel)) style \(calendar.datePickerStyle.rawValue) frame \(calendar.frame)")
+            let day = calendar.convert(NSPoint(x: calendar.bounds.midX, y: calendar.bounds.midY + 10), to: nil)
+            click(at: day, in: panel)
             for (index, step) in [0.1, 0.5, 2.0].enumerated() {
                 pump(step)
-                log("after clicking the month, step \(index) (\(step) s)", window, table: table)
+                log("after clicking a day, step \(index) (\(step) s)", window, table: table)
+            }
+        } else {
+            print("PROBE no calendar")
+        }
+
+        print("PROBE clicking another entry's note")
+        if let noteColumn = table.tableColumns.firstIndex(where: { $0.title == "Note" }) {
+            let note = table.frameOfCell(atColumn: noteColumn, row: 2)
+            click(at: table.convert(NSPoint(x: note.minX + 20, y: note.midY), to: nil), in: window)
+            for (index, step) in [0.1, 0.5, 2.0].enumerated() {
+                pump(step)
+                log("after clicking a note, step \(index) (\(step) s)", window, table: table)
             }
         }
 

@@ -181,6 +181,12 @@ struct DateTimeField: NSViewRepresentable {
 
 /// A date picker that says when editing ends and whether the date changed,
 /// and that can start editing as it shows.
+///
+/// Editing ends when focus moves to something other than the picker and the
+/// calendar it opens, rather than whenever the picker gives up focus: the
+/// calendar is in a window of its own, a child of the picker's, and opening
+/// it takes focus from the picker. Ending editing then took the picker away
+/// from under its calendar, and focus fell to the window's search field.
 final class DateTimePicker: NSDatePicker {
     // PROBE: temporary, reports focus changes to a probe test.
     static var probe: ((String) -> Void)?
@@ -191,6 +197,8 @@ final class DateTimePicker: NSDatePicker {
     var ended: ((Date?) -> Void)?
     private(set) var isEditing = false
     private var original: Date?
+    /// Watches where the window's focus goes while the date is edited.
+    private var focus: NSKeyValueObservation?
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
@@ -213,17 +221,39 @@ final class DateTimePicker: NSDatePicker {
         if became, !isEditing {
             isEditing = true
             original = dateValue
+            watchFocus()
         }
         return became
     }
 
     override func resignFirstResponder() -> Bool {
         let resigned = super.resignFirstResponder()
-        Self.probe?("resign \(resigned), editing \(isEditing)\n" + Thread.callStackSymbols.prefix(30).joined(separator: "\n"))
-        if resigned {
-            finishEditing()
-        }
+        Self.probe?("resign \(resigned), editing \(isEditing)")
         return resigned
+    }
+
+    /// Ends editing once the window's focus is on something other than this
+    /// picker and its calendar.
+    private func watchFocus() {
+        focus = window?.observe(\.firstResponder, options: [.new]) { [weak self] window, _ in
+            MainActor.assumeIsolated {
+                guard let self, self.isEditing else { return }
+                if let responder = window.firstResponder, self.holdsFocus(responder, in: window) {
+                    return
+                }
+                self.finishEditing()
+            }
+        }
+    }
+
+    /// Whether `responder` is this picker or in its calendar, which AppKit
+    /// shows in a child window of the picker's.
+    private func holdsFocus(_ responder: NSResponder, in window: NSWindow) -> Bool {
+        if responder === self {
+            return true
+        }
+        guard let view = responder as? NSView, let owner = view.window else { return false }
+        return owner !== window && owner.parent === window
     }
 
     /// Ends editing, unless it has ended already, and says so.
@@ -231,6 +261,8 @@ final class DateTimePicker: NSDatePicker {
         Self.probe?("finish, editing \(isEditing)")
         guard isEditing else { return }
         isEditing = false
+        focus?.invalidate()
+        focus = nil
         ended?(dateValue == original ? nil : dateValue)
     }
 
