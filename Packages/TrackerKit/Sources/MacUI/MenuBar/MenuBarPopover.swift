@@ -4,278 +4,66 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 
-/// The popover under the menu bar item: the running timer, a quick start
-/// with a note, project and tags, and recent combinations to switch to.
+/// The popover under the menu bar item: the running timer, if any, and the
+/// command line. Everything else is typed, or in the main window.
 struct MenuBarPopover: View {
     let model: AppModel
+    @State private var line: CommandLineModel
     @Environment(\.openWindow) private var openWindow
-    @Environment(\.undoManager) private var undoManager
-    @State private var note = ""
-    @State private var projectID: UUID?
-    @State private var tags: [String] = []
-    @State private var choosingProject = false
-    @State private var adjusting: Adjustment?
-    @State private var adjustedTime = Date()
 
-    enum Adjustment {
-        case start, stop
+    init(model: AppModel) {
+        self.model = model
+        _line = State(initialValue: CommandLineModel(model: model))
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(spacing: 0) {
             Notices(model: model)
-            runningSection
-            Divider()
-            quickStart
-            recentSection
-            Divider()
+            if let running = model.running {
+                RunningHeader(model: model, running: running)
+                Divider().overlay(Theme.line)
+            }
+            CommandBar(line: line, focusesWithWindow: true, onDone: close, onCancel: close)
+            Divider().overlay(Theme.line)
             footer
         }
-        .frame(width: 340)
-    }
-
-    // MARK: Running timer
-
-    @ViewBuilder
-    private var runningSection: some View {
-        if let running = model.running {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline) {
-                    ProjectLabel(ledger: model.ledger, projectID: running.entry.projectID)
-                    Spacer()
-                    Text(Format.duration(model.duration(of: running)))
-                        .font(.system(.title2, design: .rounded))
-                        .monospacedDigit()
-                }
-                if !running.entry.note.isEmpty {
-                    Text(running.entry.note)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
-                if !running.entry.tags.isEmpty {
-                    TagList(tags: running.entry.tags, links: model.ledger.issueLinks(tags: running.entry.tags, projectID: running.entry.projectID))
-                }
-                if let adjusting {
-                    adjustmentRow(adjusting, running: running)
-                } else {
-                    HStack {
-                        Text("Started \(Format.time(running.start, zone: running.entry.timeZone))")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Button("Started Earlier…") {
-                            begin(.start, running: running)
-                        }
-                        Menu("Stop") {
-                            Button("Stop at an Earlier Time…") {
-                                begin(.stop, running: running)
-                            }
-                        } primaryAction: {
-                            model.stopTimer(undoManager: undoManager)
-                        }
-                        .fixedSize()
-                    }
-                    .disabled(model.isReadOnly)
-                }
-            }
-            .padding(12)
-        } else {
-            Text("No timer running")
-                .foregroundStyle(.secondary)
-                .padding(12)
-        }
-    }
-
-    private func adjustmentRow(_ adjustment: Adjustment, running: ResolvedEntry) -> some View {
-        let now = model.now.date
-        let range = adjustment == .start
-            ? Date.distantPast...now
-            : running.start.date...now
-        return HStack {
-            Text(adjustment == .start ? "Started" : "Stopped")
-            DatePicker("", selection: $adjustedTime, in: range, displayedComponents: [.date, .hourAndMinute])
-                .labelsHidden()
-                .datePickerStyle(.field)
-                .environment(\.timeZone, Zones.zone(running.entry.timeZone))
-            Spacer()
-            Button("Cancel") {
-                adjusting = nil
-            }
-            Button(adjustment == .start ? "Change" : "Stop") {
-                let time = Timestamp(adjustedTime).wholeSeconds
-                switch adjustment {
-                case .start: model.setRunningStart(time, undoManager: undoManager)
-                case .stop: model.stopTimer(at: time, undoManager: undoManager)
-                }
-                adjusting = nil
-            }
-            .keyboardShortcut(.defaultAction)
-        }
-    }
-
-    private func begin(_ adjustment: Adjustment, running: ResolvedEntry) {
-        adjustedTime = adjustment == .start ? running.start.date : model.now.date
-        adjusting = adjustment
-    }
-
-    // MARK: Quick start
-
-    /// The project list opens inline rather than in a popover of its own,
-    /// because a second window taking focus can close the menu bar's. The
-    /// tags offered are the project's.
-    private var quickStart: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            TextField("What are you working on?", text: $note)
-                .textFieldStyle(.roundedBorder)
-                .onSubmit(start)
-            Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
-                GridRow {
-                    Text("Project")
-                        .gridColumnAlignment(.trailing)
-                    Button {
-                        choosingProject.toggle()
-                    } label: {
-                        ProjectPickerButtonLabel(ledger: model.ledger, projectID: projectID)
-                            .frame(maxWidth: 190, alignment: .leading)
-                    }
-                    .help("Choose a project; type to search clients and projects")
-                }
-                if choosingProject {
-                    ProjectChooser(ledger: model.ledger, current: ProjectChoice(projectID)) { chosen in
-                        projectID = chosen
-                        choosingProject = false
-                    } cancel: {
-                        choosingProject = false
-                    }
-                    .background(.background, in: RoundedRectangle(cornerRadius: 8))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 8).strokeBorder(.separator)
-                    }
-                }
-                GridRow {
-                    Text("Tags")
-                    HStack {
-                        TagField(tags: tags, suggestions: model.projectTags[projectID] ?? [], placeholder: "Add tags") { newTags in
-                            tags = newTags
-                        }
-                        Button(model.running == nil ? "Start" : "Switch", action: start)
-                    }
-                }
-            }
-        }
-        .padding(12)
+        .frame(width: 410)
+        .background(Theme.popover)
         .disabled(model.isReadOnly)
-    }
-
-    private func start() {
-        // The tag field hands over what's typed when it stops editing, which
-        // clicking a button doesn't make it do.
-        NSApp.keyWindow?.makeFirstResponder(nil)
-        let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
-        model.startTimer(Combination(projectID: projectID, tags: tags), note: trimmed, undoManager: undoManager)
-        note = ""
-        tags = []
-    }
-
-    // MARK: Recent combinations
-
-    @ViewBuilder
-    private var recentSection: some View {
-        let combinations = model.ledger.recentCombinations()
-        if !combinations.isEmpty {
-            Divider()
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Switch to")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 12)
-                    .padding(.top, 8)
-                    .padding(.bottom, 2)
-                ForEach(combinations, id: \.self) { combination in
-                    // The running timer's project and tags are marked, and
-                    // can't be picked again, as in the toolbar's menu.
-                    let running = isRunning(combination)
-                    Button {
-                        model.startTimer(combination, undoManager: undoManager)
-                    } label: {
-                        HStack {
-                            ProjectLabel(ledger: model.ledger, projectID: combination.projectID)
-                            TagList(
-                                tags: combination.tags,
-                                links: model.ledger.issueLinks(tags: combination.tags, projectID: combination.projectID),
-                                interactive: false
-                            )
-                            Spacer()
-                            if running {
-                                RunningIcon()
-                            }
-                        }
-                    }
-                    .buttonStyle(RowButtonStyle())
-                    .disabled(model.isReadOnly || running)
-                }
-            }
-            .padding(.bottom, 6)
+        .onChange(of: model.revision) {
+            line.refresh()
         }
     }
 
-    private func isRunning(_ combination: Combination) -> Bool {
-        model.running.map { combination.matches($0.entry) } ?? false
-    }
-
-    // MARK: Footer
-
-    /// Opening the main window and quitting, as rows like a menu's.
-    /// Settings is in the app menu while the main window is open.
+    /// Opening the main window and Settings, and quitting.
     private var footer: some View {
-        VStack(spacing: 0) {
+        HStack(spacing: 14) {
             Button("Open Time Tracker") {
                 openWindow(id: WindowID.main)
                 NSApp.activate()
+                close()
             }
-            Button {
+            .keyboardShortcut("o")
+            SettingsLink {
+                Text("Settings…")
+            }
+            .keyboardShortcut(",")
+            Spacer()
+            Button("Quit") {
                 NSApp.terminate(nil)
-            } label: {
-                HStack {
-                    Text("Quit")
-                    Spacer()
-                    Text("⌘Q")
-                        .foregroundStyle(.secondary)
-                }
             }
             .keyboardShortcut("q")
         }
-        .buttonStyle(RowButtonStyle())
-        .padding(.vertical, 6)
-    }
-}
-
-/// A full-width row that highlights under the pointer, like a menu item,
-/// and dims when it's disabled, as a menu item does.
-struct RowButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        Row(configuration: configuration)
+        .buttonStyle(.plain)
+        .font(.system(size: 12))
+        .foregroundStyle(Theme.text2)
+        .padding(.horizontal, 14)
+        .frame(height: 30)
     }
 
-    private struct Row: View {
-        let configuration: ButtonStyleConfiguration
-        @Environment(\.isEnabled) private var isEnabled
-        @State private var hovering = false
-
-        var body: some View {
-            configuration.label
-                .padding(.horizontal, 12)
-                .padding(.vertical, 5)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-                .opacity(isEnabled ? 1 : 0.5)
-                .background(
-                    RoundedRectangle(cornerRadius: 5)
-                        .fill(isEnabled && (hovering || configuration.isPressed) ? Color.accentColor.opacity(0.15) : Color.clear)
-                        .padding(.horizontal, 6)
-                )
-                .onHover { hovering = $0 }
-        }
+    private func close() {
+        line.clear()
+        NSApp.keyWindow?.close()
     }
 }
 
@@ -290,10 +78,6 @@ struct RowButtonStyle: ButtonStyle {
 
 #Preview("No Data") {
     MenuBarPopover(model: PreviewData.model(Ledger()))
-}
-
-#Preview("iCloud Unavailable") {
-    MenuBarPopover(model: PreviewData.model(state: .iCloudUnavailable))
 }
 #endif
 #endif

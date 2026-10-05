@@ -27,13 +27,23 @@ public final class AppModel {
         didSet {
             resolved = ledger.resolvedEntries()
             projectTags = ledger.tagsByProject()
+            revision += 1
         }
     }
+    /// Goes up with every change to the ledger, for views that work
+    /// something out from it once per change rather than on every redraw.
+    public private(set) var revision = 0
     /// The entries that aren't deleted, sorted by start, with the two-timers
     /// rule applied.
     public private(set) var resolved: [ResolvedEntry] = [] {
-        didSet { refreshOverlaps() }
+        didSet {
+            refreshOverlaps()
+            dayTotals = DayTotals(resolved)
+        }
     }
+    /// Time per day and project, for calendars and charts that show many
+    /// days.
+    public private(set) var dayTotals = DayTotals()
     /// Each project's tags, as `Ledger.tagsByProject()` lists them, kept so
     /// long lists don't work them out again for every row.
     public private(set) var projectTags: [UUID?: [String]] = [:]
@@ -57,6 +67,11 @@ public final class AppModel {
     public private(set) var missingFiles = 0
     /// The last error while loading or saving, for a notice.
     public private(set) var lastError: String?
+    /// When the data was last saved, on this device.
+    public private(set) var lastSaved: Timestamp?
+    /// Something a window asked another to do, such as Settings asking the
+    /// main window to import a file. The window that does it clears it.
+    public var request: AppRequest?
 
     /// The first day of the week in reports: 1 for Sunday through 7 for Saturday.
     public var firstWeekday: Int {
@@ -74,6 +89,8 @@ public final class AppModel {
     }
 
     public let environment: AppEnvironment
+    /// Settings that stay on this device.
+    public let preferences: Preferences
     @ObservationIgnored private var store: FileStore
     @ObservationIgnored private var pending = Changes()
     @ObservationIgnored private var blocked = Changes()
@@ -90,6 +107,7 @@ public final class AppModel {
 
     public init(environment: AppEnvironment) {
         self.environment = environment
+        preferences = Preferences(defaults: environment.defaults)
         now = environment.now()
         let chosen = environment.defaults.string(forKey: Keys.storage).flatMap(StorageKind.init(rawValue:))
         storage = chosen ?? (environment.cloud?.isAvailable == true ? .iCloud : .local)
@@ -286,6 +304,7 @@ public final class AppModel {
                 let result = try await store.save(ledger, changes: changes)
                 ledger.merge(result.ledger)
                 blocked.formUnion(result.pending)
+                lastSaved = environment.now()
                 if !result.issues.isEmpty {
                     let known = Set(issues)
                     issues += result.issues.filter { !known.contains($0) }
