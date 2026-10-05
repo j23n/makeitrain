@@ -3,6 +3,7 @@ import TrackerCore
 
 /// The words for corrections and their fixes, as the week's list and the
 /// iPhone's sheet say them.
+@MainActor
 public enum CorrectionText {
     /// What it is and when, such as "Tue 29 · Overlap 1:00".
     public static func label(_ correction: Correction, model: AppModel) -> String {

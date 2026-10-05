@@ -1,0 +1,546 @@
+#if os(macOS)
+import AppKit
+import SwiftUI
+import TrackerCore
+import TrackerKit
+
+/// What the report covers, as a sentence of choices: "Northbridge in
+/// September 2026 by tag", and the same typed, which ⌘L focuses.
+struct QueryBar: View {
+    let model: AppModel
+    let state: ReportState
+    @State private var typed = ""
+    @State private var focusRequest = 0
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 24) {
+            HStack(alignment: .firstTextBaseline, spacing: 9) {
+                filterMenu
+                Text("in")
+                HStack(alignment: .firstTextBaseline, spacing: 2) {
+                    stepButton("chevron.left", "Before", -1)
+                    periodMenu
+                    stepButton("chevron.right", "After", 1)
+                }
+                Text("by")
+                groupingMenu
+            }
+            .font(.system(size: 20))
+            .foregroundStyle(Theme.text2)
+            .lineLimit(1)
+            Spacer(minLength: 12)
+            HStack(spacing: 8) {
+                Text("or type")
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(Theme.text2)
+                CommandField(
+                    text: $typed,
+                    placeholder: state.typed,
+                    reading: reading,
+                    ledger: model.ledger,
+                    fontSize: 12.5,
+                    focusRequest: focusRequest,
+                    onSubmit: { _ in
+                        state.apply(query)
+                        typed = ""
+                        NSApp.keyWindow?.makeFirstResponder(nil)
+                    },
+                    onCancel: {
+                        typed = ""
+                        NSApp.keyWindow?.makeFirstResponder(nil)
+                    }
+                )
+                .frame(width: 230, height: 18)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 5)
+                .background(RoundedRectangle(cornerRadius: 6).fill(Theme.fill))
+                KeyCap("⌘L")
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 14)
+        .background(Theme.sunken)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(Theme.line).frame(height: 1)
+        }
+        .background {
+            Button("Type a Report") { focusRequest += 1 }
+                .keyboardShortcut("l")
+                .opacity(0)
+                .accessibilityHidden(true)
+        }
+    }
+
+    private var query: ReportQuery {
+        ReportQuery.read(typed, ledger: model.ledger, today: model.today, firstWeekday: model.firstWeekday)
+    }
+
+    private var reading: CommandReading {
+        var reading = CommandReading(text: typed)
+        reading.tokens = query.tokens
+        return reading
+    }
+
+    /// A word of the sentence that's a choice, dotted underneath.
+    private func choice(_ title: String) -> some View {
+        Text(title)
+            .fontWeight(.semibold)
+            .foregroundStyle(Theme.tag)
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(Theme.accentLine)
+                    .frame(height: 2)
+                    .offset(y: 2)
+            }
+    }
+
+    private var filterMenu: some View {
+        Menu {
+            Button("Everything") {
+                state.clients = []
+                state.projects = []
+                state.tags = []
+            }
+            Section("Clients") {
+                ForEach(model.ledger.liveClients()) { client in
+                    Toggle(client.name, isOn: Binding(
+                        get: { state.clients.contains(client.id) },
+                        set: { on in
+                            if on { state.clients.insert(client.id) } else { state.clients.remove(client.id) }
+                        }
+                    ))
+                }
+            }
+            Section("Projects") {
+                ForEach(model.ledger.pickerProjects()) { project in
+                    Toggle(model.ledger.projectTitle(project.id), isOn: Binding(
+                        get: { state.projects.contains(project.id) },
+                        set: { on in
+                            if on { state.projects.insert(project.id) } else { state.projects.remove(project.id) }
+                        }
+                    ))
+                }
+            }
+        } label: {
+            choice(state.title)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+    }
+
+    private var periodMenu: some View {
+        Menu {
+            let today = model.today
+            let first = model.firstWeekday
+            Button("This Week") { state.show(ReportPeriod.week.range(containing: today, firstWeekday: first), period: .week) }
+            Button("Last Week") { state.show(ReportPeriod.week.range(containing: today.adding(days: -7), firstWeekday: first), period: .week) }
+            Button("This Month") { state.show(ReportPeriod.month.range(containing: today, firstWeekday: first), period: .month) }
+            Button("Last Month") {
+                let thisMonth = ReportPeriod.month.range(containing: today, firstWeekday: first)
+                state.show(ReportPeriod.month.shift(thisMonth, by: -1, firstWeekday: first), period: .month)
+            }
+            Button("This Year") {
+                state.show(LocalDate(year: today.year, month: 1, day: 1)...LocalDate(year: today.year, month: 12, day: 31), period: .custom)
+            }
+        } label: {
+            choice(Format.days(state.range))
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+    }
+
+    private var groupingMenu: some View {
+        Menu {
+            ForEach(ReportRequest.Grouping.allCases, id: \.self) { grouping in
+                Button(grouping.rawValue) { state.grouping = grouping }
+            }
+        } label: {
+            choice(state.grouping.rawValue)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+    }
+
+    private func stepButton(_ systemImage: String, _ title: String, _ direction: Int) -> some View {
+        Button {
+            state.step(direction)
+        } label: {
+            Image(systemName: systemImage)
+                .font(.system(size: 14))
+                .foregroundStyle(Theme.text3)
+                .padding(.horizontal, 4)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(title)
+        .accessibilityLabel(Text(title))
+    }
+}
+
+/// The year as a bar per week, the weeks in the range in the accent color.
+/// Clicking a week shows it; dragging across weeks shows them all.
+struct YearRibbon: View {
+    let model: AppModel
+    let state: ReportState
+    @State private var dragging: ClosedRange<Int>?
+
+    var body: some View {
+        let weeks = state.weeks
+        let highest = max(weeks.map(\.total).max() ?? 0, 40 * 3_600_000)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("\(String(state.range.lowerBound.year))")
+                    .fontWeight(.semibold)
+                + Text(" · \(state.title)'s hours per week")
+                    .foregroundColor(Theme.text3)
+                Spacer()
+                Text("drag across weeks for a longer range")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.text3)
+            }
+            .font(.system(size: 13))
+            GeometryReader { geometry in
+                let width = geometry.size.width / CGFloat(max(weeks.count, 1))
+                HStack(alignment: .bottom, spacing: 2) {
+                    ForEach(weeks.indices, id: \.self) { index in
+                        let week = weeks[index]
+                        let selected = dragging.map { $0.contains(index) } ?? overlapsRange(week.start)
+                        UnevenRoundedRectangle(topLeadingRadius: 2, topTrailingRadius: 2)
+                            .fill(selected ? Theme.accent : (week.total > 0 ? Theme.accent.opacity(0.42) : Theme.emptyBar))
+                            .frame(height: week.total > 0 ? max(3, CGFloat(week.total) / CGFloat(highest) * 64) : 2)
+                            .help("Week of \(Format.monthDay(week.start)), \(week.total > 0 ? Format.duration(week.total) : "no time")")
+                    }
+                }
+                .frame(height: 64, alignment: .bottom)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in
+                            let first = index(at: value.startLocation.x, width: width, count: weeks.count)
+                            let last = index(at: value.location.x, width: width, count: weeks.count)
+                            dragging = min(first, last)...max(first, last)
+                        }
+                        .onEnded { _ in
+                            if let range = dragging {
+                                let start = weeks[range.lowerBound].start
+                                let end = weeks[range.upperBound].start.adding(days: 6)
+                                state.show(start...end, period: range.count == 1 ? .week : .custom)
+                            }
+                            dragging = nil
+                        }
+                )
+            }
+            .frame(height: 64)
+            HStack(spacing: 0) {
+                ForEach(1...12, id: \.self) { month in
+                    Text(Format.shortMonth(LocalDate(year: 2000, month: month, day: 1)))
+                        .font(.system(size: 10.5, weight: state.range.lowerBound.month == month ? .semibold : .regular))
+                        .foregroundStyle(state.range.lowerBound.month == month ? Theme.text : Theme.text3)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 14)
+        .padding(.bottom, 12)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Theme.panel))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.line))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("\(state.title)'s hours per week in \(String(state.range.lowerBound.year))"))
+    }
+
+    private func index(at x: CGFloat, width: CGFloat, count: Int) -> Int {
+        min(max(Int(x / max(width, 1)), 0), max(count - 1, 0))
+    }
+
+    private func overlapsRange(_ start: LocalDate) -> Bool {
+        start <= state.range.upperBound && start.adding(days: 6) >= state.range.lowerBound
+    }
+}
+
+/// The report's totals, breakdown, what to check before sending it, and
+/// saving it as CSV or as a PDF statement.
+struct StatementPanel: View {
+    let model: AppModel
+    let state: ReportState
+    let navigator: Navigator
+    @State private var showsAll = false
+    @State private var csv: CSVDocument?
+    @State private var savingCSV = false
+    @State private var pdf: PDFDocumentFile?
+    @State private var savingPDF = false
+
+    private var report: Report { state.report }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(state.title)
+                        .font(.system(size: 22, weight: .semibold))
+                    Text(subtitle)
+                        .foregroundStyle(Theme.text2)
+                }
+                figures
+                breakdown
+                checks
+                csvPreview
+                buttons
+            }
+            .padding(22)
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
+        .background(Theme.panel)
+        .overlay(alignment: .leading) {
+            Rectangle().fill(Theme.line).frame(width: 1)
+        }
+    }
+
+    private var subtitle: String {
+        let projects = Set(report.entries.compactMap(\.entry.projectID))
+        let names = projects.compactMap { model.ledger.projects[$0]?.name }.sorted()
+        let who = names.count == 1 && state.projects.isEmpty ? "\(names[0]) · " : ""
+        return who + Format.days(state.range)
+    }
+
+    private var figures: some View {
+        let comparison = state.comparison
+        let change = comparison.total - comparison.previousTotal
+        return Grid(horizontalSpacing: 1, verticalSpacing: 1) {
+            GridRow {
+                figure("Total", Format.duration(report.total), "\(report.entries.count) \(report.entries.count == 1 ? "entry" : "entries")")
+                figure("Average day", Format.duration(report.averagePerDayWorked), "on days worked")
+            }
+            GridRow {
+                figure("Days worked", "\(report.daysWorked)", "of \(state.weekdays) weekdays")
+                figure(
+                    "vs the \(state.period == .month ? "month" : state.period == .week ? "week" : "days") before",
+                    (change >= 0 ? "+" : "−") + Format.duration(abs(change)),
+                    comparison.percent.map { "\($0 >= 0 ? "+" : "")\($0) % on \(Format.duration(comparison.previousTotal))" } ?? "nothing before"
+                )
+            }
+        }
+        .background(Theme.line)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.line))
+    }
+
+    private func figure(_ label: String, _ value: String, _ detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.text2)
+            Text(value)
+                .font(.system(size: 24, weight: .medium))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            Text(detail)
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.text2)
+                .lineLimit(1)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.card)
+    }
+
+    private var rows: [ReportGroup] {
+        report.groups.flatMap { group -> [ReportGroup] in
+            state.grouping == .client || group.children.isEmpty ? [group] : group.children
+        }
+    }
+
+    private var breakdown: some View {
+        let rows = rows
+        let shown = showsAll ? rows : Array(rows.prefix(6))
+        let highest = rows.map(\.milliseconds).max() ?? 1
+        return VStack(alignment: .leading, spacing: 9) {
+            HStack {
+                Text("By \(state.grouping.rawValue)")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+                SegmentPicker(
+                    ReportRequest.Grouping.allCases.map { (value: $0, title: $0.rawValue.capitalized) },
+                    selection: Binding(get: { state.grouping }, set: { state.grouping = $0 })
+                )
+                .scaleEffect(0.9)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(shown) { group in
+                    VStack(spacing: 4) {
+                        HStack(spacing: 10) {
+                            groupTitle(group)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Text(Format.duration(group.milliseconds))
+                                .frame(width: 78, alignment: .trailing)
+                            Text(Format.percent(group.milliseconds, of: report.total))
+                                .foregroundStyle(Theme.text3)
+                                .frame(width: 44, alignment: .trailing)
+                        }
+                        .font(.system(size: 12))
+                        .monospacedDigit()
+                        GeometryReader { geometry in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Theme.fill)
+                                Capsule()
+                                    .fill(group.color.map { ProjectTint(hex: $0).bar } ?? Theme.accent.opacity(0.7))
+                                    .frame(width: geometry.size.width * CGFloat(group.milliseconds) / CGFloat(max(highest, 1)))
+                            }
+                        }
+                        .frame(height: 4)
+                    }
+                    .padding(.bottom, 4)
+                }
+            }
+            if rows.count > 6 {
+                Button(showsAll ? "Show fewer" : "\(rows.count - 6) more · \(Format.duration(rows.dropFirst(6).reduce(0) { $0 + $1.milliseconds }))") {
+                    showsAll.toggle()
+                }
+                .buttonStyle(.link)
+                .font(.system(size: 12.5))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func groupTitle(_ group: ReportGroup) -> some View {
+        if case let .tag(key) = group.kind, let url = issueURL(key) {
+            Link(destination: url) {
+                Text("\(group.title) ↗")
+                    .foregroundStyle(Theme.tag)
+                    .lineLimit(1)
+            }
+        } else {
+            HStack(spacing: 6) {
+                if let color = group.color {
+                    TintDot(ProjectTint(hex: color))
+                }
+                Text(group.title)
+                    .lineLimit(1)
+            }
+        }
+    }
+
+    /// The issue a tag refers to, when the report's entries with it are all
+    /// in one project.
+    private func issueURL(_ tag: String) -> URL? {
+        let projects = Set(report.entries.filter { entry in entry.entry.tags.contains { Tags.same($0, tag) } }.map(\.entry.projectID))
+        guard projects.count == 1, let projectID = projects.first else { return nil }
+        let spelled = report.entries.lazy.flatMap(\.entry.tags).first { Tags.same($0, tag) } ?? tag
+        return model.ledger.issueURL(forTag: spelled, projectID: projectID)
+    }
+
+    /// What to check before sending the report.
+    private var checks: some View {
+        let overlapDays = state.overlapDaysInRange
+        let notDownloaded = model.missingFiles + model.issues.filter { $0.problem == .notDownloaded }.count
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Before you send")
+                .font(.system(size: 13, weight: .semibold))
+            if report.doubleCounted > 0 {
+                HStack(alignment: .top, spacing: 10) {
+                    Hatching()
+                        .frame(width: 14, height: 14)
+                        .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(Theme.amber))
+                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                        .padding(.top, 2)
+                    VStack(alignment: .leading, spacing: 4) {
+                        (Text(Format.duration(report.doubleCounted)).fontWeight(.semibold).foregroundColor(Theme.amberText)
+                            + Text(" counts twice, where entries overlap on \(overlapDays.map { Format.monthDay($0) }.formatted(.list(type: .and)))."))
+                            .fixedSize(horizontal: false, vertical: true)
+                        if let first = overlapDays.first {
+                            Button("Correct them in the week ›") {
+                                navigator.go(.week(first))
+                            }
+                            .buttonStyle(.link)
+                        }
+                    }
+                }
+            }
+            if report.running != nil {
+                Label("The running timer counts once it stops.", systemImage: "record.circle")
+                    .foregroundStyle(Theme.text2)
+            }
+            Label(
+                notDownloaded == 0 ? "Every month file is downloaded." : "\(notDownloaded) month files aren't downloaded yet, so time may be missing.",
+                systemImage: notDownloaded == 0 ? "checkmark.circle" : "icloud.and.arrow.down"
+            )
+            .foregroundStyle(notDownloaded == 0 ? Theme.text2 : Theme.amberText)
+        }
+        .font(.system(size: 12.5))
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Theme.amberWash))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.amberLine))
+    }
+
+    private var csvPreview: some View {
+        let text = String(CSVExport.text(for: report, ledger: model.ledger).dropFirst())
+        let lines = text.components(separatedBy: "\r\n").filter { !$0.isEmpty }
+        let hours = lines.dropFirst().reduce(0.0) { sum, line in
+            let fields = line.split(separator: ",", omittingEmptySubsequences: false)
+            return sum + (fields.count > 3 ? Double(fields[3]) ?? 0 : 0)
+        }
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("CSV · \(max(lines.count - 1, 0)) rows")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+                Text("hours add up to ") + Text(String(format: "%.4f", hours)).foregroundColor(Theme.text)
+            }
+            .font(.system(size: 12))
+            .foregroundStyle(Theme.text2)
+            Text((lines.prefix(3) + (lines.count > 3 ? ["…"] : [])).joined(separator: "\n"))
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(Theme.text4)
+                .lineLimit(4)
+                .lineSpacing(6)
+                .textSelection(.enabled)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 8).fill(Theme.field))
+                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Theme.line))
+        }
+    }
+
+    private var buttons: some View {
+        HStack(spacing: 8) {
+            Button {
+                csv = CSVDocument(data: CSVExport.data(for: report, ledger: model.ledger))
+                savingCSV = true
+            } label: {
+                HStack {
+                    Text("Save CSV…")
+                    Spacer()
+                    KeyCap("⌘E", onInverse: true)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(ChoiceButtonStyle(suggested: true))
+            .keyboardShortcut("e")
+            .disabled(report.entries.isEmpty)
+            .fileExporter(isPresented: $savingCSV, document: csv, contentType: .commaSeparatedText, defaultFilename: "\(state.title) \(state.range.lowerBound) to \(state.range.upperBound)") { _ in }
+            Button {
+                pdf = PDFDocumentFile(data: StatementPDF.data(for: report, ledger: model.ledger, title: state.title, now: model.now))
+                savingPDF = true
+            } label: {
+                HStack {
+                    Text("PDF statement…")
+                    Spacer()
+                    KeyCap("⌘P")
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(ChoiceButtonStyle())
+            .keyboardShortcut("p")
+            .disabled(report.entries.isEmpty)
+            .fileExporter(isPresented: $savingPDF, document: pdf, contentType: .pdf, defaultFilename: StatementPDF.fileName(for: report, title: state.title)) { _ in }
+        }
+    }
+}
+#endif
