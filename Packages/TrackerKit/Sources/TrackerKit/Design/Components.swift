@@ -168,10 +168,10 @@ public struct ChoiceButtonStyle: ButtonStyle {
     }
 
     public func makeBody(configuration: Configuration) -> some View {
-        Body(configuration: configuration, suggested: suggested, compact: compact)
+        Styled(configuration: configuration, suggested: suggested, compact: compact)
     }
 
-    private struct Body: View {
+    private struct Styled: View {
         let configuration: Configuration
         let suggested: Bool
         let compact: Bool
