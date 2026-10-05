@@ -44,7 +44,7 @@ import Testing
         let preview = CommandPreview(command, in: context)
         #expect(preview.newOverlaps.count == 1)
         #expect(preview.newOverlaps.first?.earlier == uuid(105))
-        #expect(preview.newOverlaps.first?.duration == 30 * 60000)
+        #expect(preview.newOverlaps.first?.duration == Int64(30 * 60000))
     }
 
     @Test func movesTheRunningTimersStart() throws {

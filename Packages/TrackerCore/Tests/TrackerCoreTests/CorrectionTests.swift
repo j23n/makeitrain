@@ -102,9 +102,9 @@ import Testing
 
     @Test func suggestsTheProjectOfAnEntryWithTheSameNote() {
         var ledger = self.ledger
-        ledger.merge(F.entry(30, F.internal, "2026-09-15", "12:00", "12:30", note: "Call with tax advisor"))
+        ledger.merge(F.entry(30, F.inHouse, "2026-09-15", "12:00", "12:30", note: "Call with tax advisor"))
         let correction = find(in: ledger).first { $0.kind == .noProject(id: uuid(6)) }
-        #expect(correction?.fixes == [.assign(id: uuid(6), projectID: F.internal)])
+        #expect(correction?.fixes == [.assign(id: uuid(6), projectID: F.inHouse)])
     }
 
     @Test func aTimerRunningMoreThanTwelveHoursNeedsCorrecting() {
@@ -154,15 +154,16 @@ import Testing
     }
 
     @Test func totalsDaysOnceForCalendarsAndCharts() {
+        let minute: Int64 = 60000
         let ledger = F.ledger([F.runningBookings])
         let totals = DayTotals(ledger.resolvedEntries())
         let friday = LocalDate(year: 2026, month: 10, day: 2)
         let monday = LocalDate(year: 2026, month: 10, day: 5)
-        #expect(totals.projects(on: friday) == [F.bookings: 195 * 60000])
-        #expect(totals.total(on: monday) == 60 * 60000)
-        #expect(totals.total(on: monday, now: F.at("10:40")) == 130 * 60000)
-        #expect(totals.total(on: monday, now: F.at("10:40"), projects: [F.internal]) == 60 * 60000)
-        #expect(totals.total(in: week) == (80 + 195) * 60000)
+        #expect(totals.projects(on: friday) == [F.bookings: 195 * minute])
+        #expect(totals.total(on: monday) == 60 * minute)
+        #expect(totals.total(on: monday, now: F.at("10:40")) == 130 * minute)
+        #expect(totals.total(on: monday, now: F.at("10:40"), projects: [F.inHouse]) == 60 * minute)
+        #expect(totals.total(in: week) == (80 + 195) * minute)
         #expect(totals.loggedDays.count == 3)
     }
 

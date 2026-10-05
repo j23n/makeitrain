@@ -6,7 +6,7 @@ import Foundation
 ///
 /// - Northbridge (1) › Bookings (11), with two GitHub repositories
 /// - Zenith (2) › Harbor (12)
-/// - Internal (13), without a client, and Admin (14), archived
+/// - Internal (13, `inHouse`), without a client, and Admin (14), archived
 ///
 /// Entries: Harbor "Check-in" on Wednesday 30 September 07:30–08:50 (102);
 /// Bookings "Standup" #Daily on Friday 2 October 08:45–09:00 (104) and
@@ -18,7 +18,7 @@ struct CommandFixture {
     static let zenith = uuid(2)
     static let bookings = uuid(11)
     static let harbor = uuid(12)
-    static let internal = uuid(13)
+    static let inHouse = uuid(13)
     static let admin = uuid(14)
 
     /// A time today, such as "10:40", or on another day.
@@ -65,7 +65,7 @@ struct CommandFixture {
                     updated: stamp
                 ),
                 Project(id: harbor, clientID: zenith, name: "Harbor", color: "#9BBB59", updated: stamp),
-                Project(id: internal, name: "Internal", color: "#7F7F7F", updated: stamp),
+                Project(id: inHouse, name: "Internal", color: "#7F7F7F", updated: stamp),
                 Project(id: admin, name: "Admin", color: "#C0504D", archived: true, updated: stamp),
             ]
         )
@@ -73,10 +73,10 @@ struct CommandFixture {
 
     static var baseEntries: [TimeEntry] {
         [
-            entry(102, harbor, "2026-09-30", "07:30", "08:50", note: "Check-in"),
-            entry(104, bookings, "2026-10-02", "08:45", "09:00", tags: ["Daily"], note: "Standup"),
-            entry(101, bookings, "2026-10-02", "09:00", "12:00", tags: ["#227"], note: "Export to PDF"),
-            entry(105, internal, "2026-10-05", "08:00", "09:00", note: "Planning"),
+            Self.entry(102, harbor, "2026-09-30", "07:30", "08:50", note: "Check-in"),
+            Self.entry(104, bookings, "2026-10-02", "08:45", "09:00", tags: ["Daily"], note: "Standup"),
+            Self.entry(101, bookings, "2026-10-02", "09:00", "12:00", tags: ["#227"], note: "Export to PDF"),
+            Self.entry(105, inHouse, "2026-10-05", "08:00", "09:00", note: "Planning"),
         ]
     }
 
@@ -87,15 +87,15 @@ struct CommandFixture {
 
     /// Bookings "Export to PDF" #227 running since 09:30 today (103).
     static var runningBookings: TimeEntry {
-        entry(103, bookings, "2026-10-05", "09:30", nil, tags: ["#227"], note: "Export to PDF")
+        Self.entry(103, bookings, "2026-10-05", "09:30", nil, tags: ["#227"], note: "Export to PDF")
     }
 
     /// Bookings "Export to PDF" #227 09:30–10:40 today (103), then Harbor
     /// "release call" running since 10:40 (106).
     static var switchedToHarbor: [TimeEntry] {
         [
-            entry(103, bookings, "2026-10-05", "09:30", "10:40", tags: ["#227"], note: "Export to PDF"),
-            entry(106, harbor, "2026-10-05", "10:40", nil, note: "release call"),
+            Self.entry(103, bookings, "2026-10-05", "09:30", "10:40", tags: ["#227"], note: "Export to PDF"),
+            Self.entry(106, harbor, "2026-10-05", "10:40", nil, note: "release call"),
         ]
     }
 
