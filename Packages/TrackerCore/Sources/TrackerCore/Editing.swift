@@ -175,6 +175,8 @@ extension Ledger {
         switch fix {
         case let .trimEarlier(id, end):
             changes.formUnion(edit(id, now: now) { $0.end = end })
+        case let .trimLater(id, start):
+            changes.formUnion(edit(id, now: now) { $0.start = start })
         case let .split(outerID, innerID):
             guard let outer = entries[outerID], let inner = entries[innerID], let innerEnd = inner.end,
                   outer.start < inner.start, outer.end.map({ $0 > innerEnd }) ?? true
@@ -193,6 +195,26 @@ extension Ledger {
             entries[newID] = after
             changes.months.insert(after.month)
         }
+        return changes
+    }
+
+    /// Moves the seam between two entries that meet or overlap: the earlier
+    /// one ends and the later one starts at `time`, as one change. `time`
+    /// stays inside both, at least a minute from either's other end; the
+    /// later one runs until now while it runs.
+    @discardableResult
+    public mutating func moveSeam(earlier earlierID: UUID, later laterID: UUID, to time: Timestamp, now: Timestamp) -> Changes {
+        var changes = settleOvertakenTimers(now: now)
+        guard let earlier = entries[earlierID], let later = entries[laterID], !earlier.isDeleted, !later.isDeleted,
+              earlier.start < later.start, let earlierEnd = earlier.end, earlierEnd >= later.start,
+              later.end.map({ earlierEnd <= $0 }) ?? true
+        else { return changes }
+        let first = earlier.start.adding(seconds: 60)
+        let last = (later.end ?? now).adding(seconds: -60)
+        guard first <= last else { return changes }
+        let seam = min(max(time.wholeSeconds, first), last)
+        changes.formUnion(edit(earlierID, now: now) { $0.end = seam })
+        changes.formUnion(edit(laterID, now: now) { $0.start = seam })
         return changes
     }
 

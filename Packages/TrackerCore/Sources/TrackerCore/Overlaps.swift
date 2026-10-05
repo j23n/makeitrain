@@ -26,11 +26,19 @@ public struct Overlap: Hashable, Sendable {
     /// The one-click fix to offer. nil when both start at the same moment,
     /// where neither fix makes sense.
     public var fix: OverlapFix?
+    /// Every fix to offer, the one to suggest first: splitting the outer
+    /// entry around an inner one or ending it early, or, where they only
+    /// partly overlap, ending the earlier one or starting the later one
+    /// later. Where both start at the same moment, the longer one can start
+    /// when the shorter one ends.
+    public var fixes: [OverlapFix]
 }
 
 public enum OverlapFix: Hashable, Sendable {
     /// End the earlier entry when the later one starts.
     case trimEarlier(id: UUID, end: Timestamp)
+    /// Start the later entry when the earlier one ends.
+    case trimLater(id: UUID, start: Timestamp)
     /// Cut the outer entry into the parts before and after the inner one.
     case split(outer: UUID, inner: UUID)
 }
@@ -72,7 +80,8 @@ public enum Overlaps {
                     earlier: latest.entry.id,
                     later: span.entry.id,
                     duration: span.entry.start.distance(to: min(span.end, latest.end)),
-                    fix: fix(earlier: latest, later: span)
+                    fix: fix(earlier: latest, later: span),
+                    fixes: fixes(earlier: latest, later: span)
                 ))
                 result.flagged.formUnion([latest.entry.id, span.entry.id])
                 group.append(span.entry.id)
@@ -124,5 +133,30 @@ public enum Overlaps {
             return later.entry.isRunning ? nil : .split(outer: earlier.entry.id, inner: later.entry.id)
         }
         return .trimEarlier(id: earlier.entry.id, end: later.entry.start)
+    }
+
+    private static func fixes(earlier: Span, later: Span) -> [OverlapFix] {
+        if earlier.entry.start == later.entry.start {
+            // The longer one can start where the shorter one ends, unless
+            // the shorter one is the running timer.
+            let (short, long) = earlier.end <= later.end ? (earlier, later) : (later, earlier)
+            guard short.end < long.end, !short.entry.isRunning else { return [] }
+            return [.trimLater(id: long.entry.id, start: short.end)]
+        }
+        if earlier.end > later.end {
+            // The earlier entry contains the later one, which must have
+            // stopped to split around it.
+            var result: [OverlapFix] = []
+            if !later.entry.isRunning {
+                result.append(.split(outer: earlier.entry.id, inner: later.entry.id))
+            }
+            result.append(.trimEarlier(id: earlier.entry.id, end: later.entry.start))
+            return result
+        }
+        var result: [OverlapFix] = [.trimEarlier(id: earlier.entry.id, end: later.entry.start)]
+        if !earlier.entry.isRunning, earlier.end < later.end {
+            result.append(.trimLater(id: later.entry.id, start: earlier.end))
+        }
+        return result
     }
 }

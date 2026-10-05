@@ -88,7 +88,7 @@ extension AppModel {
         let name: String
         switch fix {
         case .split: name = "Split Entry"
-        case .trimEarlier: name = "Trim Entry"
+        case .trimEarlier, .trimLater: name = "Trim Entry"
         }
         edit(name, undoManager: undoManager) { ledger, now in
             ledger.apply(fix, now: now)

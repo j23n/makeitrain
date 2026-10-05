@@ -105,6 +105,7 @@ extension OverlapFix {
     public var title: String {
         switch self {
         case .trimEarlier: "Trim Earlier Entry"
+        case .trimLater: "Start Later Entry Later"
         case .split: "Split Entry Around It"
         }
     }
