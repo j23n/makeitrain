@@ -1,8 +1,8 @@
 import Foundation
 
 // The command line: one line of text that starts, switches, stops or logs
-// time, or manages clients and projects. `Commands.read` works out what a
-// line means as it's typed, with its parts for highlighting, and
+// time, or manages clients and projects. `CommandReading(_:in:)` works out
+// what a line means as it's typed, with its parts for highlighting, and
 // `Ledger.perform` carries it out. Nothing changes until it's performed.
 
 /// An entry as a line describes it: a project, tags and a note.
@@ -210,16 +210,12 @@ public struct CommandContext: Sendable {
     }
 }
 
-public enum Commands {
+extension CommandReading {
     /// What `text` means, as of `context`.
-    public static func read(_ text: String, in context: CommandContext) -> CommandReading {
+    public init(_ text: String, in context: CommandContext) {
         var reader = CommandReader(text: text, context: context)
-        return reader.read()
+        self = reader.read()
     }
-
-    /// Words that don't start a project's name on their own, so a note
-    /// such as "a quick fix" isn't read as a project.
-    static let notProjects: Set<String> = ["a", "an", "and", "at", "for", "from", "i", "in", "my", "of", "on", "or", "the", "to", "with"]
 }
 
 /// A word of a typed line and where it is.
@@ -229,8 +225,12 @@ struct CommandWord {
     var range: Range<String.Index>
 }
 
-/// Reads one line. See `Commands.read`.
+/// Reads one line. See `CommandReading(_:in:)`.
 struct CommandReader {
+    /// Words that don't start a project's name on their own, so a note
+    /// such as "a quick fix" isn't read as a project.
+    static let notProjects: Set<String> = ["a", "an", "and", "at", "for", "from", "i", "in", "my", "of", "on", "or", "the", "to", "with"]
+
     let text: String
     let context: CommandContext
     let words: [CommandWord]
@@ -678,7 +678,7 @@ struct CommandReader {
             }
             for count in stride(from: run, through: 1, by: -1) {
                 let candidate = phrase(first..<first + count)
-                if count == 1, Commands.notProjects.contains(words[first].lower) || words[first].lower.count < 2 { continue }
+                if count == 1, Self.notProjects.contains(words[first].lower) || words[first].lower.count < 2 { continue }
                 if let match = project(matching: candidate, includingArchived: false) {
                     projectID = match
                     projectWords = first..<first + count

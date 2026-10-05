@@ -17,7 +17,7 @@ import Testing
 
     @Test func previewsWhatAndOnlyWhatChanges() {
         let context = F.context(F.ledger(F.switchedToHarbor), now: "12:20")
-        let reading = Commands.read("book #227 from 11:05", in: context)
+        let reading = CommandReading("book #227 from 11:05", in: context)
         let preview = CommandPreview(reading.primary!, in: context)
         #expect(preview.diff.entries.count == 2)
         #expect(preview.diff.entries[0].before?.id == uuid(106))

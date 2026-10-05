@@ -104,6 +104,6 @@ struct CommandFixture {
     }
 
     static func read(_ text: String, _ ledger: Ledger = ledger(), now: String = "10:40", on day: String = "2026-10-05") -> CommandReading {
-        Commands.read(text, in: context(ledger, now: now, on: day))
+        CommandReading(text, in: context(ledger, now: now, on: day))
     }
 }
