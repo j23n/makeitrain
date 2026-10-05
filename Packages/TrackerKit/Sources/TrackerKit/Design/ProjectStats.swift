@@ -19,6 +19,7 @@ public struct ProjectStats {
 
     public var rows: [UUID?: Row] = [:]
 
+    @MainActor
     public init(model: AppModel) {
         let today = model.today
         let firstWeekday = model.firstWeekday
