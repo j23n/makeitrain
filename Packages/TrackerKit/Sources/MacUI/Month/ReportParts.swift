@@ -355,7 +355,7 @@ struct StatementPanel: View {
     }
 
     private var breakdown: some View {
-        let rows = rows
+        let rows = self.rows
         let shown = showsAll ? rows : Array(rows.prefix(6))
         let highest = rows.map(\.milliseconds).max() ?? 1
         return VStack(alignment: .leading, spacing: 9) {

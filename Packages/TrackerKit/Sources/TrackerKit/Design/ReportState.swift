@@ -46,9 +46,10 @@ public final class ReportState {
         self.period = period
         self.grouping = grouping
         let request = ReportRequest(range: range, grouping: grouping)
-        report = Report(request, ledger: model.ledger, resolved: model.resolved, now: model.now)
+        let first = Report(request, ledger: model.ledger, resolved: model.resolved, now: model.now)
+        report = first
         comparison = ReportComparison(
-            report,
+            first,
             period: period,
             today: model.today,
             firstWeekday: model.firstWeekday,

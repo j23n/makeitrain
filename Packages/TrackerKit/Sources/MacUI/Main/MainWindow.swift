@@ -158,6 +158,9 @@ struct MainWindow: View {
             navigator.go(.week(day))
         case let .showProject(id):
             navigator.go(.project(id))
+        case let .command(text):
+            line.text = text
+            focusRequest += 1
         }
         model.request = nil
     }

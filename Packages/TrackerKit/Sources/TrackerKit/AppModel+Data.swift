@@ -10,6 +10,9 @@ public enum AppRequest: Equatable, Sendable {
     case showWeek(LocalDate)
     /// Show a project's page.
     case showProject(UUID)
+    /// Type this into the main window's command line, as the projects'
+    /// New and Rename do.
+    case command(String)
 }
 
 /// A data file and what's known about it, as Settings lists them.

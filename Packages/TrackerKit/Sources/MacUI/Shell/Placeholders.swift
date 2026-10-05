@@ -5,26 +5,6 @@ import TrackerKit
 
 // Screens the redesign hasn't reached yet show the earlier ones meanwhile.
 
-struct MonthScreen: View {
-    let model: AppModel
-    let navigator: Navigator
-    let anchor: LocalDate
-
-    var body: some View {
-        ReportsView(model: model)
-    }
-}
-
-struct YearScreen: View {
-    let model: AppModel
-    let navigator: Navigator
-    let year: Int
-
-    var body: some View {
-        ReportsView(model: model)
-    }
-}
-
 struct ProjectsScreen: View {
     let model: AppModel
     let navigator: Navigator
