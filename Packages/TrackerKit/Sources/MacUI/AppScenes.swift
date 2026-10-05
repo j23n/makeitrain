@@ -23,7 +23,8 @@ public struct AppScenes: Scene {
             MainWindow(model: model)
                 .dockIcon()
         }
-        .defaultSize(width: 1200, height: 720)
+        .windowStyle(.hiddenTitleBar)
+        .defaultSize(width: 1320, height: 840)
         .commands {
             FileCommands()
         }

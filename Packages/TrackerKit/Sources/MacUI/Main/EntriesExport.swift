@@ -52,6 +52,13 @@ struct EntriesExport: ViewModifier {
                     error = failure.localizedDescription
                 }
             }
+            .onChange(of: model.request) { _, request in
+                // Settings' Export All Entries….
+                if request == .exportEntries {
+                    model.request = nil
+                    save()
+                }
+            }
             .alert("Couldn't Export", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
                 Button("OK") { error = nil }
             } message: {

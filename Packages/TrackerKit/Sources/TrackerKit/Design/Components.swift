@@ -3,14 +3,18 @@ import TrackerCore
 
 // Small pieces the redesigned screens share on the Mac, iPhone and iPad.
 
-/// A key, as in "⏎ accept" or "⌘K".
+/// A key, as in "⏎ accept" or "⌘K": outlined, filled for the key that
+/// does what's suggested, or outlined in the inverse colors on a button
+/// that's filled.
 public struct KeyCap: View {
     let key: String
     let inverted: Bool
+    let onInverse: Bool
 
-    public init(_ key: String, inverted: Bool = false) {
+    public init(_ key: String, inverted: Bool = false, onInverse: Bool = false) {
         self.key = key
         self.inverted = inverted
+        self.onInverse = onInverse
     }
 
     public var body: some View {
@@ -19,12 +23,12 @@ public struct KeyCap: View {
             .monospacedDigit()
             .padding(.horizontal, 6)
             .frame(minHeight: 18)
-            .foregroundStyle(inverted ? Theme.inverseText : Theme.text2)
+            .foregroundStyle(inverted || onInverse ? Theme.inverseText : Theme.text2)
             .background {
                 if inverted {
                     RoundedRectangle(cornerRadius: 5).fill(Theme.inverse)
                 } else {
-                    RoundedRectangle(cornerRadius: 5).strokeBorder(Theme.key)
+                    RoundedRectangle(cornerRadius: 5).strokeBorder(onInverse ? Theme.inverseText.opacity(0.3) : Theme.key)
                 }
             }
             .accessibilityHidden(true)
