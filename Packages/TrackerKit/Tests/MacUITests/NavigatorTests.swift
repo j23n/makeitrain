@@ -1,0 +1,129 @@
+#if os(macOS)
+import AppKit
+import Carbon.HIToolbox
+import Foundation
+import Testing
+import TrackerCore
+import TrackerKit
+@testable import MacUI
+
+@MainActor
+@Suite struct NavigatorTests {
+    let monday = LocalDate(year: 2026, month: 9, day: 28)
+    let thursday = LocalDate(year: 2026, month: 10, day: 1)
+    let project = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+
+    @Test func backAndForwardRetraceWhereTheWindowWas() {
+        let navigator = Navigator(.week(monday))
+        #expect(!navigator.canGoBack)
+        navigator.go(.projects)
+        navigator.go(.project(project))
+        #expect(navigator.canGoBack)
+        #expect(!navigator.canGoForward)
+
+        navigator.goBack()
+        #expect(navigator.screen == .projects)
+        navigator.goBack()
+        #expect(navigator.screen == .week(monday))
+        #expect(!navigator.canGoBack)
+        navigator.goForward()
+        #expect(navigator.screen == .projects)
+        #expect(navigator.canGoForward)
+    }
+
+    @Test func goingSomewhereNewForgetsWhatWasAhead() {
+        let navigator = Navigator(.week(monday))
+        navigator.go(.projects)
+        navigator.goBack()
+        navigator.go(.month(monday))
+        #expect(!navigator.canGoForward)
+        navigator.goBack()
+        #expect(navigator.screen == .week(monday))
+    }
+
+    @Test func showingTheSameScreenAgainAddsNothing() {
+        let navigator = Navigator(.week(monday))
+        navigator.go(.week(monday))
+        #expect(!navigator.canGoBack)
+    }
+
+    @Test func steppingAWeekReplacesItRatherThanAddingToBack() {
+        let navigator = Navigator(.projects)
+        navigator.go(.week(monday))
+        navigator.replace(.week(monday.adding(days: 7)))
+        navigator.replace(.week(monday.adding(days: 14)))
+        navigator.goBack()
+        #expect(navigator.screen == .projects)
+    }
+
+    @Test func backRemembersFiftyScreens() {
+        let navigator = Navigator(.week(monday))
+        for offset in 1...60 {
+            navigator.go(.day(monday.adding(days: offset)))
+        }
+        var steps = 0
+        while navigator.canGoBack {
+            navigator.goBack()
+            steps += 1
+        }
+        #expect(steps == 50)
+        #expect(navigator.screen == .day(monday.adding(days: 10)))
+    }
+
+    @Test func zoomingKeepsTheDay() {
+        let navigator = Navigator(.week(thursday))
+        navigator.zoom(.month, today: monday)
+        #expect(navigator.screen == .month(thursday))
+        navigator.zoom(.year, today: monday)
+        #expect(navigator.screen == .year(2026))
+        navigator.zoom(.day, today: monday)
+        #expect(navigator.screen == .day(LocalDate(year: 2026, month: 1, day: 1)))
+        navigator.zoom(.projects, today: monday)
+        #expect(navigator.screen == .projects)
+        // The projects have no day, so zooming back in goes to today.
+        navigator.zoom(.week, today: monday)
+        #expect(navigator.screen == .week(monday))
+    }
+
+    @Test func aProjectsPageZoomsAsTheProjects() {
+        #expect(Screen.project(project).zoom == .projects)
+        #expect(Screen.project(project).day == nil)
+        #expect(Screen.year(2025).day == LocalDate(year: 2025, month: 1, day: 1))
+        #expect(MainWindow.screen(for: .year, today: thursday) == .year(2026))
+        #expect(MainWindow.screen(for: .day, today: thursday) == .day(thursday))
+    }
+}
+
+@MainActor
+@Suite struct ShortcutTests {
+    func press(_ characters: String, keyCode: Int, _ modifiers: NSEvent.ModifierFlags) -> NSEvent {
+        NSEvent.keyEvent(
+            with: .keyDown,
+            location: .zero,
+            modifierFlags: modifiers,
+            timestamp: 0,
+            windowNumber: 0,
+            context: nil,
+            characters: characters,
+            charactersIgnoringModifiers: characters,
+            isARepeat: false,
+            keyCode: UInt16(keyCode)
+        )!
+    }
+
+    @Test func aShortcutIsWrittenWithItsModifiersInTheMacsOrder() throws {
+        let shortcut = try #require(HotKey.shortcut(from: press("t", keyCode: kVK_ANSI_T, [.command, .shift])))
+        #expect(shortcut.title == "⇧⌘T")
+        #expect(shortcut.keyCode == UInt32(kVK_ANSI_T))
+        #expect(shortcut.modifiers == UInt32(cmdKey | shiftKey))
+
+        let space = try #require(HotKey.shortcut(from: press(" ", keyCode: kVK_Space, [.control, .option])))
+        #expect(space.title == "⌃⌥Space")
+    }
+
+    @Test func aKeyWithoutCommandOptionOrControlIsNoShortcut() {
+        #expect(HotKey.shortcut(from: press("t", keyCode: kVK_ANSI_T, [])) == nil)
+        #expect(HotKey.shortcut(from: press("T", keyCode: kVK_ANSI_T, [.shift])) == nil)
+    }
+}
+#endif

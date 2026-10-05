@@ -57,6 +57,7 @@ struct CorrectionsPanel: View {
                         .padding(.bottom, 4)
                     }
                     .onChange(of: week.selectedCorrection) { _, id in
+                        guard let id else { return }
                         withAnimation(.easeInOut(duration: 0.15)) {
                             proxy.scrollTo(id, anchor: .center)
                         }

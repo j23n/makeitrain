@@ -47,14 +47,6 @@ struct Notices: View {
     }
 }
 
-extension View {
-    /// The width of every screen's inspector, so it opens as wide on one
-    /// screen as on another.
-    func inspectorWidth() -> some View {
-        inspectorColumnWidth(min: 280, ideal: 300, max: 440)
-    }
-}
-
 #if DEBUG
 #Preview("Notices") {
     VStack(alignment: .leading, spacing: 12) {

@@ -3,6 +3,7 @@ import AppKit
 import SwiftUI
 import TrackerCore
 import TrackerKit
+import UniformTypeIdentifiers
 
 /// What the report covers, as a sentence of choices: "Northbridge in
 /// September 2026 by tag", and the same typed, which ⌘L focuses.
