@@ -441,18 +441,29 @@ struct ProjectTableRow<Name: View, Repos: View, Cal: View, Week: View, Month: Vi
 
     var body: some View {
         HStack(spacing: 16) {
-            name.frame(minWidth: 220, maxWidth: .infinity, alignment: .leading)
-            repositories.frame(minWidth: 150, maxWidth: .infinity, alignment: .leading)
-            calendar.frame(minWidth: 170, maxWidth: .infinity, alignment: .leading)
-            week.frame(width: 84, alignment: .trailing)
-            month.frame(width: 100, alignment: .trailing)
-            spark.frame(width: 156, alignment: .leading)
-            total.frame(width: 104, alignment: .trailing)
+            cell(name, alignment: .leading).frame(minWidth: 220, maxWidth: .infinity)
+            cell(repositories, alignment: .leading).frame(minWidth: 150, maxWidth: .infinity)
+            cell(calendar, alignment: .leading).frame(minWidth: 170, maxWidth: .infinity)
+            cell(week, alignment: .trailing).frame(width: 84)
+            cell(month, alignment: .trailing).frame(width: 100)
+            cell(spark, alignment: .leading).frame(width: 156)
+            cell(total, alignment: .trailing).frame(width: 104)
         }
         .font(.system(size: 13))
         .padding(.horizontal, 16)
         .frame(height: height)
         .overlay(alignment: .top) { Rectangle().fill(Theme.line).frame(height: 1) }
+    }
+
+    /// A column's content on a clear background, so that a column left
+    /// empty, as a client's row leaves its repositories, keeps its width: a
+    /// frame around an `EmptyView` takes no space, which moved the client's
+    /// times under the next columns.
+    private func cell(_ content: some View, alignment: Alignment) -> some View {
+        ZStack(alignment: alignment) {
+            Color.clear
+            content
+        }
     }
 }
 
