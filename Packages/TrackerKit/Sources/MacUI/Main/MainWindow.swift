@@ -89,7 +89,7 @@ struct WindowConfigurator: NSViewRepresentable {
 
 #if DEBUG
 #Preview("Week") {
-    MainWindow(model: PreviewData.model(PreviewData.ownerLedger))
+    MainWindow(model: PreviewData.model(PreviewData.freelancerLedger))
         .frame(width: 1280, height: 820)
 }
 
