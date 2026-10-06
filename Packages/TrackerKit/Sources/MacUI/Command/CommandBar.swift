@@ -99,7 +99,8 @@ struct CommandBar: View {
     /// The keys that do something with what's typed.
     private var hints: some View {
         HStack(spacing: 16) {
-            if let completion = line.reading.completion {
+            // Tab takes a suggestion first.
+            if let completion = line.reading.completion, line.suggestions.isEmpty {
                 KeyHint("⇥", "\(completion.text), from \(Format.weekday(completion.day))")
                     .lineLimit(1)
             } else if case .addProject? = line.reading.alternate {

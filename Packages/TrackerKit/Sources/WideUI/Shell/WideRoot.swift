@@ -274,7 +274,8 @@ struct CommandDropdown: View {
             } else if line.showsToday {
                 EntryList(model: line.model, entries: Array(line.todaysEntries.prefix(12)))
             }
-            if let completion = line.reading.completion {
+            // Tab takes a suggestion first.
+            if let completion = line.reading.completion, line.suggestions.isEmpty {
                 Divider().overlay(Theme.line)
                 HStack {
                     KeyHint("⇥", "\(completion.text), from \(Format.weekday(completion.day))")
