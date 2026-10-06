@@ -6,56 +6,62 @@ Time Tracker is a menu bar app for the Mac, with an iPhone and iPad app that sha
 
 | Path | What it holds |
 | --- | --- |
-| `App/` | The app target, which builds for macOS and for iOS: the entry point, which opens the Mac's or iOS's scenes, Info.plist, an entitlements file for each platform, and the assets. It contains almost no code. |
-| `Packages/TrackerKit` | The app layer on Apple platforms. `TrackerKit` has the shared app model, storage, iCloud sync and the views and screen logic both apps use; `MacUI` has the Mac's screens, and `MobileUI` the iPhone's and the iPad's. Every screen has previews with the sample data in `PreviewData`. |
-| `Packages/TrackerCore` | The data model, file format, merging, the timer and overlap rules, reports and the entry filter they share with the entries table, CSV export and import, turning calendar events into entries, and backups. Plain Swift that also builds and tests on Linux. |
-| `TimeTracker.xcodeproj` | The Xcode project, with one multiplatform target and scheme, `TimeTracker`, for the Mac, iPhone and iPad. Settings that differ, such as the entitlements and the Info.plist keys of each platform, are set per SDK. |
+| `App/` | The app target, which builds for macOS and for iOS: the entry point, which opens the Mac's or iOS's scenes, the App Shortcuts, Info.plist, an entitlements file for each platform, and the assets. It contains almost no code. |
+| `Shared/` | The App Intents, built into the app and into the widget extension: start a timer from a line, stop it, and open the command line. |
+| `Widgets/` | The iOS widget extension: the running timer's Live Activity, and the controls for Control Center, the Lock Screen and the Action button. |
+| `Packages/TrackerKit` | The app layer on Apple platforms. `TrackerKit` has the shared app model, storage, iCloud sync, the design's colors and parts, and the screen logic every screen uses. `WideUI` has the wide window's screens, which the Mac's main window and a wide iPad window both show. `MacUI` has the rest of the Mac app: the menu bar, the shortcut's panel, the main window around the wide screens, and Settings. `MobileUI` has the iPhone's screens and the iOS app around them. `TimerActivity` has the Live Activity's attributes, which the app and the extension share. Every screen has previews with the sample data in `PreviewData`. |
+| `Packages/TrackerCore` | The data model, file format, merging, reading the command line and carrying it out, what needs correcting and its fixes, the timer and overlap rules, reports and typed reports, CSV export and import, turning calendar events into entries, and backups. Plain Swift that also builds and tests on Linux. |
+| `TimeTracker.xcodeproj` | The Xcode project: one multiplatform app target and scheme, `TimeTracker`, for the Mac, iPhone and iPad, and the iOS widget extension it embeds, `TimeTrackerWidgets`. Settings that differ, such as the entitlements and the Info.plist keys of each platform, are set per SDK. |
 | `docs/` | These documents. |
 
 ## How the pieces fit
 
 ```mermaid
 flowchart LR
-  V[Screens<br/>MacUI, MobileUI] --> M[AppModel<br/>main actor]
+  V[Screens<br/>WideUI, MacUI, MobileUI] --> M[AppModel<br/>main actor]
+  I[App Intents] --> M
   M --> S[FileStore<br/>actor]
   S --> A[FileAccess<br/>plain or coordinated]
   A --> F[(Data folder<br/>iCloud Drive or local)]
   W[Watcher<br/>metadata query] -.-> M
 ```
 
-Screens talk only to the app model; only the file store touches disk.
+Screens and intents talk only to the app model; only the file store touches disk.
 
-- **AppModel** (`TrackerKit`) runs on the main actor. It keeps every client, project and entry in memory in a `Ledger`, runs edits, registers undo, ticks once a minute for running timers, and schedules saves. Years of entries come to a few megabytes. It also keeps what views derive from all entries, the resolved entries, the overlaps and each project's tags, so a view listing thousands of entries doesn't work them out on every redraw. The overlaps follow the clock only while a timer runs, and views hear of them only when they change; views that list every entry don't read the clock, so they aren't rebuilt each minute. The entries table's cells show text and make their control only when it's needed: the note's text field and the project's button when the pointer comes over them, since those look like their text, and the start's and end's date fields and the tags' token field when they're clicked, until editing ends, since those don't. On macOS 26 a date picker takes about 20 ms to make and a text field about 15 ms, so a few dozen rows with a control in every cell took seconds to open.
+- **AppModel** (`TrackerKit`) runs on the main actor. There's one for the app, `AppModel.shared`, made on first use, since an App Intent can run before any window opens; starting it again waits for the first load. It keeps every client, project and entry in memory in a `Ledger`, runs edits, registers undo, ticks once a minute for running timers, and schedules saves. Years of entries come to a few megabytes. It also keeps what screens derive from all entries: the resolved entries, the overlaps, each project's tags and each day's time by project, so a screen showing a month doesn't work them out on every redraw, and a revision number that changes with the data, for screens to recompute what they keep.
+- **The command line:** `CommandReading` (`TrackerCore`) reads a line against the ledger: what Return and Option-Return would do, the words' kinds for coloring them, what's wrong with it, and a completion. `Ledger.perform` carries a command out, and `CommandPreview` carries it out on a copy to say what would change. `CommandLineModel` (`TrackerKit`) holds a line as it's typed, with its reading, its preview and the earlier lines, for the Mac's fields and the iPhone's.
+- **Corrections:** `Corrections` (`TrackerCore`) finds what needs correcting on some days and the fixes for each, and applies the suggested ones one after another. `WeekModel` (`TrackerKit`) works out the days a screen shows, their corrections, what each suggestion would change and the totals with them, once when the data or the days change, not on every redraw.
+- **Reports:** `Report` (`TrackerCore`) has the figures and groups of some days; `ReportQuery` reads a typed report. `ReportState` (`TrackerKit`) holds a report screen's days, filters and grouping, with the report, the comparison with the days before, and each day's time.
 - **Ledger** (`TrackerCore`) holds all records by id. Its edit methods stamp what changed and report which files need saving; its merge methods combine copies from files and other devices.
 - **FileStore** (`TrackerCore`) is an actor, so file work never blocks the main thread. It wraps `Folder`, which loads every file and saves each one as a read-merge-write.
 - **FileAccess** is the small protocol `Folder` uses to reach the disk: plain file access for the local folder and tests, and `NSFileCoordinator` for iCloud.
 - **Watcher** (`TrackerKit`) runs a metadata query on the iCloud folder, asks iCloud to download missing files, resolves conflicting versions, and tells the model to reload when another device changes something.
-- **Calendars** (`TrackerKit`) reads the Calendar app's calendars through EventKit, which has every account on the device, and hands their events to `CalendarImport` in TrackerCore. Which calendar goes to which project is a setting on each device, not part of the synced data.
+- **Calendars** (`TrackerKit`) reads the Calendar app's calendars through EventKit, which has every account on the device, and hands their events to `CalendarImport` in TrackerCore, for corrections and for importing. Which calendar goes to which project is a setting on each device, not part of the synced data, as are the appearance, the shortcut, the corrections skipped and the lines typed, in `Preferences`.
 
 ## Screens
 
 The Mac app:
 
-- **Menu bar:** the stopwatch icon with the running timer's hours and minutes. Its popover starts, stops and switches timers, sets the start back or stops at an earlier time, starts from a note, project and tags, and lists recent project and tag combinations to switch to. Rows at the bottom open the main window and quit; Settings is in the app menu while the main window is open.
-- **Main window:** a sidebar with the **Timeline** by day, week or month (drag to move and resize, double-click to add), the **Entries** table, edited in place and filtered by period, client, project, tag and overlaps, and **Reports** with figures, a chart, a breakdown with bars and CSV export; then the clients with their projects, each with a **page** of its time and, for a project, its tags and issues, and the settings in the page's inspector: a project's GitHub repositories and calendar among them. The toolbar has the timer, to start, stop or switch it, between the title and the screen's buttons. File › Import CSV… adds entries from a CSV file, File › Import Calendar Events… adds the events of calendars linked to projects, and File › Export CSV… saves every entry as a CSV file.
-- **Settings:** launch at login and the first day of the week, then iCloud and buttons that show the data and the backups in Finder.
+- **Menu bar:** the stopwatch icon with the running timer's time, and its project if chosen, marked when something needs correcting. Its popover is the command line, with the running timer over it and what the line would do under it. A shortcut chosen in Settings opens the same command line in a panel over any app.
+- **Main window:** a bar with Back and Forward, the zoom, and the command line with the running timer, over the **day** or **week**, with what needs correcting drawn in place and listed beside it, the **month** or **year** as a report with its statement, and the **projects**, each with a page. File › Import CSV… and Import Calendar Events… add entries, and Export CSV… saves them all.
+- **Settings:** General, for the appearance, the shortcut, the command line and the menu bar, and Data, for where the data is, its files, backups, calendars, and importing and exporting.
 
-The iOS app is one app for iPhone and iPad, with a layout for each:
+The iOS app is one app for iPhone and iPad:
 
-- **iPhone:** four tabs: **Timer**, **Entries** by day with a form to edit each, **Reports** with the CSV in the share sheet, and **Settings** with clients and projects, each with its tags, GitHub repositories and calendar, and calendar and CSV import.
-- **iPad:** the Mac's main window, made for touch: a sidebar with the **Timer**, the **Timeline** by day, week or month (tap a block to select it, then drag it or its handles; double-tap to add), **Entries** by day under the Mac's filter bar, **Reports** with days of your choice and filters, the clients and projects with their pages, as on the Mac, and **Settings**. The selected entry or tag, or a page's settings, are edited in an inspector beside the list or page, or in a sheet in a narrow window. Every screen but the Timer has the timer in its toolbar. The File menu imports and exports, as on the Mac, and Go has the screens. Each window has its own screen; all of them share the one app model.
-
-Views and logic both apps use live in `TrackerKit`: the report's figures, chart and breakdown, and the panels, figure tiles, share bars and bar charts they're made of, the figures, weeks, tags and issues of a project's or client's page, the tree of clients and projects in the sidebar, the project label and picker, the project's color dot, tag capsules, the overlap warning and the running timer's mark, a text field that commits on Return or when it loses focus, so typing doesn't make an undo step per keystroke, the timeline's blocks, the hour grid's hours, measurements and the arithmetic of dragging on it, the week view's day headings, the line at the time now, the month calendar's entries, the entries filter, and the context menu's items. Drawing each of these one way keeps the Mac, the iPhone and the iPad alike.
+- **iPhone:** four tabs, **Today**, **Week** with its corrections one at a time in a panel at the bottom, **Month** as a report, and **Projects**, each with a page and its settings, and the app's Settings behind the gear. The command line floats over the tab bar and opens over the screen.
+- **iPad:** a window at least 960 points wide shows the Mac's main window, from `WideUI`, with Settings at the end of the bar; a narrower one, as in Split View or Slide Over, shows the iPhone's tabs. The layout follows the window, so each window of the app picks its own.
+- **Outside the app:** the Live Activity, the controls, and the intents Siri and Shortcuts offer.
 
 ## Permissions
 
-The Mac app has the App Sandbox, iCloud Documents for its own container, read-write access to files the user picks, for CSV export and import, and calendars. The iOS app has iCloud Documents. Both ask for full access to calendars when the user allows it in a project's settings, since EventKit can't give access to single calendars. GitHub links open in the browser, so the apps still never use the network. Calendar data never leaves the device except as the entries imported, so the App Store privacy label can still say "Data Not Collected".
+The Mac app has the App Sandbox, iCloud Documents for its own container, read-write access to files the user picks, for CSV export and import, and calendars. The iOS app has iCloud Documents, and shows a Live Activity while a timer runs. Both ask for full access to calendars when the user allows it, since EventKit can't give access to single calendars. GitHub links open in the browser, so the apps still never use the network. Calendar data never leaves the device except as the entries imported, so the App Store privacy label can still say "Data Not Collected".
 
 ## Choices
 
 - Logic lives in the packages, where `swift test` runs it. The app target stays thin.
 - TrackerCore has no Apple-only dependencies, so its tests also run on Linux.
 - There's no SwiftData or Core Data, because they store a database rather than readable files.
-- The Mac app uses SwiftUI scenes: `MenuBarExtra` for the popover, a `Window` for the main window, and `Settings`. The Dock icon shows only while the main window or Settings is open.
-- The minimum versions are macOS 14 and iOS 17, the first with `@Observable` and SwiftUI's inspector.
-- The iPad's layout is picked by the device, not by the window's width, so resizing a window in Split View or Stage Manager doesn't swap the whole interface; a narrow iPad window shows the sidebar as a list to pick a screen from, and inspectors as sheets.
+- The Mac app uses SwiftUI scenes: `MenuBarExtra` for the popover, a `Window` for the main window, and `Settings`. The Dock icon shows only while the main window or Settings is open. The shortcut is a Carbon hot key, which needs no accessibility permission.
+- The type is the system's: SF Pro with digits of even width for times and totals, and SF Mono only in the command line. Colors come in pairs for light and dark, chosen on each device.
+- The minimum versions are macOS 14 and iOS 17, the first with `@Observable` and SwiftUI's key presses. The controls need iOS 18, where they're offered.
+- App Intents live in the app target and the extension, where the build reads their metadata; in the app they call into `MobileUI`. Start and Stop are Live Activity intents, so they run in the app, where the data is, even from the Lock Screen or Control Center.

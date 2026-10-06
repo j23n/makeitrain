@@ -1,99 +1,97 @@
 # Behavior
 
-The rules the app follows, whichever screen or device an edit comes from. One timer runs at a time, entries may overlap but are flagged, and report totals count every entry in full.
+The rules the app follows, whichever screen or device an edit comes from. One timer runs at a time, time is started, switched, stopped and logged by typing a line, entries may overlap but are flagged, and what needs correcting is shown in place until you accept a fix.
+
+## The command line
+
+The command line is how time gets in. It's in the Mac's menu bar popover, in the panel a global shortcut opens over any app, and in the bar at the top of the Mac's main window, where ⌘K puts the keyboard in it. On iPhone it floats over the tab bar and opens over the screen when tapped; an iPad window that's wide enough has it in the bar at the top, as on the Mac.
+
+What a line can say:
+
+| Line | What it does |
+| --- | --- |
+| `book #227 Export to PDF` | Starts a timer for Bookings with the tag #227 and a note, or switches to it |
+| `book #227` | The same, with the note of the last entry tagged #227 |
+| `harbor from 11:05`, `harbor -15m` | Switches as if you had at 11:05, or 15 minutes ago |
+| `from 10:30` | The running timer started at 10:30 |
+| `stop`, `stop 11:05`, `stop -10m` | Stops the timer now, or earlier |
+| `book review 9:00-10:30` | Logs a finished entry; also `9-10:30`, `9am-11am` and `9:00 to 17:00` |
+| `book review wed 14-16` | On another day: `yesterday`, `wed`, `30 sep`, `sep 30` or `2026-09-30` |
+| `book review for 45m` | Logs 45 minutes that end now |
+| `new project Phoenix for zenith` | Adds a project, and its client if that's new |
+| `new client Acme` | Adds a client |
+| `archive harbor`, `unarchive harbor` | Archives a project or client, or brings it back |
+| `color book teal` | Blue, red, green, purple, orange, teal, gold or gray, or a hex color |
+| `rename book to Bookings Pro` | Renames a project or client |
+| `merge zenith2 into zenith` | Moves everything over, then deletes the first |
+| `find export pdf` | Lists the entries with those words |
+
+- Under the line, the app says what Return would do and what that changes, before anything does: "Switch to Harbor, release call. Bookings ends at 10:40, after 1:10. No gap, no overlap." A change that would make an overlap says so. A line that can't be done says why, such as a start after the running timer's or an end in the future.
+- Option-Return does what the line could also mean: for a timer, log it as done instead, from when the last entry today ended to now; for a new project, add it and start a timer for it. On iPhone it's a second button.
+- Tab finishes the line from the last entry like it, as "book #227 Export to PDF, as on Wed". Up and Down bring back earlier lines, and Down on an empty line lists today's entries. On iPhone, the lines run lately and the words to add, such as `from 10:30`, `−15m` and `#`, are buttons under the line.
+- The words are colored as they're read: a project underlined in its color, a client underlined, tags in blue, times in amber, words such as `stop` and `new project` in the accent color, a new name in bold, and a name that matches nothing dotted underneath.
+- A project is found by the start of its words or its client's: `book`, `bo tl` and `north book` all find Northbridge's Bookings, ignoring case and accents. When two match as well, the one used last wins. Short words such as "a", "the", "for" and "with" don't match a project on their own, so they stay part of the note.
+- A time typed without a day is today's, or yesterday's when today's hasn't come yet and yesterday's was in the last 12 hours, as when typing `from 23:30` just after midnight. A day counts only next to a time. An end hour below the start, as in `9-5`, is in the afternoon.
+- Tags are written with a `#` or as the project already has them. A tag typed in another case takes the project's spelling. `#daily` loses its `#`, unless the project has it with one; references such as `#227` and `api#12` keep it.
+- After a line runs, the popover and the shortcut's panel close, unless Settings says to keep them open. Every line run is remembered on that device, the latest 100.
 
 ## Timer
 
 - Starting a timer stops the running one at the same instant, so switching tasks leaves no gap and no overlap.
-- A quick start needs only a note. The entry shows as "Unassigned", with an empty ring where a project's color would be, until it gets a project. The menu bar's quick start also takes a project and tags, offering the project's tags as you type.
-- The main window's toolbar has the timer in a capsule: a round button to start a timer without a project, or the running timer's project, note (or tags) and time with a round button to stop it. Its menu starts, or switches to, a recent project and tags. On macOS 26 it has as much space on its left, up to the screen's title, as on its right, up to the screen's buttons, and it's as tall as the toolbar's other items. Earlier versions of macOS center it in the part of the toolbar beside the sidebar.
-- On iPad, every screen but the Timer has the timer in the middle of its toolbar: "Start Timer", or a stop button and the running timer's project and time. Touching and holding "Start Timer" offers the recent projects and tags; tapping the running timer offers them too, with "Started Earlier…" and "Stop at an Earlier Time…".
-- Wherever recent projects and tags are offered, the running timer's are marked and can't be picked: starting them again would only cut the running entry in two.
-- The running timer's entry has a red mark wherever entries are listed: in the Mac's table, on iPhone and iPad, on the timeline and in the month calendar. In the lists and the month calendar, an overlap's warning takes its place.
-- "Started Earlier…" moves the running timer's start back, for work that began before the timer did. This can create an overlap.
-- "Stop at an Earlier Time…" stops the running timer in the past, for a timer left running. There's no idle detection.
+- A timer needs no project: a note or tags will do. The entry shows as "Unassigned", with an empty ring where a project's color would be, until it gets one.
+- The menu bar shows the running timer's hours and minutes, and the project's name if Settings says so, and marks the icon when something needs correcting, which Settings can turn off.
+- On iPhone, the running timer is a Live Activity on the Lock Screen and in the Dynamic Island while Settings allows it, counting up, with a Stop button. Control Center, the Lock Screen and the Action button can have a control that opens the command line and one that stops the timer, on iOS 18. Siri and the Shortcuts app can start a timer from what you say, as on the command line, stop it, and open the command line.
 - A stopped entry never runs again; continuing work starts a new entry. That's what lets a stop win over edits made to an out-of-date copy on another device. Undoing a stop is the one exception: it resumes the timer.
-- Start and end times are whole seconds. The timeline snaps them to five minutes.
-- The menu bar shows the running timer's hours and minutes, updated when the minute changes.
+- Start and end times are whole seconds. Dragging on the week snaps them to five minutes.
+- There's no idle detection. A timer left running is found as a correction instead.
+
+## Corrections
+
+What needs correcting is found when the days are shown and never stored:
+
+- **Overlaps:** two entries both count the same time.
+- **Timers that ran long:** an entry over 12 hours, or one that ran past midnight into 5:00 or later.
+- **Entries without a project.**
+- **Calendar events not logged:** events of a project's calendar that no entry covers. An event counts as logged when at least half of it is logged to its project.
+
+On the Mac's and the iPad's week, each correction is numbered and listed beside the days, and drawn in place: the times a fix would change struck through with the new ones beside them, entries a fix would add as dashed outlines, time counted twice hatched, and the end a long timer likely had as a line. On iPhone, the week's corrections are a panel at the bottom, one at a time, and Today says how many there are.
+
+- Each correction offers its fixes, the likeliest first, and nothing changes until one is chosen. Return accepts the selected one's first fix, J and K move between them, and Tab skips one. A skipped correction isn't offered again on that device.
+- **Overlaps:** trim the earlier entry to end where the later starts, trim the later to start where the earlier ends, or, when one contains the other, split the outer one around the inner. Entries that start together offer to trim the longer. Dragging the seam between them moves the end of one and the start of the other together.
+- **Long timers:** end at the usual end of the day, or an hour before or after. The usual end is the middle of the last ends of the four weeks before, leaving out entries that ran long, or 18:00 with nothing to go by, on five minutes.
+- **No project:** the project of another entry with the same note, when there is one, or a project to choose.
+- **Calendar events:** log the event as an entry for its project, with its title as the note.
+- "Accept all" applies every first fix, one after another, each against the result of the last, as one step to undo. The week's total is shown struck through next to what it would be with the fixes, and so is each day's.
 
 ## Overlaps
 
-- Overlaps are worked out when the data is displayed and never stored. Entries are scanned in order of start while tracking the latest end so far, and an entry overlaps if it starts before that end. That also catches an entry that overlaps an earlier, longer one with a shorter entry in between.
+- Overlaps are worked out when the data is displayed. Entries are scanned in order of start while tracking the latest end so far, and an entry overlaps if it starts before that end. That also catches an entry that overlaps an earlier, longer one with a shorter entry in between.
 - A running timer counts as ending now. Deleted entries and entries with no duration are ignored.
-- The entries list and the month calendar show a warning icon, and the list's "Overlaps" filter shows only overlapping entries; right-clicking an entry on the Mac, or touching and holding it on iPad, offers its fixes. The timeline gives overlapping blocks an orange edge.
-- Each overlap offers a one-click fix, never applied on its own. If the earlier entry ends inside the later one, the fix is "Trim Earlier Entry". If one entry contains the other, it's "Split Entry Around It", which cuts the outer entry into the parts before and after the inner one; that also covers a meeting added in the middle of a running timer. Entries that start at the same moment get no fix.
+- Reports count the time twice and say how much: the sum of the durations minus the length of their union, which stays right when three entries overlap. The month marks the days they're on.
 
 ## Editing entries
 
-- On the Mac and iPad, the bar over the entries narrows them to a period (today, this or last week or month, this year, or days of your choice), to clients and projects, to entries with any of some tags, and to overlaps, and shows how many entries that leaves and their total time. The tags offered are those of the projects chosen, or of all projects. "Today" and the other periods move on as the days pass; days of your choice stay. An entry is on the day it starts, in its own time zone, as in reports. The search field in the toolbar narrows it further, by note, project or tag. On iPad the entries are listed by day, newest first, and the one tapped is edited in the inspector beside the list.
-- On the Mac, the entries table is edited in place, and every row shows its values as text, whatever the pointer has passed over. Start and end are in the entry's own time zone, with the zone's name next to the start when it isn't the Mac's. Clicking one makes it a field to type over, with no stepper, where clicking the date opens a calendar, and a click outside the calendar closes it and leaves the field open; Return finishes, Escape puts back what it was, and the change is made when editing ends. Clicking the tags makes them tokens to edit the same way. The end's tooltip says how long the entry is. Click the project to choose another, and the note to type over it. On the timeline, the selected entry is edited in the inspector, which also takes a duration.
-- On iPhone, an entry is edited in its own form, and on iPad in the inspector, or in a sheet in a narrow window. The form also takes a duration, duplicates the entry and splits it.
-- With no entry selected, the timeline's inspector on the Mac and iPad sums up the days shown: their time and entries, and each project's time with a bar, counting the running timer as far as it has run. The inspector of the iPad's entries does the same for the entries the filter and search leave. Clicking or tapping empty space on the timeline, or pressing Escape on the Mac, deselects the entry.
-- A start can't be after the end, nor the running timer's after now, and an end can't be before the start.
-- The timeline shows a day or a week on an hour grid, or a month as a calendar. The grid opens at 7:00, or at the hour of an earlier entry on the days shown. Blocks show the project, times and note, and the tags when the block has room for them. On the Mac's grid, drag a block to move it, in the week view to another day too; drag its top or bottom edge to change its start or end; double-click empty space to add an hour. Click a day's heading in the week view, or double-click a day in the month view, to see it on its own.
-- On iPad, tap a block to select it, which shows a handle on its top and bottom edges. Drag the selected block to move it, in the week view to another day too, or a handle to change its start or end; there's a tick for each five minutes. Only the selected block moves, so a swipe across the others scrolls. Double-tap empty space to add an hour, and tap a day's heading in the week view, or a day's number in the month view, to see it on its own.
-- Right-clicking entries on the Mac, in the table or on the timeline, offers "Open #123 on GitHub" for tags that refer to issues, "Duplicate", "Split Entry…", the entry's overlap fixes, "Set Project…", "Add Tag", "Remove Tag" and "Delete". All but splitting and the overlap fixes work on every selected entry at once. Touching and holding an entry on iPad offers the same for that entry.
-- "Duplicate" puts a copy right after the entry, with the same project, tags, note and length, so it doesn't overlap the original. Copies of several entries keep their order and follow the last one. The running timer isn't copied. The copy is selected, ready to move.
-- "Split Entry…" cuts an entry in two at a time inside it, suggesting the middle, on five minutes. Both parts keep the project, tags and note. Splitting the running timer stops the first part there and keeps the second running.
+- The week, or a day, shows entries as blocks on an hour grid, from 7:00 to 19:00, widened to any entry and to the time now. Blocks show their times, title and tags in the project's color. A day with nothing on a weekend is left out of the week.
+- On the Mac and a wide iPad window, drag a block to move it, to another day too, or its top or bottom edge to change its start or end. The selected entry is also a line under the week, such as `2 oct 13:30-16:30 bookings #153 Bug fix`, to change by typing: Return applies it, Escape puts it back.
+- On iPhone, tap an entry to change it as a line, or to stop, continue, duplicate, split or delete it. Touching and holding an entry, or right-clicking one on the Mac, offers the same, and setting its project.
+- "Duplicate" puts a copy right after the entry, with the same project, tags, note and length, so it doesn't overlap the original. The running timer isn't copied.
+- "Split" cuts an entry in two in the middle, on five minutes. Both parts keep the project, tags and note. Splitting the running timer stops the first part there and keeps the second running.
+- A start can't be after the end, nor the running timer's after now, and an end can't be before the start or in the future.
 
-## Clients and projects
+## Month, year and reports
 
-- In reports, a project without a client is listed under "No client".
-- Pickers show "Acme › Website redesign"; a project without a client has no prefix.
-- On the Mac and iPad, the sidebar lists each client with its projects under the screens, then the projects without a client and, if there are any, the entries without a project, "Unassigned". Archived clients and projects are folded away under "Archived". New Project… and New Client… ask for the name; they're in the menu at the bottom of the Mac's sidebar and at the top of the iPad's. A new project goes to the client shown, or to the shown project's client; on the Mac, the sheet that asks for its name lets you pick another.
-- On the Mac, a client's projects fold away under it. Right-clicking a client in the sidebar offers New Project… and archiving or unarchiving it, and right-clicking a project offers Start Timer and archiving or unarchiving it.
-- Each client and project has a page: its time this week, this month and in all, and each of its last twelve weeks. A project's page lists its tags, and has a button that starts its timer, or stops it while it runs; a client's page lists its projects with their time and adds new ones. The unassigned entries have a page like a project's. The settings of a client or project are in the inspector of its page, or in a sheet in a narrow iPad window, which stays closed until Settings in the toolbar opens it.
-- Typing in a project picker narrows the list to projects whose client or project name has each word typed, ignoring case and accents: "web", "site" and "acme web" all find "Acme › Website redesign". Projects whose name starts with what's typed come first. On the Mac, the arrow keys move through the list, Return picks, and Escape clears the search or closes the list.
-- Archiving a client hides it and its projects from pickers and the menu bar's "Switch to" list. Their history stays in reports.
-- Deleting a client or project that has entries isn't possible; the app offers to archive it instead. A client has entries when any of its projects does. Deleting a client deletes its projects too.
-- Another device may still log time to a project deleted here. An entry pointing at a deleted project shows that project as archived, and so does a project whose client was deleted.
-- "Merge Into…" moves every entry of one project to another, or every project of one client to another, and deletes the first. It's for when two devices each added "Acme".
-- Entries point at the project, not the client, so moving a project to another client moves its history too, including in past reports.
-- A project's settings, in the inspector of its page on the Mac and iPad and in the project's form on iPhone, show its GitHub repositories and the calendar its events come from on this device, and on iPhone its tags.
-
-## Tags
-
-- Tags are free text on each entry. Extra spaces are trimmed, matching ignores case, and `;` is dropped, because it separates tags in the CSV.
-- Each project has its own tags: the ones on its entries, and for entries without a project, theirs. Typing a tag suggests the entry's project's tags with their existing spelling, and "Add Tag" offers them. An entry moved to another project takes its tags along.
-- On the Mac and iPad, a project's page lists its tags with their time and entries, the busiest first, and a bar for each. Tags that refer to issues are listed apart, by repository, numbered, with an arrow that opens the issue; a long list shows its busiest eight until asked for all. Selecting a tag shows its settings in the inspector, or in a sheet in a narrow iPad window.
-- Renaming a tag changes it on that project's entries only, and renaming it to another of the project's tags merges the two. A tag can also be removed from the project's entries.
-- Reports filter and group by tag name across projects.
-
-## GitHub
-
-- A project can have GitHub repositories, added as "owner/name" or by pasting an address, including clone addresses and GitHub Enterprise servers.
-- A tag like `#123` refers to issue or pull request 123 in the project's first repository. `api#123` refers to #123 in the project's repository named `api`, and `owner/repo#123` to #123 in any repository, as GitHub writes references. A slash before the "#" reads the same, so `api/#123` and `owner/repo/#123` work too. Any other tag is a plain tag.
-- The first repository is marked "#123". To make another one the first, right-click it on the Mac, or swipe right on it or touch and hold it on iOS.
-- Changing the repositories never moves a tag to another issue. When a tag would point elsewhere, because another repository became the first or the one it names was removed, it's rewritten to name the repository it meant: `#123` becomes `web#123`, or `acme/web#123` once `web` is removed, which still opens it. A tag written with a slash keeps it: `web/#123` becomes `acme/web/#123`. Where two repositories share a name, the owner is added too. The change and the rewritten tags are one step to undo. Removing a project's last repository leaves its tags as they are, so tags can wait for the right repository after a mistyped one.
-- Tags that refer to issues are tinted. Clicking one in the menu bar, in the timeline's inspector or on iOS opens it in the browser, as does its arrow on a project's page. Right-clicking an entry offers "Open #123 on GitHub". The address is the issue's, which GitHub opens as the pull request when the number is one.
-- The app doesn't talk to GitHub itself, so it needs no account or token, and private repositories open with the browser's GitHub sign-in.
-
-## Time zones
-
-- Each entry keeps the time zone it was recorded in. It's shown and edited in that zone, with a label such as "EDT" where that isn't the device's current zone.
-- An entry belongs to the day it started on, in its own zone. Reports cover calendar days: an entry is in range when its day is.
-- An entry that runs past midnight counts in full on its first day, in totals and the chart alike, so the chart adds up to the total.
-- The timeline draws each entry at its own wall-clock time. On a travel day blocks can look as if they overlap when they don't; overlap warnings use real time.
-
-## Durations
-
-- Durations under a day are written as a stopwatch writes them, such as 7:45, and from a day up with their units, such as 42 h 31 m or 574 h, so a week's or a project's total doesn't read as a time of day. Every screen follows this rule, and seconds are left out.
-- A duration can be typed as 1:30, 1.5, 90m, 1h 30m or 1h30, or as the app writes it.
-
-## Reports
-
-- A report covers a day, a week, a month or a custom range; the iPhone offers the first three. Weeks start on the day chosen in Settings.
-- Its figures are the total, the average day worked, which leaves out days without time, how many days had time, and the change from the period before: the day, week or month before, or as many days before a custom range, with the same filters. While a period is under way, its days so far are compared with as many days at the start of the period before, so a week on its Wednesday is held against Monday to Wednesday of the week before. A day's report shows its entries and when its first entry started and its last one ended instead of the average and the days.
-- The chart has a column for each day, stacked by project, with each day's total over it and a dashed line at the average day worked. A range longer than a month has a column for each week, and one longer than about four months a column for each month.
-- Groups: by client, with each client's projects under it, then "No client" and "Unassigned"; by project; or by tag, then "Untagged". A client with one project takes one line, such as "Acme › Website". Each line has its share of the total and a bar for it; a client with several projects has a bar in their colors. An entry with two tags counts in full under each, so tag totals can add up to more than the total.
-- Filters for clients, projects and tags on the Mac and iPad.
-- Every entry counts in full, so the total equals the sum of end minus start over the CSV's rows. Where entries overlap, that time counts twice, and the report says how much: the sum of the durations minus the length of their union, which stays right when three entries overlap.
-- A running timer isn't in the totals or the CSV. Reports show it on its own line, such as "Running: 0:42, not included".
-- While iCloud files are still downloading or a file can't be read, reports say their totals may be incomplete.
+- The month shows its days with each one's time as a bar by project and a mark where entries overlap, the year's weeks above them, and the statement beside them. Clicking a day shows it alone; Shift-clicking, or Shift and the arrows, stretches the range; Return opens the day and W its week. On iPhone, tap a day to show it alone, and hold and drag across days for a range. The year shows its weeks and a small month for each month.
+- What a report covers reads as a sentence of choices, "Northbridge in September 2026 by tag", and can be typed: ⌘L on the Mac, and the command line on iPhone's Month. A typed report takes clients, projects and tags by name; a period such as `today`, `yesterday`, `this week`, `last month`, `sep`, `sep 2026`, `sep-oct`, `1-15 sep`, `q3`, `2026`, `ytd` or `2026-09-01 to 2026-09-15`; and `by client`, `by project` or `by tag`. A month without a year is the last one up to today. Words it doesn't know are marked and left out.
+- The statement has the figures: the total, the average day worked, which leaves out days without time, how many days had time out of the weekdays, and the change from the period before, with the same filters. While a period is under way, its days so far are compared with as many days at the start of the period before. Then the time by client, project or tag, with each line's share; tags that refer to issues link to them.
+- Before you send it, the statement says how much time counts twice and on which days, with a link to correct them in the week, whether a timer is running, which counts once it stops, and whether every month file is downloaded.
+- Groups: by client, with each client's projects under it, then "No client" and "Unassigned"; by project; or by tag, then "Untagged". An entry with two tags counts in full under each, so tag totals can add up to more than the total.
+- Every entry counts in full, so the total equals the sum of end minus start over the CSV's rows. A running timer isn't in the totals or the CSV.
+- Save CSV… (⌘E) saves the report's entries; PDF Statement… (⌘P) saves a statement to send, on A4 pages: who and when, the total, the time by project or by tag, and every entry.
+- Weeks start on the day chosen in Settings.
 
 ## CSV export
 
-The CSV has the entries behind the report: the same range and filters, one row each, whatever the grouping. On the Mac and iPad, File › Export CSV… saves every entry the same way, from the first day to the last, and so does Settings › Export All Entries… on iPad.
+The CSV has the entries behind the report: the same range and filters, one row each, whatever the grouping. On the Mac, File › Export CSV… saves every entry the same way, from the first day to the last, and so does Settings › Export All Entries… on iPhone and iPad.
 
 ```csv
 date,start,end,hours,client,project,tags,note
@@ -105,11 +103,50 @@ date,start,end,hours,client,project,tags,note
 - `date` is the entry's day in its own time zone. `start` and `end` are ISO 8601 with the entry's own offset.
 - `hours` has four decimals, because spreadsheets can't add up the ISO times. The column adds up to within seconds of the report total.
 - Tags are joined with `;`. A project without a client has an empty client cell; an unassigned entry has empty client and project cells.
-- On the Mac the file is saved through the save dialog, which gives the sandboxed app access to the chosen file. On iPhone and iPad a report's CSV goes to the share sheet, and every entry's is saved through the iPad's document picker.
+- On the Mac the file is saved through the save dialog, which gives the sandboxed app access to the chosen file; on iPhone and iPad, through the document picker.
+
+## Clients and projects
+
+- The projects list has each client with its projects, then the projects without a client and the entries without a project, "Unassigned". Each project shows its GitHub repositories, its calendar on this device, its time this week and this month, a bar for each of its last twelve weeks, and its time in all. Archived clients and projects are folded away. On the Mac, the arrows move, Return opens a project's page, and R, C, A, M and N rename, color, archive, merge or add, by putting the line for it in the command line.
+- A project's page has its time this week, this month and in all, its last twelve weeks day by day, with days over 12 hours in amber, and its tags with their time, those that refer to issues grouped by repository. Selecting a tag renames it, merges it into another or removes it. Its settings are beside it on the Mac and a wide iPad window, and behind Edit on iPhone: its name, client, color, GitHub repositories, the calendar on this device, and archiving, merging or deleting it.
+- Pickers show "Acme › Website redesign"; a project without a client has no prefix.
+- Archiving a client hides it and its projects from pickers and the command line. Their history stays in reports.
+- Deleting a client or project that has entries isn't possible; archive it instead. A client has entries when any of its projects does. Deleting a client deletes its projects too.
+- Another device may still log time to a project deleted here. An entry pointing at a deleted project shows that project as archived, and so does a project whose client was deleted.
+- Merging moves every entry of one project to another, or every project of one client to another, and deletes the first. It's for when two devices each added "Acme".
+- Entries point at the project, not the client, so moving a project to another client moves its history too, including in past reports.
+
+## Tags
+
+- Tags are free text on each entry. Extra spaces are trimmed, matching ignores case, and `;` is dropped, because it separates tags in the CSV.
+- Each project has its own tags: the ones on its entries, and for entries without a project, theirs. A tag typed in another case takes the spelling the project has. An entry moved to another project takes its tags along.
+- Renaming a tag changes it on that project's entries only, and renaming it to another of the project's tags merges the two. A tag can also be removed from the project's entries.
+- Reports filter and group by tag name across projects.
+
+## GitHub
+
+- A project can have GitHub repositories, added as "owner/name" or by pasting an address, including clone addresses and GitHub Enterprise servers.
+- A tag like `#123` refers to issue or pull request 123 in the project's first repository. `api#123` refers to #123 in the project's repository named `api`, and `owner/repo#123` to #123 in any repository, as GitHub writes references. A slash before the "#" reads the same, so `api/#123` and `owner/repo/#123` work too. Any other tag is a plain tag.
+- The first repository is marked "#123"; "Make first" makes another one the first.
+- Changing the repositories never moves a tag to another issue. When a tag would point elsewhere, because another repository became the first or the one it names was removed, it's rewritten to name the repository it meant: `#123` becomes `web#123`, or `acme/web#123` once `web` is removed, which still opens it. A tag written with a slash keeps it: `web/#123` becomes `acme/web/#123`. Where two repositories share a name, the owner is added too. The change and the rewritten tags are one step to undo. Removing a project's last repository leaves its tags as they are, so tags can wait for the right repository after a mistyped one.
+- Tags that refer to issues are tinted and open the issue in the browser, from a project's page and from reports. The address is the issue's, which GitHub opens as the pull request when the number is one.
+- The app doesn't talk to GitHub itself, so it needs no account or token, and private repositories open with the browser's GitHub sign-in.
+
+## Time zones
+
+- Each entry keeps the time zone it was recorded in. It's shown and edited in that zone.
+- An entry belongs to the day it started on, in its own zone. Reports cover calendar days: an entry is in range when its day is.
+- An entry that runs past midnight counts in full on its first day, and the next day shows where it ended, as "–08:55 Thursday's Refactoring".
+- The week draws each entry at its own wall-clock time. On a travel day blocks can look as if they overlap when they don't; overlap warnings use real time.
+
+## Durations
+
+- Durations under a day are written as a stopwatch writes them, such as 7:45, and from a day up with their units, such as 42 h 31 m or 574 h, so a week's or a project's total doesn't read as a time of day. Every screen follows this rule, and seconds are left out. Digits keep an even width, so columns of times line up.
+- A duration can be typed as 45m, 1h30, 1h 30m or 90 min, and 1:30 or 1.5 where a duration is expected.
 
 ## CSV import
 
-File › Import CSV… on the Mac and iPad, also in the Mac's Entries toolbar, and Settings › Import CSV… on iPhone and iPad add entries from a CSV file. A summary shows what the file adds before anything changes, and the whole import is one step to undo.
+File › Import CSV… on the Mac, and Settings › Import CSV… on the Mac, iPhone and iPad add entries from a CSV file. A summary shows what the file adds before anything changes, and the whole import is one step to undo.
 
 - The app's own CSV reads back as it was exported. Detailed exports from other time trackers work too: columns are found by their headings, such as `start`, `end`, `start date`, `start time`, `end date`, `end time`, `date`, `duration`, `hours`, `client`, `project`, `tags`, and `note` or `description`. Commas, semicolons and tabs all separate fields.
 - Date-times with an offset keep their wall-clock time: an entry recorded in New York still shows at its New York time. Times without an offset are read in the device's time zone, and so are times in UTC, ending in Z, since they don't say where the work was done. An end time earlier than the start is on the next day, unless an end date says otherwise.
@@ -120,18 +157,28 @@ File › Import CSV… on the Mac and iPad, also in the Mac's Entries toolbar, a
 - A row with the same start, end, project and note as an entry that's already there is skipped, so importing a file twice adds its entries once.
 - Rows that can't be read are listed by line and left out; the rest can still be imported.
 
-## Calendar import
+## Calendars
 
-Each project can have a calendar on each device, chosen in the project's settings on the Mac, iPhone and iPad; one calendar per client. File › Import Calendar Events… on the Mac and iPad, also in the Mac's Entries toolbar's Import menu, and Settings › Import Calendar Events… on iPhone and iPad then add the events of linked calendars as entries. A summary shows what the import adds before anything changes, and the whole import is one step to undo.
+Each project can have a calendar on each device, chosen in the project's settings or in Settings. A project has one calendar at most, and a calendar belongs to one project. Its events that aren't logged show up in the week as corrections, to log one by one or all at once. File › Import Calendar Events… on the Mac and Settings › Import Calendar Events… on the Mac, iPhone and iPad add the events of some days in one go. A summary shows what the import adds before anything changes, and the whole import is one step to undo.
 
-- The app reads the calendars the Mac, iPhone or iPad has: every account in Internet Accounts, such as iCloud, Google or Exchange, and calendars subscribed to by link. It reads only linked calendars, and only when importing or showing a project's settings.
+- The app reads the calendars the device has: every account in Internet Accounts, such as iCloud, Google or Exchange, and calendars subscribed to by link. It reads only linked calendars, and only when showing days or importing.
 - Links are kept on each device, because each device identifies calendars differently and may have other accounts. A link follows its calendar when the calendar's id changes, as after its account is removed and added back, by the calendar's title and account.
-- The import takes the events that start on the days chosen, from the start of this week through today unless changed. Each becomes an entry for the calendar's project, with the event's title as the note and no tags, recorded in the device's time zone.
-- Events that aren't time spent working are left out, and the summary counts them by reason: all-day events, cancelled events, declined invitations, events shown as free or out of office, events that take no time or last more than a day, and events that haven't ended yet.
+- Each event becomes an entry for the calendar's project, with the event's title as the note and no tags, recorded in the device's time zone. The import takes the events that start on the days chosen, from the start of this week through today unless changed.
+- Events that aren't time spent working are left out, and the import's summary counts them by reason: all-day events, cancelled events, declined invitations, events shown as free or out of office, events that take no time or last more than a day, and events that haven't ended yet.
 - An imported entry's id comes from the event: its id on the calendar server and, for one occurrence of a repeating event, when that occurrence was first scheduled. Importing the same days again, or on another device, finds the entries already there. An entry with the same start, end, project and note also counts as already there.
 - Editing an imported entry keeps it as edited. Deleting one, or undoing the import, keeps it deleted when importing again, unless the summary's switch asks to import deleted entries again.
 - Exchange gives an event different ids on the Mac and on iOS, so an Exchange calendar is best linked on one device only.
 
+## Settings
+
+- **Appearance:** light, dark, or following the system, on each device.
+- **On the Mac:** opening at login, the first day of the week, the shortcut that opens the command line over any app (none until you set one), whether the command line closes after Return, a cheat sheet of everything you can type, and what the menu bar shows.
+- **On iPhone and iPad:** the Live Activity, how to add the controls and shortcuts, and the first day of the week.
+- **Data:** where the data is and whether it's up to date, keeping it in iCloud Drive or on the device, the data files and whether each was read, backups, and importing and exporting.
+- **Calendars:** which calendar on this device belongs to which project.
+
+These settings stay on the device. Clients, projects and entries are in the data files, and those sync.
+
 ## Undo
 
-Every edit can be undone and redone from the Edit menu, with ⌘Z and ⇧⌘Z on an iPad with a keyboard, or by shaking an iPhone. An undo is saved and synced like any other edit.
+Every edit can be undone and redone from the Edit menu, with ⌘Z and ⇧⌘Z on an iPad with a keyboard, or by shaking an iPhone. A line run on the command line, an accepted correction and "Accept all" are each one step. An undo is saved and synced like any other edit.
