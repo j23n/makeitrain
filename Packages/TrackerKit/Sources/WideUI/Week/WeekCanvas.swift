@@ -1,5 +1,3 @@
-#if os(macOS)
-import AppKit
 import SwiftUI
 import TrackerCore
 import TrackerKit
@@ -346,13 +344,7 @@ struct DayColumn: View {
         Color.clear
             .frame(height: 6)
             .contentShape(Rectangle())
-            .onHover { inside in
-                if inside {
-                    NSCursor.resizeUpDown.push()
-                } else {
-                    NSCursor.pop()
-                }
-            }
+            .resizeCursor()
             .gesture(
                 DragGesture(minimumDistance: 1)
                     .onChanged { value in
@@ -459,13 +451,7 @@ struct DayColumn: View {
                         .frame(height: 21)
                         .background(Capsule().fill(Theme.marker))
                         .offset(y: offset)
-                        .onHover { inside in
-                            if inside {
-                                NSCursor.resizeUpDown.push()
-                            } else {
-                                NSCursor.pop()
-                            }
-                        }
+                        .resizeCursor()
                         .gesture(
                             DragGesture(minimumDistance: 1)
                                 .onChanged { value in
@@ -746,4 +732,3 @@ struct EntryMenu: View {
         }
     }
 }
-#endif

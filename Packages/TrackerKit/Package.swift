@@ -23,14 +23,21 @@ let package = Package(
             dependencies: [.product(name: "TrackerCore", package: "TrackerCore")],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
+        // The wide window's screens: the Mac's main window, and an iPad's
+        // when it's wide.
         .target(
-            name: "MacUI",
+            name: "WideUI",
             dependencies: ["TrackerKit"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .target(
+            name: "MacUI",
+            dependencies: ["TrackerKit", "WideUI"],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+        .target(
             name: "MobileUI",
-            dependencies: ["TrackerKit", "TimerActivity"],
+            dependencies: ["TrackerKit", "TimerActivity", "WideUI"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         // The Live Activity's attributes, which the iOS app and its widget
@@ -47,6 +54,11 @@ let package = Package(
         .testTarget(
             name: "MacUITests",
             dependencies: ["MacUI", "TrackerKit"],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+        .testTarget(
+            name: "WideUITests",
+            dependencies: ["WideUI", "TrackerKit"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
     ]

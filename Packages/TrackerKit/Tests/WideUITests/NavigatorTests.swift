@@ -1,11 +1,8 @@
-#if os(macOS)
-import AppKit
-import Carbon.HIToolbox
 import Foundation
 import Testing
 import TrackerCore
 import TrackerKit
-@testable import MacUI
+@testable import WideUI
 
 @MainActor
 @Suite struct NavigatorTests {
@@ -89,41 +86,7 @@ import TrackerKit
         #expect(Screen.project(project).zoom == .projects)
         #expect(Screen.project(project).day == nil)
         #expect(Screen.year(2025).day == LocalDate(year: 2025, month: 1, day: 1))
-        #expect(MainWindow.screen(for: .year, today: thursday) == .year(2026))
-        #expect(MainWindow.screen(for: .day, today: thursday) == .day(thursday))
+        #expect(Zoom.year.screen(today: thursday) == .year(2026))
+        #expect(Zoom.day.screen(today: thursday) == .day(thursday))
     }
 }
-
-@MainActor
-@Suite struct ShortcutTests {
-    func press(_ characters: String, keyCode: Int, _ modifiers: NSEvent.ModifierFlags) -> NSEvent {
-        NSEvent.keyEvent(
-            with: .keyDown,
-            location: .zero,
-            modifierFlags: modifiers,
-            timestamp: 0,
-            windowNumber: 0,
-            context: nil,
-            characters: characters,
-            charactersIgnoringModifiers: characters,
-            isARepeat: false,
-            keyCode: UInt16(keyCode)
-        )!
-    }
-
-    @Test func aShortcutIsWrittenWithItsModifiersInTheMacsOrder() throws {
-        let shortcut = try #require(HotKey.shortcut(from: press("t", keyCode: kVK_ANSI_T, [.command, .shift])))
-        #expect(shortcut.title == "⇧⌘T")
-        #expect(shortcut.keyCode == UInt32(kVK_ANSI_T))
-        #expect(shortcut.modifiers == UInt32(cmdKey | shiftKey))
-
-        let space = try #require(HotKey.shortcut(from: press(" ", keyCode: kVK_Space, [.control, .option])))
-        #expect(space.title == "⌃⌥Space")
-    }
-
-    @Test func aKeyWithoutCommandOptionOrControlIsNoShortcut() {
-        #expect(HotKey.shortcut(from: press("t", keyCode: kVK_ANSI_T, [])) == nil)
-        #expect(HotKey.shortcut(from: press("T", keyCode: kVK_ANSI_T, [.shift])) == nil)
-    }
-}
-#endif

@@ -1,11 +1,9 @@
-#if os(macOS)
-import AppKit
 import SwiftUI
 import TrackerCore
 import TrackerKit
 
 /// Clients and their projects as a table: each project's repositories,
-/// calendar on this Mac, and time this week, this month, over the last
+/// calendar on this device, and time this week, this month, over the last
 /// twelve weeks and in all. Arrows move, Return opens a project's page, and
 /// single keys rename, color, archive, merge or add.
 struct ProjectsScreen: View {
@@ -114,7 +112,7 @@ struct ProjectsScreen: View {
             .background(RoundedRectangle(cornerRadius: 8).fill(Theme.field))
             .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Theme.strongLine))
             Toggle("Show archived", isOn: $showsArchived)
-                .toggleStyle(.checkbox)
+                .checkbox()
                 .font(.system(size: 12.5))
             Menu {
                 Button("New Project…") { model.request = .command("new project ") }
@@ -122,7 +120,7 @@ struct ProjectsScreen: View {
             } label: {
                 Label("New", systemImage: "plus")
             }
-            .menuStyle(.borderlessButton)
+            .plainMenu()
             .fixedSize()
             .disabled(model.isReadOnly)
         }
@@ -134,7 +132,7 @@ struct ProjectsScreen: View {
         } repositories: {
             Text("Repositories")
         } calendar: {
-            Text("Calendar on this Mac")
+            Text("Calendar on this \(deviceName)")
         } week: {
             Text("This week")
         } month: {
@@ -168,7 +166,7 @@ struct ProjectsScreen: View {
                 } label: {
                     Text("⋯").foregroundStyle(Theme.text2)
                 }
-                .menuStyle(.borderlessButton)
+                .plainMenu()
                 .menuIndicator(.hidden)
                 .fixedSize()
                 .accessibilityLabel(Text("\(client.name)'s actions"))
@@ -221,7 +219,7 @@ struct ProjectsScreen: View {
             let repositories = project.repositories.compactMap { GitHub.Repository($0) }
             if repositories.isEmpty {
                 Button("Add…") { navigator.go(.project(project.id)) }
-                    .buttonStyle(.link)
+                    .linkButton()
             } else {
                 HStack(spacing: 6) {
                     ForEach(Array(repositories.prefix(2).enumerated()), id: \.offset) { index, repository in
@@ -252,7 +250,7 @@ struct ProjectsScreen: View {
                         }
                     }
                 }
-                .menuStyle(.borderlessButton)
+                .plainMenu()
                 .fixedSize()
                 .disabled(model.calendars.isEmpty)
             }
@@ -301,7 +299,7 @@ struct ProjectsScreen: View {
                 .fill(ProjectTint(hex: project.color).ink)
                 .frame(width: 14, height: 14)
         }
-        .menuStyle(.borderlessButton)
+        .plainMenu()
         .menuIndicator(.hidden)
         .fixedSize()
         .accessibilityLabel(Text("\(project.name)'s color, \(Palette.name(of: project.color))"))
@@ -326,7 +324,7 @@ struct ProjectsScreen: View {
                     Button("Assign it in the week ›") {
                         navigator.go(.week(latest.entry.day))
                     }
-                    .buttonStyle(.link)
+                    .linkButton()
                 }
                 Spacer()
                 time(row.thisWeek).frame(width: 84, alignment: .trailing)
@@ -477,4 +475,3 @@ struct Sparkline: View {
         .accessibilityLabel(Text("Last 12 weeks: \(values.map { Format.duration($0) }.joined(separator: ", "))"))
     }
 }
-#endif

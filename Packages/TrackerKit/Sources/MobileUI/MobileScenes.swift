@@ -19,9 +19,6 @@ public struct MobileScenes: Scene {
             MobileRoot(model: model)
                 .task { await model.start() }
         }
-        .commands {
-            PadCommands()
-        }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .background:
@@ -53,14 +50,18 @@ public struct MobileScenes: Scene {
     }
 }
 
-/// The iPhone's tabs, or the iPad's sidebar, in light or dark as chosen.
+/// The iPhone's tabs, or on an iPad wide enough the Mac's layout, in
+/// light or dark as chosen.
 struct MobileRoot: View {
     let model: AppModel
 
+    /// The width from which an iPad window uses the Mac's layout.
+    static let wideWidth: CGFloat = 960
+
     var body: some View {
-        Group {
-            if UIDevice.current.userInterfaceIdiom == .pad {
-                PadRoot(model: model)
+        GeometryReader { geometry in
+            if UIDevice.current.userInterfaceIdiom == .pad, geometry.size.width >= Self.wideWidth {
+                PadWideRoot(model: model)
             } else {
                 PhoneRoot(model: model)
             }

@@ -1,4 +1,3 @@
-#if os(macOS)
 import Observation
 import SwiftUI
 import TrackerCore
@@ -9,6 +8,17 @@ enum Zoom: String, CaseIterable, Identifiable {
     case day, week, month, year, projects
 
     var id: Self { self }
+
+    /// The screen of this zoom around a day.
+    func screen(today day: LocalDate) -> Screen {
+        switch self {
+        case .day: .day(day)
+        case .week: .week(day)
+        case .month: .month(day)
+        case .year: .year(day.year)
+        case .projects: .projects
+        }
+    }
 
     var title: String {
         switch self {
@@ -95,14 +105,6 @@ final class Navigator {
 
     /// Shows another zoom around the same day.
     func zoom(_ zoom: Zoom, today: LocalDate) {
-        let day = screen.day ?? today
-        switch zoom {
-        case .day: go(.day(day))
-        case .week: go(.week(day))
-        case .month: go(.month(day))
-        case .year: go(.year(day.year))
-        case .projects: go(.projects)
-        }
+        go(zoom.screen(today: screen.day ?? today))
     }
 }
-#endif

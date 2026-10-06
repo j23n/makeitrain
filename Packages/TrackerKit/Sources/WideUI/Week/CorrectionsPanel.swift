@@ -1,4 +1,3 @@
-#if os(macOS)
 import SwiftUI
 import TrackerCore
 import TrackerKit
@@ -194,7 +193,7 @@ struct CorrectionCard: View {
                         }
                     }
                 }
-                .menuStyle(.borderlessButton)
+                .plainMenu()
                 .fixedSize()
                 .disabled(model.isReadOnly)
             }
@@ -209,7 +208,7 @@ struct CorrectionCard: View {
                     .frame(minHeight: selected ? 32 : 28)
             }
             .buttonStyle(.plain)
-            .help("Skipped corrections aren't offered again on this Mac.")
+            .help("Skipped corrections aren't offered again on this \(deviceName).")
         }
     }
 }
@@ -258,4 +257,3 @@ struct ChangeTable: View {
         return "\(Format.time(entry.start, zone: zone))–\(entry.end.map { Format.time($0, zone: zone) } ?? "now")"
     }
 }
-#endif

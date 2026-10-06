@@ -1,5 +1,3 @@
-#if os(macOS)
-import AppKit
 import SwiftUI
 import TrackerCore
 import TrackerKit
@@ -44,11 +42,11 @@ struct QueryBar: View {
                     onSubmit: { _ in
                         state.apply(query)
                         typed = ""
-                        NSApp.keyWindow?.makeFirstResponder(nil)
+                        endTextEditing()
                     },
                     onCancel: {
                         typed = ""
-                        NSApp.keyWindow?.makeFirstResponder(nil)
+                        endTextEditing()
                     }
                 )
                 .frame(width: 230, height: 18)
@@ -125,7 +123,7 @@ struct QueryBar: View {
         } label: {
             choice(state.title)
         }
-        .menuStyle(.borderlessButton)
+        .plainMenu()
         .menuIndicator(.hidden)
         .fixedSize()
     }
@@ -147,7 +145,7 @@ struct QueryBar: View {
         } label: {
             choice(Format.days(state.range))
         }
-        .menuStyle(.borderlessButton)
+        .plainMenu()
         .menuIndicator(.hidden)
         .fixedSize()
     }
@@ -160,7 +158,7 @@ struct QueryBar: View {
         } label: {
             choice(state.grouping.rawValue)
         }
-        .menuStyle(.borderlessButton)
+        .plainMenu()
         .menuIndicator(.hidden)
         .fixedSize()
     }
@@ -401,7 +399,7 @@ struct StatementPanel: View {
                 Button(showsAll ? "Show fewer" : "\(rows.count - 6) more · \(Format.duration(rows.dropFirst(6).reduce(0) { $0 + $1.milliseconds }))") {
                     showsAll.toggle()
                 }
-                .buttonStyle(.link)
+                .linkButton()
                 .font(.system(size: 12.5))
             }
         }
@@ -457,7 +455,7 @@ struct StatementPanel: View {
                             Button("Correct them in the week ›") {
                                 navigator.go(.week(first))
                             }
-                            .buttonStyle(.link)
+                            .linkButton()
                         }
                     }
                 }
@@ -544,4 +542,3 @@ struct StatementPanel: View {
         }
     }
 }
-#endif

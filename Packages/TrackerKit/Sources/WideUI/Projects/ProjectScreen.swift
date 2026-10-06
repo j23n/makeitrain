@@ -1,5 +1,3 @@
-#if os(macOS)
-import AppKit
 import SwiftUI
 import TrackerCore
 import TrackerKit
@@ -169,7 +167,7 @@ struct ProjectScreen: View {
                         Button("correct it") {
                             navigator.go(.week(longCorrection.day))
                         }
-                        .buttonStyle(.link)
+                        .linkButton()
                     }
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.amberText)
@@ -311,7 +309,7 @@ struct ProjectScreen: View {
                         showsAllIssues.insert(key)
                     }
                 }
-                .buttonStyle(.link)
+                .linkButton()
                 .font(.system(size: 12))
             }
         }
@@ -330,7 +328,7 @@ struct ProjectScreen: View {
                     .textFieldStyle(.roundedBorder)
                     .focused($renaming)
                     .onSubmit { rename(tag, to: newName) }
-                    .onExitCommand { selectedTag = nil }
+                    .onEscape { selectedTag = nil }
                 Text(Format.duration(tag.milliseconds))
                     .monospacedDigit()
                 Menu {
@@ -342,7 +340,7 @@ struct ProjectScreen: View {
                 } label: {
                     Image(systemName: "arrow.triangle.merge")
                 }
-                .menuStyle(.borderlessButton)
+                .plainMenu()
                 .fixedSize()
                 .disabled(others.isEmpty)
                 .help("Merge it into another of \(project.name)'s tags")
@@ -399,7 +397,7 @@ struct WeekDays: View {
                     Text("more than 12 hours")
                 }
                 Button("Open in Month ›", action: openMonth)
-                    .buttonStyle(.link)
+                    .linkButton()
             }
             .font(.system(size: 12))
             .foregroundStyle(Theme.text2)
@@ -473,8 +471,7 @@ struct ProjectSettingsPanel: View {
     @State private var mergeTarget: Project?
     @State private var confirmingDelete = false
     @Environment(\.undoManager) private var undoManager
-
-    static let privacySettings = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")!
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         ScrollView {
@@ -588,7 +585,7 @@ struct ProjectSettingsPanel: View {
                             Button("Make first") {
                                 model.makeFirstRepository(address, ofProject: project.id, undoManager: undoManager)
                             }
-                            .buttonStyle(.link)
+                            .linkButton()
                             .font(.system(size: 11.5))
                         }
                         Button {
@@ -629,7 +626,7 @@ struct ProjectSettingsPanel: View {
     }
 
     private var calendar: some View {
-        field("Calendar · this Mac only", footer: "Its events show up in the week as corrections until you log them.") {
+        field("Calendar · this \(deviceName) only", footer: "Its events show up in the week as corrections until you log them.") {
             switch model.calendarAccess {
             case .notDetermined:
                 Button("Allow Access to Calendars…") {
@@ -640,12 +637,14 @@ struct ProjectSettingsPanel: View {
                     Text("Time Tracker isn't allowed to read your calendars.")
                         .foregroundStyle(Theme.text2)
                     Button("Open Privacy & Security") {
-                        NSWorkspace.shared.open(Self.privacySettings)
+                        if let url = calendarPrivacySettings {
+                            openURL(url)
+                        }
                     }
                 }
                 .font(.system(size: 12))
             case .restricted:
-                Text("Reading calendars isn't allowed on this Mac.")
+                Text("Reading calendars isn't allowed on this \(deviceName).")
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.text2)
             case .granted:
@@ -699,7 +698,7 @@ struct ProjectSettingsPanel: View {
                         }
                     }
                 }
-                .menuStyle(.borderlessButton)
+                .plainMenu()
                 .fixedSize()
                 .disabled(others.isEmpty)
                 Button("Delete…") {
@@ -737,4 +736,3 @@ struct ProjectSettingsPanel: View {
         }
     }
 }
-#endif

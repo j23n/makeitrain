@@ -3,6 +3,7 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 import UIKit
+import WideUI
 
 /// The command line floating over the tab bar: the running timer, what to
 /// type, and Stop. Tapping it opens the command line.
@@ -140,7 +141,10 @@ struct PhoneCommandSheet: View {
             text: Binding(get: { line.text }, set: { line.text = $0 }),
             placeholder: model.running == nil ? "start, or log time" : "switch, stop or log",
             reading: line.reading,
-            submit: { submit(alternate: false) }
+            submit: { alternate in submit(alternate: alternate) },
+            onTab: { line.complete() },
+            onUp: { line.previousLine() },
+            onDown: { line.nextLine() }
         )
         if case .find? = line.reading.primary {
             foundEntries
@@ -157,19 +161,33 @@ struct PhoneCommandSheet: View {
         return running.entry.note.isEmpty ? project : "\(project) · \(running.entry.note)"
     }
 
-    private func field(text: Binding<String>, placeholder: String, reading: CommandReading, submit: @escaping () -> Void) -> some View {
+    private func field(
+        text: Binding<String>,
+        placeholder: String,
+        reading: CommandReading,
+        submit: @escaping (_ alternate: Bool) -> Void,
+        onTab: @escaping () -> Bool = { false },
+        onUp: @escaping () -> Bool = { false },
+        onDown: @escaping () -> Bool = { false }
+    ) -> some View {
         HStack(spacing: 10) {
             Text("›")
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(Theme.accent)
                 .accessibilityHidden(true)
-            PhoneCommandField(
+            CommandField(
                 text: text,
                 placeholder: placeholder,
                 reading: reading,
                 ledger: model.ledger,
+                fontSize: 17,
+                focusesWithWindow: true,
                 focusRequest: router.focusRequest,
-                onSubmit: submit
+                onSubmit: submit,
+                onTab: onTab,
+                onUp: onUp,
+                onDown: onDown,
+                onCancel: close
             )
             .frame(height: 56)
             if !text.wrappedValue.isEmpty {
@@ -400,7 +418,7 @@ struct PhoneCommandSheet: View {
     @ViewBuilder
     private var reportLine: some View {
         let query = self.query
-        field(text: $reportText, placeholder: "acme last month by tag", reading: reading(of: query), submit: showReport)
+        field(text: $reportText, placeholder: "acme last month by tag", reading: reading(of: query), submit: { _ in showReport() })
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
                 Text("Show").fontWeight(.semibold)

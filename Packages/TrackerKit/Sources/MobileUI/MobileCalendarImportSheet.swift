@@ -33,11 +33,8 @@ struct MobileCalendarImportSheet: View {
                     CalendarImportSummary(plan: plan, ledger: model.ledger, includingDeleted: $includingDeleted)
                 } else {
                     Section {
-                        NavigationLink("Clients & Projects") {
-                            MobileProjectsScreen(model: model)
-                        }
-                    } footer: {
-                        Text("No project has a calendar yet. Choose one in a project's settings.")
+                        Text("No project has a calendar yet. Link one in Settings, under Calendars, or in a project's settings.")
+                            .foregroundStyle(Theme.text2)
                     }
                 }
             }

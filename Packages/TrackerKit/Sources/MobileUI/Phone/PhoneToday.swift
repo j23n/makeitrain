@@ -3,6 +3,7 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 import UIKit
+import WideUI
 
 /// Today: the day so far on an hour grid, what needs correcting on it,
 /// and the command line over the tab bar.
@@ -164,14 +165,16 @@ struct PhoneEntrySheet: View {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
-                        PhoneCommandField(
+                        CommandField(
                             text: $text,
                             placeholder: "",
                             reading: model.read(text),
                             ledger: model.ledger,
                             fontSize: 15,
+                            focusesWithWindow: true,
                             focusRequest: focusRequest,
-                            onSubmit: apply
+                            onSubmit: { _ in apply() },
+                            onCancel: { dismiss() }
                         )
                         .frame(height: 44)
                         Text(Format.duration(model.duration(of: entry)))

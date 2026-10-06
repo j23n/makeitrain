@@ -1,5 +1,3 @@
-#if os(macOS)
-import AppKit
 import SwiftUI
 import TrackerCore
 import TrackerKit
@@ -275,7 +273,7 @@ struct LineEditor: View {
                 .foregroundStyle(Theme.text2)
                 .fixedSize()
             } else {
-                Text("Click an entry to change it here as a line, such as 2 oct 13:30-16:30 bookings #153 Bug fix.")
+                Text("Select an entry to change it here as a line, such as 2 oct 13:30-16:30 bookings #153 Bug fix.")
                     .font(.system(size: 12.5))
                     .foregroundStyle(Theme.text3)
                     .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
@@ -295,4 +293,3 @@ struct LineEditor: View {
         }
     }
 }
-#endif

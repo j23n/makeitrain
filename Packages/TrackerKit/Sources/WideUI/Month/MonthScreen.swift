@@ -1,7 +1,8 @@
-#if os(macOS)
-import AppKit
 import SwiftUI
 import TrackerCore
+#if os(macOS)
+import AppKit
+#endif
 import TrackerKit
 
 /// A month as a report: what it covers as a sentence, the year's weeks,
@@ -95,12 +96,20 @@ struct MonthScreen: View {
     private var rangeLine: some View {
         HStack(alignment: .firstTextBaseline, spacing: 16) {
             (Text(Format.days(state.range)).fontWeight(.semibold).foregroundColor(Theme.text)
-                + Text(" · Shift-click a day, or use Shift and the arrows, for another range"))
+                + Text(rangeHint))
                 .font(.system(size: 13))
                 .foregroundStyle(Theme.text2)
             Spacer()
             legend
         }
+    }
+
+    private var rangeHint: String {
+        #if os(macOS)
+        return " · Shift-click a day, or use Shift and the arrows, for another range"
+        #else
+        return " · Use Shift and the arrows for another range"
+        #endif
     }
 
     private var legend: some View {
@@ -225,7 +234,7 @@ struct MonthHeatGrid: View {
             open(day)
         }
         .onTapGesture {
-            if NSEvent.modifierFlags.contains(.shift) {
+            if extendsSelection {
                 let anchor = state.range.lowerBound
                 state.show(min(anchor, day)...max(anchor, day), period: .custom)
             } else {
@@ -236,6 +245,16 @@ struct MonthHeatGrid: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text("\(Format.longDay(day)), \(total > 0 ? Format.duration(total) : "no time")"))
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    /// Whether Shift is held, so a click stretches the range to the day.
+    /// On iPad, Shift and the arrows do it instead.
+    private var extendsSelection: Bool {
+        #if os(macOS)
+        return NSEvent.modifierFlags.contains(.shift)
+        #else
+        return false
+        #endif
     }
 }
 
@@ -345,4 +364,3 @@ struct MiniMonth: View {
         return Theme.accent.opacity(0.18 + level * 0.67)
     }
 }
-#endif
