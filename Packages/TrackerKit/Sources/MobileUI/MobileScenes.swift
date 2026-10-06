@@ -8,7 +8,7 @@ import UIKit
 /// background and brings the clock up to date when it comes back. An iPad
 /// can open it in several windows, which share the data.
 public struct MobileScenes: Scene {
-    @State private var model = AppModel(environment: .live())
+    @State private var model = AppModel.shared
     @Environment(\.scenePhase) private var scenePhase
 
     public init() {}
@@ -52,33 +52,36 @@ public struct MobileScenes: Scene {
     }
 }
 
-/// The iPhone's tabs, or the iPad's sidebar.
+/// The iPhone's tabs, or the iPad's sidebar, in light or dark as chosen.
 struct MobileRoot: View {
     let model: AppModel
 
     var body: some View {
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            PadRoot(model: model)
-        } else {
-            PhoneTabs(model: model)
+        Group {
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                PadRoot(model: model)
+            } else {
+                PhoneRoot(model: model)
+            }
+        }
+        .onChange(of: model.preferences.appearance, initial: true) { _, appearance in
+            apply(appearance)
         }
     }
-}
 
-/// The iPhone's tabs.
-struct PhoneTabs: View {
-    let model: AppModel
-
-    var body: some View {
-        TabView {
-            TimerScreen(model: model)
-                .tabItem { Label("Timer", systemImage: "stopwatch") }
-            EntriesScreen(model: model)
-                .tabItem { Label("Entries", systemImage: "list.bullet.rectangle") }
-            MobileReportsScreen(model: model)
-                .tabItem { Label("Reports", systemImage: "chart.bar.xaxis") }
-            MobileSettingsScreen(model: model)
-                .tabItem { Label("Settings", systemImage: "gear") }
+    /// Sets every window's appearance, sheets included, which a color
+    /// scheme preference doesn't reliably reach.
+    private func apply(_ appearance: Preferences.Appearance) {
+        let style: UIUserInterfaceStyle = switch appearance {
+        case .system: .unspecified
+        case .light: .light
+        case .dark: .dark
+        }
+        for scene in UIApplication.shared.connectedScenes {
+            guard let scene = scene as? UIWindowScene else { continue }
+            for window in scene.windows {
+                window.overrideUserInterfaceStyle = style
+            }
         }
     }
 }
@@ -127,7 +130,7 @@ struct MobileNotices: View {
 }
 
 #Preview("iPhone") {
-    PhoneTabs(model: PreviewData.model())
+    PhoneRoot(model: PreviewData.model())
 }
 
 #Preview("No Data") {

@@ -200,6 +200,34 @@ public enum CommandText {
         }
     }
 
+    /// What a command's button says, in a word or two, such as "Switch"
+    /// or "Log", for the iPhone's command line.
+    public static func verb(_ command: Command, running: ResolvedEntry?) -> String {
+        switch command {
+        case let .start(_, _, end):
+            if end != nil { return "Log" }
+            return running == nil ? "Start" : "Switch"
+        case .log:
+            return "Log"
+        case .stop:
+            return "Stop"
+        case .moveStart:
+            return "Change the start"
+        case .addProject, .addClient:
+            return "Add"
+        case let .archive(_, archived):
+            return archived ? "Archive" : "Unarchive"
+        case .setColor:
+            return "Change the color"
+        case .merge:
+            return "Merge"
+        case .rename:
+            return "Rename"
+        case .find:
+            return "Find"
+        }
+    }
+
     /// Why a line can't be run, as a sentence.
     public static func message(_ problem: CommandProblem, zone: String) -> String {
         switch problem {

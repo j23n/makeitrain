@@ -1,0 +1,518 @@
+#if os(iOS)
+import SwiftUI
+import TrackerCore
+import TrackerKit
+import UIKit
+
+/// A project's page: its running timer, its time this week, this month
+/// and in all, its last twelve weeks day by day, and its tags by
+/// repository. Edit opens its settings.
+struct PhoneProjectPage: View {
+    let model: AppModel
+    let router: PhoneRouter
+    let projectID: UUID
+    @State private var overview: ProjectOverview?
+    @State private var editing = false
+    @State private var chosenTag: ProjectOverview.Tag?
+    @State private var renaming: ProjectOverview.Tag?
+    @State private var newName = ""
+    @Environment(\.undoManager) private var undoManager
+    @Environment(\.openURL) private var openURL
+
+    private var project: Project? {
+        model.ledger.projects[projectID].flatMap { $0.isDeleted ? nil : $0 }
+    }
+
+    var body: some View {
+        Group {
+            if let project {
+                page(project)
+            } else {
+                Text("This project is gone.")
+                    .foregroundStyle(Theme.text2)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .background(Theme.background)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("Edit") { editing = true }
+                    .fontWeight(.semibold)
+                    .disabled(project == nil)
+            }
+        }
+        .sheet(isPresented: $editing) {
+            if let project {
+                PhoneProjectSettings(model: model, project: project) { merged in
+                    if let merged {
+                        router.projectsPath = [.project(merged)]
+                    } else {
+                        router.projectsPath = []
+                    }
+                }
+            }
+        }
+        .onAppear(perform: load)
+        .onChange(of: model.revision) { load() }
+        .onChange(of: model.now) {
+            if overview?.isRunning == true {
+                load()
+            }
+        }
+    }
+
+    private func load() {
+        overview = ProjectOverview(
+            projects: [projectID],
+            ledger: model.ledger,
+            resolved: model.resolved,
+            today: model.today,
+            firstWeekday: model.firstWeekday,
+            now: model.now
+        )
+    }
+
+    private func page(_ project: Project) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 10) {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(ProjectTint(hex: project.color).ink)
+                            .frame(width: 20, height: 20)
+                        Text(project.name)
+                            .font(.system(size: 28, weight: .bold))
+                            .lineLimit(2)
+                    }
+                    Text(model.ledger.client(forProject: projectID)?.name ?? "No client")
+                        .foregroundStyle(Theme.text2)
+                }
+                .padding(.horizontal, 4)
+                timer(project)
+                if let overview {
+                    figures(overview)
+                    PhoneProjectWeeks(model: model, projectID: projectID, tint: ProjectTint(hex: project.color)) {
+                        router.month.show(ReportPeriod.month.range(containing: model.today, firstWeekday: model.firstWeekday), period: .month)
+                        router.month.projects = [projectID]
+                        router.tab = .month
+                    }
+                    tags(overview, project: project)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 4)
+            .padding(.bottom, 16)
+        }
+        .confirmationDialog(
+            chosenTag?.name ?? "",
+            isPresented: Binding(get: { chosenTag != nil }, set: { if !$0 { chosenTag = nil } }),
+            titleVisibility: .visible,
+            presenting: chosenTag
+        ) { tag in
+            if let url = tag.url {
+                Button("Open on GitHub") { openURL(url) }
+            }
+            Button("Rename or Merge…") {
+                newName = tag.name
+                renaming = tag
+            }
+            Button("Remove from \(project.name)'s Entries", role: .destructive) {
+                model.removeTag(tag.name, fromProject: projectID, undoManager: undoManager)
+            }
+        } message: { tag in
+            Text("\(Format.duration(tag.milliseconds)) on \(tag.count) \(tag.count == 1 ? "entry" : "entries")")
+        }
+        .alert(
+            "Rename \(renaming?.name ?? "")",
+            isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } }),
+            presenting: renaming
+        ) { tag in
+            TextField("Name", text: $newName)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            Button("Rename") { rename(tag) }
+            Button("Cancel", role: .cancel) {}
+        } message: { tag in
+            Text("Renames it on \(tag.count) \(project.name) \(tag.count == 1 ? "entry" : "entries"). The name of another of its tags merges the two.")
+        }
+    }
+
+    /// The running timer with Stop, or Start.
+    @ViewBuilder
+    private func timer(_ project: Project) -> some View {
+        if let running = model.running, running.entry.projectID == projectID {
+            HStack(spacing: 9) {
+                Circle().fill(Theme.now).frame(width: 7, height: 7)
+                Text(Format.duration(model.duration(of: running)))
+                    .fontWeight(.semibold)
+                    .monospacedDigit()
+                Text(([running.entry.note] + running.entry.tags).filter { !$0.isEmpty }.joined(separator: " · "))
+                    .foregroundStyle(Theme.text2)
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                Button {
+                    model.stopTimer(undoManager: undoManager)
+                } label: {
+                    Text("Stop")
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Theme.inverseText)
+                        .padding(.horizontal, 14)
+                        .frame(height: 40)
+                        .background(RoundedRectangle(cornerRadius: 11).fill(Theme.inverse))
+                }
+                .buttonStyle(.plain)
+                .disabled(model.isReadOnly)
+            }
+            .font(.system(size: 15))
+            .padding(.leading, 14)
+            .padding(.trailing, 6)
+            .frame(height: 54)
+            .background(RoundedRectangle(cornerRadius: 15).fill(Theme.panel))
+            .overlay(RoundedRectangle(cornerRadius: 15).strokeBorder(Theme.line))
+        } else if !project.archived {
+            Button {
+                model.startTimer(Combination(projectID: projectID, tags: []), undoManager: undoManager)
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "play.fill")
+                    Text(model.running == nil ? "Start \(project.name)" : "Switch to \(project.name)")
+                        .lineLimit(1)
+                }
+                .font(.system(size: 15, weight: .semibold))
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .foregroundStyle(Theme.text)
+                .background(RoundedRectangle(cornerRadius: 15).fill(Theme.panel))
+                .overlay(RoundedRectangle(cornerRadius: 15).strokeBorder(Theme.line))
+            }
+            .buttonStyle(.plain)
+            .disabled(model.isReadOnly)
+        }
+    }
+
+    private func figures(_ overview: ProjectOverview) -> some View {
+        HStack(spacing: 1) {
+            figure("This week", overview.thisWeek, marked: false)
+            figure("This month", overview.thisMonth, marked: ranLongThisMonth)
+            figure("All time", overview.total, marked: false)
+        }
+        .background(Theme.line)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Theme.line))
+    }
+
+    private func figure(_ label: String, _ milliseconds: Int64, marked: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 5) {
+                Text(label)
+                if marked {
+                    Circle().fill(Theme.amber).frame(width: 6, height: 6)
+                        .accessibilityLabel(Text("includes a timer that ran long"))
+                }
+            }
+            .font(.system(size: 12))
+            .foregroundStyle(Theme.text2)
+            Text(Format.duration(milliseconds))
+                .font(.system(size: 17, weight: .semibold))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .padding(.horizontal, 11)
+        .padding(.vertical, 9)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.panel)
+    }
+
+    /// Whether a timer of the project ran long this month.
+    private var ranLongThisMonth: Bool {
+        let month = ReportPeriod.month.range(containing: model.today, firstWeekday: model.firstWeekday)
+        return Corrections.find(on: month, ledger: model.ledger, resolved: model.resolved, timeZone: model.environment.timeZone(), now: model.now)
+            .contains { correction in
+                if case let .ranLong(id, _) = correction.kind {
+                    return model.ledger.entries[id]?.projectID == projectID
+                }
+                return false
+            }
+    }
+
+    // MARK: Tags
+
+    @ViewBuilder
+    private func tags(_ overview: ProjectOverview, project: Project) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Tags")
+                .font(.system(size: 14, weight: .semibold))
+                .padding(.horizontal, 2)
+            if overview.repositories.isEmpty && overview.tags.isEmpty {
+                Text("No tags yet. Type them with a #, as in book #227.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.text3)
+                    .padding(.horizontal, 2)
+            }
+            ForEach(overview.repositories) { repository in
+                tagGroup(repository.title, detail: "\(repository.issues.count) \(repository.issues.count == 1 ? "issue" : "issues")", tags: repository.issues, tint: ProjectTint(hex: project.color))
+            }
+            if !overview.tags.isEmpty {
+                tagGroup("Other tags", detail: "\(overview.tags.count)", tags: overview.tags, tint: ProjectTint(hex: project.color))
+            }
+        }
+    }
+
+    private func tagGroup(_ title: String, detail: String, tags: [ProjectOverview.Tag], tint: ProjectTint) -> some View {
+        let highest = tags.map(\.milliseconds).max() ?? 1
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(title).font(.system(size: 13, weight: .semibold))
+                Spacer()
+                Text(detail).font(.system(size: 12)).foregroundStyle(Theme.text3)
+            }
+            ForEach(tags.prefix(12)) { tag in
+                Button {
+                    chosenTag = tag
+                } label: {
+                    HStack(spacing: 10) {
+                        Text(tag.number.map { "#\($0)" } ?? tag.name)
+                            .foregroundStyle(tag.url == nil ? Theme.text : Theme.tag)
+                            .lineLimit(1)
+                            .frame(width: tag.number == nil ? 104 : 52, alignment: .leading)
+                        GeometryReader { geometry in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Theme.fill)
+                                Capsule()
+                                    .fill(tint.bar)
+                                    .frame(width: geometry.size.width * CGFloat(tag.milliseconds) / CGFloat(max(highest, 1)))
+                            }
+                        }
+                        .frame(height: 5)
+                        Text(Format.duration(tag.milliseconds))
+                            .monospacedDigit()
+                            .frame(width: 78, alignment: .trailing)
+                    }
+                    .font(.system(size: 14))
+                    .frame(minHeight: 30)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            if tags.count > 12 {
+                Text("and \(tags.count - 12) more")
+                    .font(.system(size: 12.5))
+                    .foregroundStyle(Theme.text3)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Theme.panel))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Theme.line))
+    }
+
+    private func rename(_ tag: ProjectOverview.Tag) {
+        guard let cleaned = Tags.normalize([newName]).first, cleaned != tag.name else { return }
+        let existing = (overview?.tagNames ?? []).first { Tags.same($0, cleaned) && !Tags.same($0, tag.name) }
+        model.renameTag(tag.name, to: existing ?? cleaned, inProject: projectID, undoManager: undoManager)
+    }
+}
+
+/// A project's last twelve weeks, a row of days each, with each day's time
+/// as a bar and the week's total.
+struct PhoneProjectWeeks: View {
+    let model: AppModel
+    let projectID: UUID
+    let tint: ProjectTint
+    let openMonth: () -> Void
+
+    var body: some View {
+        let thisWeek = ReportPeriod.week.range(containing: model.today, firstWeekday: model.firstWeekday)
+        let first = thisWeek.lowerBound.adding(days: -77)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Last 12 weeks")
+                    .font(.system(size: 14, weight: .semibold))
+                Spacer()
+                Button("Open in Month", action: openMonth)
+                    .font(.system(size: 13.5))
+            }
+            .padding(.horizontal, 2)
+            VStack(spacing: 3) {
+                ForEach(0..<12, id: \.self) { index in
+                    let start = first.adding(days: index * 7)
+                    let days = (0..<7).map { start.adding(days: $0) }
+                    let times = days.map { model.dayTotals.projects(on: $0, now: model.now)[projectID] ?? 0 }
+                    let total = times.reduce(0, +)
+                    HStack(spacing: 4) {
+                        Text(Format.monthDay(start))
+                            .foregroundStyle(index == 11 ? Theme.text : Theme.text3)
+                            .lineLimit(1)
+                            .frame(width: 44, alignment: .leading)
+                        ForEach(0..<7, id: \.self) { offset in
+                            cell(days[offset], time: times[offset])
+                        }
+                        Text(total > 0 ? Format.duration(total) : "—")
+                            .monospacedDigit()
+                            .foregroundStyle(total > 50 * 3_600_000 ? Theme.amberText : (total > 0 ? Theme.text : Theme.text3))
+                            .lineLimit(1)
+                            .frame(width: 64, alignment: .trailing)
+                    }
+                    .font(.system(size: 11.5))
+                    .frame(height: 17)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text("Week of \(Format.monthDay(start)), \(total > 0 ? Format.duration(total) : "no time")"))
+                }
+            }
+        }
+    }
+
+    private func cell(_ day: LocalDate, time: Int64) -> some View {
+        ZStack(alignment: .bottom) {
+            RoundedRectangle(cornerRadius: 4)
+                .fill(day > model.today ? Color.clear : (day.weekday == 1 || day.weekday == 7 ? Theme.weekendCell : Theme.cell))
+                .overlay {
+                    if day > model.today {
+                        RoundedRectangle(cornerRadius: 4).strokeBorder(Theme.strongLine, style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+                    } else if day == model.today {
+                        RoundedRectangle(cornerRadius: 4).strokeBorder(Theme.accent, lineWidth: 1.5)
+                    }
+                }
+            if time > 0 {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(time > Corrections.longest ? Theme.amber : tint.bar)
+                    .frame(height: max(2, CGFloat(min(time, 37_800_000)) / 37_800_000 * 13))
+                    .padding(.horizontal, 2)
+                    .padding(.bottom, 2)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+/// A project's settings: name, client, color, GitHub repositories, the
+/// calendar on this iPhone, and archiving, merging or deleting it.
+struct PhoneProjectSettings: View {
+    let model: AppModel
+    let project: Project
+    /// After a merge, the project it went into; after a delete, nil.
+    let gone: (UUID?) -> Void
+    @State private var name = ""
+    @State private var mergeTarget: Project?
+    @State private var confirmingDelete = false
+    @Environment(\.undoManager) private var undoManager
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        let entries = model.resolved.filter { $0.entry.projectID == project.id }.count
+        let others = model.ledger.projects.values
+            .filter { !$0.isDeleted && $0.id != project.id }
+            .sorted { model.ledger.projectTitle($0.id).lowercased() < model.ledger.projectTitle($1.id).lowercased() }
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Name", text: $name)
+                        .onSubmit(rename)
+                    Picker("Client", selection: Binding(
+                        get: { project.clientID },
+                        set: { clientID in
+                            model.updateProject(project.id, actionName: "Change Client", undoManager: undoManager) { $0.clientID = clientID }
+                        }
+                    )) {
+                        Text("No client").tag(UUID?.none)
+                        ForEach(model.ledger.liveClients().filter { !$0.archived || $0.id == project.clientID }) { client in
+                            Text(client.name).tag(UUID?.some(client.id))
+                        }
+                    }
+                    HStack(spacing: 10) {
+                        ForEach(Palette.colors, id: \.self) { hex in
+                            let chosen = project.color.uppercased() == hex
+                            Button {
+                                model.updateProject(project.id, actionName: "Change Color", undoManager: undoManager) { $0.color = hex }
+                            } label: {
+                                RoundedRectangle(cornerRadius: 7)
+                                    .fill(ProjectTint(hex: hex).ink)
+                                    .frame(width: 30, height: 30)
+                                    .overlay {
+                                        if chosen {
+                                            RoundedRectangle(cornerRadius: 7).strokeBorder(Theme.text, lineWidth: 2.5)
+                                        }
+                                    }
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(Text(Palette.name(of: hex)))
+                            .accessibilityAddTraits(chosen ? .isSelected : [])
+                        }
+                    }
+                    .padding(.vertical, 4)
+                } footer: {
+                    Text("Saved in projects.json, so every device has them. Moving it to another client moves its history too.")
+                }
+                MobileRepositoriesSection(model: model, project: project)
+                MobileProjectCalendarSection(model: model, project: project)
+                Section {
+                    Toggle("Archived", isOn: Binding(
+                        get: { project.archived },
+                        set: { archived in
+                            model.updateProject(project.id, actionName: archived ? "Archive Project" : "Unarchive Project", undoManager: undoManager) { $0.archived = archived }
+                        }
+                    ))
+                    Menu("Merge Into…") {
+                        ForEach(others) { other in
+                            Button(model.ledger.projectTitle(other.id)) {
+                                mergeTarget = other
+                            }
+                        }
+                    }
+                    .disabled(others.isEmpty)
+                    Button("Delete…", role: .destructive) {
+                        confirmingDelete = true
+                    }
+                    .disabled(entries > 0)
+                } footer: {
+                    Text(entries > 0
+                        ? "It has \(entries) \(entries == 1 ? "entry" : "entries"), so it can be archived or merged but not deleted. Archived projects leave the pickers and stay in reports."
+                        : "It has no entries, so it can be deleted.")
+                }
+            }
+            .disabled(model.isReadOnly)
+            .navigationTitle(project.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        rename()
+                        dismiss()
+                    }
+                }
+            }
+            .confirmationDialog(
+                "Merge “\(project.name)” into “\(mergeTarget.map { model.ledger.projectTitle($0.id) } ?? "")”?",
+                isPresented: Binding(get: { mergeTarget != nil }, set: { if !$0 { mergeTarget = nil } }),
+                titleVisibility: .visible,
+                presenting: mergeTarget
+            ) { target in
+                Button("Merge") {
+                    if (try? model.mergeProject(project.id, into: target.id, undoManager: undoManager)) != nil {
+                        dismiss()
+                        gone(target.id)
+                    }
+                }
+            } message: { target in
+                Text("Every entry of “\(project.name)” moves to “\(target.name)”, and “\(project.name)” is deleted.")
+            }
+            .confirmationDialog("Delete “\(project.name)”?", isPresented: $confirmingDelete, titleVisibility: .visible) {
+                Button("Delete", role: .destructive) {
+                    if (try? model.deleteProject(project.id, undoManager: undoManager)) != nil {
+                        dismiss()
+                        gone(nil)
+                    }
+                }
+            }
+        }
+        .onAppear { name = project.name }
+    }
+
+    private func rename() {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed != project.name else { return }
+        model.updateProject(project.id, actionName: "Rename Project", undoManager: undoManager) { $0.name = trimmed }
+    }
+}
+#endif

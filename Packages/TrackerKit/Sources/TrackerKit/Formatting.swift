@@ -44,6 +44,17 @@ public enum Format {
         noon(of: day).formatted(Date.FormatStyle(timeZone: utc).weekday(.abbreviated).month(.abbreviated).day())
     }
 
+    /// A day with its weekday and month in full, such as "Monday 5
+    /// October", in the order the user's language puts them.
+    public static func fullDay(_ day: LocalDate) -> String {
+        noon(of: day).formatted(Date.FormatStyle(timeZone: utc).weekday(.wide).day().month(.wide))
+    }
+
+    /// A month's name in full, such as "September".
+    public static func monthName(_ day: LocalDate) -> String {
+        noon(of: day).formatted(Date.FormatStyle(timeZone: utc).month(.wide))
+    }
+
     /// A day's weekday, such as "Mon".
     public static func weekday(_ day: LocalDate) -> String {
         noon(of: day).formatted(Date.FormatStyle(timeZone: utc).weekday(.abbreviated))

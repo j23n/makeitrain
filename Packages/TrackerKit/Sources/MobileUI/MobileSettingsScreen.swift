@@ -4,18 +4,6 @@ import TrackerCore
 import TrackerKit
 import UniformTypeIdentifiers
 
-/// The iPhone's Settings tab.
-struct MobileSettingsScreen: View {
-    let model: AppModel
-
-    var body: some View {
-        NavigationStack {
-            SettingsForm(model: model)
-                .navigationTitle("Settings")
-        }
-    }
-}
-
 /// iCloud, the first day of the week, clients and projects, and importing
 /// entries from calendars and CSV files, for the iPhone's Settings tab and
 /// the iPad's Settings screen.
@@ -489,10 +477,6 @@ struct MobileProjectForm: View {
     let model = PreviewData.model()
     let plan = try! model.importPlan(for: Data(csv.utf8))
     return MobileImportSheet(model: model, request: ImportRequest(fileName: "harvest.csv", plan: plan))
-}
-
-#Preview("Settings") {
-    MobileSettingsScreen(model: PreviewData.model())
 }
 
 #Preview("Clients & Projects") {

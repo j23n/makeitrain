@@ -98,7 +98,9 @@ public final class AppModel {
     @ObservationIgnored private var saveTask: Task<Void, Never>?
     @ObservationIgnored private var clockTask: Task<Void, Never>?
     @ObservationIgnored private var lastBackup: LocalDate?
-    @ObservationIgnored private var started = false
+    /// Opening the storage at launch, which later callers of `start()`
+    /// wait for.
+    @ObservationIgnored private var starting: Task<Void, Never>?
 
     private enum Keys {
         static let storage = "storage"
@@ -156,12 +158,19 @@ public final class AppModel {
     // MARK: - Loading and saving
 
     /// Opens the chosen storage and starts the clock, at launch. On iPad
-    /// each window asks for this as it opens; only the first time counts.
+    /// each window asks for this as it opens, and App Intents do before
+    /// they act; only the first time counts, and the others wait for it.
     public func start() async {
-        guard !started else { return }
-        started = true
-        startClock()
-        await open(storage)
+        if let starting {
+            await starting.value
+            return
+        }
+        let task = Task {
+            startClock()
+            await open(storage)
+        }
+        starting = task
+        await task.value
     }
 
     /// Reads every file again and merges it in.
@@ -481,3 +490,10 @@ extension AppModel {
     }
 }
 #endif
+
+extension AppModel {
+    /// The app's model, which its windows, the menu bar and App Intents
+    /// share. An intent can run before any window opens, so it's made on
+    /// first use rather than by a window.
+    public static let shared = AppModel(environment: .live())
+}

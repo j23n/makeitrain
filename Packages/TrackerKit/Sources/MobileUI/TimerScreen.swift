@@ -3,18 +3,6 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 
-/// The iPhone's Timer tab.
-struct TimerScreen: View {
-    let model: AppModel
-
-    var body: some View {
-        NavigationStack {
-            TimerList(model: model)
-                .navigationTitle("Timer")
-        }
-    }
-}
-
 /// Moving the running timer's start back, or stopping it at an earlier time.
 enum TimerAdjustment: String, Identifiable {
     case start, stop
@@ -200,18 +188,6 @@ struct AdjustTimeSheet: View {
 }
 
 #if DEBUG
-#Preview("Running") {
-    TimerScreen(model: PreviewData.model())
-}
-
-#Preview("Stopped") {
-    TimerScreen(model: PreviewData.model(PreviewData.stoppedLedger))
-}
-
-#Preview("No Data") {
-    TimerScreen(model: PreviewData.model(Ledger()))
-}
-
 #Preview("Started Earlier") {
     let model = PreviewData.model()
     return AdjustTimeSheet(model: model, running: model.running!, adjustment: .start)

@@ -137,9 +137,13 @@ public final class CommandLineModel {
 /// key, and what it changes, or why it can't.
 public struct CommandPreviewView: View {
     let line: CommandLineModel
+    /// Whether the action shows its key, as on the Mac. The iPhone has a
+    /// button for it instead.
+    let showsKey: Bool
 
-    public init(line: CommandLineModel) {
+    public init(line: CommandLineModel, showsKey: Bool = true) {
         self.line = line
+        self.showsKey = showsKey
     }
 
     private var model: AppModel { line.model }
@@ -151,14 +155,16 @@ public struct CommandPreviewView: View {
         } else if let command = line.reading.primary, let preview = line.preview {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 9) {
-                    KeyCap("⏎", inverted: true)
+                    if showsKey {
+                        KeyCap("⏎", inverted: true)
+                    }
                     Text(CommandText.title(command, running: model.running, now: model.environment.now(), zone: zone))
                         .fontWeight(.semibold)
                     subject(command)
                 }
                 .lineLimit(1)
                 CommandChanges(model: model, command: command, preview: preview)
-                    .padding(.leading, 31)
+                    .padding(.leading, showsKey ? 31 : 0)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
