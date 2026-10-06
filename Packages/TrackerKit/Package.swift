@@ -12,6 +12,7 @@ let package = Package(
         .library(name: "TrackerKit", targets: ["TrackerKit"]),
         .library(name: "MacUI", targets: ["MacUI"]),
         .library(name: "MobileUI", targets: ["MobileUI"]),
+        .library(name: "TimerActivity", targets: ["TimerActivity"]),
     ],
     dependencies: [
         .package(path: "../TrackerCore"),
@@ -29,7 +30,13 @@ let package = Package(
         ),
         .target(
             name: "MobileUI",
-            dependencies: ["TrackerKit"],
+            dependencies: ["TrackerKit", "TimerActivity"],
+            swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+        // The Live Activity's attributes, which the iOS app and its widget
+        // extension share.
+        .target(
+            name: "TimerActivity",
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .testTarget(

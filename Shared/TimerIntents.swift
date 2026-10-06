@@ -1,10 +1,16 @@
 #if os(iOS)
 import AppIntents
+#if !WIDGET_EXTENSION
 import MobileUI
+#endif
 
-/// Starts a timer from Siri, Shortcuts, a control or the Action button,
-/// for what's said or typed as in the command line.
-struct StartTimerIntent: AppIntent {
+// The app's intents. They're built into the app and into its widget
+// extension, whose Live Activity and controls run them; as Live Activity
+// intents they always run in the app, where the data is.
+
+/// Starts a timer from Siri, Shortcuts or the Action button, for what's
+/// said or typed as in the command line.
+struct StartTimerIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Start a Timer"
     static let description = IntentDescription(
         "Starts a timer for what you're working on, written as in the command line, such as “bookings #227 export”. A running timer stops first."
@@ -13,22 +19,37 @@ struct StartTimerIntent: AppIntent {
     @Parameter(title: "What", requestValueDialog: "What are you working on?")
     var line: String
 
+    init() {}
+
+    init(line: String) {
+        self.line = line
+    }
+
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
+        #if WIDGET_EXTENSION
+        return .result(dialog: "Open Time Tracker to start a timer.")
+        #else
         let said = await TimerActions.start(line)
         return .result(dialog: "\(said)")
+        #endif
     }
 }
 
-/// Stops the running timer.
-struct StopTimerIntent: AppIntent {
+/// Stops the running timer, from Siri, Shortcuts, the Live Activity or
+/// Control Center.
+struct StopTimerIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Stop the Timer"
     static let description = IntentDescription("Stops the running timer.")
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
+        #if WIDGET_EXTENSION
+        return .result(dialog: "Open Time Tracker to stop the timer.")
+        #else
         let said = await TimerActions.stop()
         return .result(dialog: "\(said)")
+        #endif
     }
 }
 
@@ -40,41 +61,10 @@ struct OpenCommandLineIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        #if !WIDGET_EXTENSION
         TimerActions.openCommandLine()
+        #endif
         return .result()
-    }
-}
-
-/// The intents as App Shortcuts, so Siri and Spotlight offer them without
-/// setting anything up.
-struct TimeTrackerShortcuts: AppShortcutsProvider {
-    static var appShortcuts: [AppShortcut] {
-        AppShortcut(
-            intent: StartTimerIntent(),
-            phrases: [
-                "Start a timer in \(.applicationName)",
-                "Start tracking time in \(.applicationName)",
-            ],
-            shortTitle: "Start a Timer",
-            systemImageName: "play.fill"
-        )
-        AppShortcut(
-            intent: StopTimerIntent(),
-            phrases: [
-                "Stop the timer in \(.applicationName)",
-                "Stop tracking time in \(.applicationName)",
-            ],
-            shortTitle: "Stop the Timer",
-            systemImageName: "stop.fill"
-        )
-        AppShortcut(
-            intent: OpenCommandLineIntent(),
-            phrases: [
-                "Open the command line in \(.applicationName)",
-            ],
-            shortTitle: "Command Line",
-            systemImageName: "chevron.right"
-        )
     }
 }
 #endif

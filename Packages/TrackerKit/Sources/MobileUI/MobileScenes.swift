@@ -1,5 +1,6 @@
 #if os(iOS)
 import SwiftUI
+import TimerActivity
 import TrackerCore
 import TrackerKit
 import UIKit
@@ -66,6 +67,9 @@ struct MobileRoot: View {
         }
         .onChange(of: model.preferences.appearance, initial: true) { _, appearance in
             apply(appearance)
+        }
+        .onChange(of: LiveActivities.state(of: model), initial: true) { _, state in
+            LiveActivities.shared.show(state)
         }
     }
 
