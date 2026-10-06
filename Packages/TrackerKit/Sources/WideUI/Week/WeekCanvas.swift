@@ -187,6 +187,11 @@ struct DayColumn: View {
     private var day: LocalDate { days[index] }
     private let height = WeekCanvas.hourHeight
 
+    /// The column's own coordinates, which drags measure in. A block's
+    /// edges move while they're dragged, so a drag measured in the edge's
+    /// coordinates would chase itself and jump back and forth.
+    private static let space = "dayColumn"
+
     private func y(_ second: Int) -> CGFloat {
         (CGFloat(second) / 3600 - CGFloat(hours.lowerBound)) * height
     }
@@ -213,6 +218,7 @@ struct DayColumn: View {
                 nowLine(width: width)
             }
             .frame(width: width, height: geometry.size.height, alignment: .topLeading)
+            .coordinateSpace(.named(Self.space))
         }
         .overlay(alignment: .leading) {
             Rectangle().fill(Theme.line).frame(width: 1)
@@ -329,7 +335,7 @@ struct DayColumn: View {
     }
 
     private func moveGesture(_ block: DayBlock, width: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 4)
+        DragGesture(minimumDistance: 4, coordinateSpace: .named(Self.space))
             .onChanged { value in
                 guard !model.isReadOnly else { return }
                 drag = BlockDrag(id: block.id, kind: .move, translation: value.translation)
@@ -346,7 +352,7 @@ struct DayColumn: View {
             .contentShape(Rectangle())
             .resizeCursor()
             .gesture(
-                DragGesture(minimumDistance: 1)
+                DragGesture(minimumDistance: 1, coordinateSpace: .named(Self.space))
                     .onChanged { value in
                         guard !model.isReadOnly else { return }
                         drag = BlockDrag(id: block.id, kind: kind, translation: CGSize(width: 0, height: value.translation.height))
@@ -453,7 +459,7 @@ struct DayColumn: View {
                         .offset(y: offset)
                         .resizeCursor()
                         .gesture(
-                            DragGesture(minimumDistance: 1)
+                            DragGesture(minimumDistance: 1, coordinateSpace: .named(Self.space))
                                 .onChanged { value in
                                     seamDrag = (preview.id, value.translation.height)
                                 }
