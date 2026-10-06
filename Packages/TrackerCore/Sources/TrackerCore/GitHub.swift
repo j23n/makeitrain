@@ -188,14 +188,4 @@ extension Ledger {
     public func issueURL(forTag tag: String, projectID: UUID?) -> URL? {
         GitHub.url(forTag: tag, repositories: projectID.flatMap { projects[$0]?.repositories } ?? [])
     }
-
-    /// The tags among `tags` that refer to issues or pull requests, with
-    /// their web addresses.
-    public func issueLinks(tags: [String], projectID: UUID?) -> [String: URL] {
-        var links: [String: URL] = [:]
-        for tag in tags {
-            links[tag] = issueURL(forTag: tag, projectID: projectID)
-        }
-        return links
-    }
 }

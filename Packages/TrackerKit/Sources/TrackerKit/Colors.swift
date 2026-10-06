@@ -17,23 +17,6 @@ extension Color {
     }
 }
 
-/// Colors offered for projects. The palette lives in TrackerCore, so the
-/// command line can name colors too.
-public enum ProjectColors {
-    public static var palette: [String] { Palette.colors }
-
-    /// The first palette color no live project uses yet, or the least used.
-    public static func next(in ledger: Ledger) -> String {
-        Palette.next(in: ledger)
-    }
-
-    /// A palette color's name, such as "Blue", for VoiceOver and tooltips;
-    /// the hex string for a color that isn't in the palette.
-    public static func name(of hex: String) -> String {
-        Palette.name(of: hex)
-    }
-}
-
 extension Ledger {
     /// The color of an entry's project, gray for none.
     public func color(ofProject projectID: UUID?) -> Color {

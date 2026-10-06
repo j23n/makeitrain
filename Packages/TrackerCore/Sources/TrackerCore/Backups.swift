@@ -62,25 +62,3 @@ extension Changes {
         Changes(months: Set(ledger.entries.values.map(\.month)), projects: true)
     }
 }
-
-/// Why data couldn't be copied to another folder.
-public enum CopyError: Error, Hashable, Sendable {
-    /// Some files in the source couldn't be read, so their records would be
-    /// left behind.
-    case incomplete([FileIssue])
-}
-
-extension Folder {
-    /// Merges every record in `source` into this folder, by id, and leaves
-    /// `source` untouched. Records already here are kept, so this works
-    /// when both folders hold data, as when turning iCloud on for a second
-    /// Mac.
-    ///
-    /// Throws `CopyError.incomplete` without writing anything if some file in
-    /// `source` can't be read.
-    public func merge(from source: Folder) throws -> SaveResult {
-        let loaded = try source.load()
-        guard loaded.issues.isEmpty else { throw CopyError.incomplete(loaded.issues) }
-        return try save(loaded.ledger, changes: .all(in: loaded.ledger))
-    }
-}

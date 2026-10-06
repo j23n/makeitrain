@@ -85,13 +85,6 @@ extension AppModel {
         return copy
     }
 
-    /// The month files a correction's suggested fix changes, for saying so
-    /// before it's accepted.
-    public func monthsChanged(by fix: CorrectionFix) -> Set<MonthKey> {
-        var copy = ledger
-        return copy.apply(fix, now: environment.now()).months
-    }
-
     static func actionName(of fix: CorrectionFix) -> String {
         switch fix {
         case let .overlap(overlapFix):

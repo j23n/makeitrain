@@ -69,21 +69,6 @@ import Testing
         #expect(ledger.projects[uuid(10)]?.name == "Website")
     }
 
-    @Test func deletingAClientDeletesItsProjects() throws {
-        let client = Client(id: uuid(20), name: "Acme", updated: morning)
-        let project = Project(id: uuid(10), clientID: uuid(20), name: "Website", updated: morning)
-        var ledger = Ledger(clients: [client], projects: [project], entries: [entry(1, project: uuid(10))])
-        #expect(throws: LedgerError.hasEntries) {
-            var copy = ledger
-            try copy.deleteClient(uuid(20), now: noon)
-        }
-        ledger.deleteEntry(uuid(1), now: noon)
-        let changes = try ledger.deleteClient(uuid(20), now: noon)
-        #expect(ledger.clients[uuid(20)]?.isDeleted == true)
-        #expect(ledger.projects[uuid(10)]?.isDeleted == true)
-        #expect(changes == Changes(projects: true))
-    }
-
     @Test func mergingAProjectMovesItsEntries() throws {
         let duplicate = Project(id: uuid(10), name: "Acme", updated: morning)
         let original = Project(id: uuid(11), name: "Acme", updated: morning)

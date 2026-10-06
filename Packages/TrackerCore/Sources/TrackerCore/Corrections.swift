@@ -336,9 +336,4 @@ public struct DayTotals: Hashable, Sendable {
         }
         return sum
     }
-
-    /// The days with time logged, earliest first.
-    public var loggedDays: [LocalDate] {
-        days.keys.sorted()
-    }
 }

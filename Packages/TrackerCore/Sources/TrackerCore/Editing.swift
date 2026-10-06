@@ -20,12 +20,6 @@ public struct Changes: Hashable, Sendable {
         months.formUnion(other.months)
         projects = projects || other.projects
     }
-
-    public func union(_ other: Changes) -> Changes {
-        var result = self
-        result.formUnion(other)
-        return result
-    }
 }
 
 public enum LedgerError: Error, Hashable, Sendable {
@@ -343,20 +337,6 @@ extension Ledger {
         new.updated = Timestamp.stamp(after: old.updated, now: now)
         clients[id] = new
         return Changes(projects: true)
-    }
-
-    /// Deletes a client and its projects. Throws `LedgerError.hasEntries` if
-    /// any of its projects has entries.
-    @discardableResult
-    public mutating func deleteClient(_ id: UUID, now: Timestamp) throws -> Changes {
-        guard clients[id]?.isDeleted == false else { throw LedgerError.notFound }
-        let projectIDs = Set(projects.values.filter { $0.clientID == id }.map(\.id))
-        guard !hasEntries(inProjects: projectIDs) else { throw LedgerError.hasEntries }
-        var changes = updateClient(id, now: now) { $0.deleted = now }
-        for projectID in projectIDs where projects[projectID]?.isDeleted == false {
-            changes.formUnion(updateProject(projectID, now: now) { $0.deleted = now })
-        }
-        return changes
     }
 
     /// Moves every project of one client to another, then deletes the first client.

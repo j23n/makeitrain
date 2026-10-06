@@ -52,48 +52,6 @@ import Testing
     }
 }
 
-@Suite struct FolderMergeTests {
-    let now = t("2026-09-23T12:00:00+02:00")
-
-    func entry(_ number: Int, on day: String) -> TimeEntry {
-        TimeEntry(
-            id: uuid(number),
-            start: t("\(day)T09:00:00+02:00"),
-            end: t("\(day)T10:00:00+02:00"),
-            timeZone: "Europe/Berlin",
-            updated: now
-        )
-    }
-
-    @Test func mergesIntoAFolderThatAlreadyHasData() throws {
-        let files = MemoryFiles()
-        let local = Folder(root: URL(fileURLWithPath: "/local"), access: files)
-        let cloud = Folder(root: URL(fileURLWithPath: "/cloud"), access: files)
-        _ = try local.save(Ledger(entries: [entry(1, on: "2026-09-21"), entry(2, on: "2026-08-01")]), changes: Changes(months: [MonthKey(year: 2026, month: 9), MonthKey(year: 2026, month: 8)]))
-        _ = try cloud.save(Ledger(entries: [entry(3, on: "2026-09-22")]), changes: Changes(months: [MonthKey(year: 2026, month: 9)]))
-        let localFiles = files.snapshot().filter { $0.key.hasPrefix("/local/") }
-
-        _ = try cloud.merge(from: local)
-
-        #expect(Set(try cloud.load().ledger.entries.keys) == [uuid(1), uuid(2), uuid(3)])
-        #expect(files.snapshot().filter { $0.key.hasPrefix("/local/") } == localFiles)
-    }
-
-    @Test func refusesToLeaveRecordsBehind() throws {
-        let files = MemoryFiles()
-        let local = Folder(root: URL(fileURLWithPath: "/local"), access: files)
-        let cloud = Folder(root: URL(fileURLWithPath: "/cloud"), access: files)
-        files.put("/local/entries/2026-09.json", Data("not json".utf8))
-        do {
-            _ = try cloud.merge(from: local)
-            Issue.record("Expected the merge to refuse")
-        } catch CopyError.incomplete(let issues) {
-            #expect(issues.map(\.path) == ["entries/2026-09.json"])
-        }
-        #expect(files.paths() == ["/local/entries/2026-09.json"])
-    }
-}
-
 @Suite struct NotDownloadedTests {
     @Test func aFileNotDownloadedYetIsReportedAndNeverWritten() throws {
         let files = MemoryFiles()

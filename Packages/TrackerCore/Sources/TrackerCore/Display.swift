@@ -108,25 +108,3 @@ public struct Combination: Hashable, Sendable {
             && Set(entry.tags.map { $0.lowercased() }) == Set(tags.map { $0.lowercased() })
     }
 }
-
-extension Ledger {
-    /// The most recently used combinations of project and tags, newest first.
-    /// Leaves out archived projects and entries with neither a project nor
-    /// tags.
-    public func recentCombinations(limit: Int = 8) -> [Combination] {
-        var seen: Set<String> = []
-        var result: [Combination] = []
-        let recent = entries.values
-            .filter { !$0.isDeleted }
-            .sorted { TimeEntry.fileOrder($1, $0) }
-        for entry in recent {
-            guard entry.projectID != nil || !entry.tags.isEmpty else { continue }
-            if let projectID = entry.projectID, isArchived(project: projectID) { continue }
-            let key = (entry.projectID?.uuidString ?? "") + "|" + entry.tags.map { $0.lowercased() }.sorted().joined(separator: "|")
-            guard seen.insert(key).inserted else { continue }
-            result.append(Combination(projectID: entry.projectID, tags: entry.tags))
-            if result.count == limit { break }
-        }
-        return result
-    }
-}

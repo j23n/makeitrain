@@ -91,7 +91,7 @@ extension AppModel {
         var plan = try CSVImport.plan(data, into: ledger, timeZone: environment.timeZone(), now: environment.now())
         var colored = ledger
         for index in plan.projects.indices {
-            plan.projects[index].color = ProjectColors.next(in: colored)
+            plan.projects[index].color = Palette.next(in: colored)
             colored.merge(plan.projects[index])
         }
         return plan
@@ -119,27 +119,9 @@ extension AppModel {
 
     // MARK: - Clients and projects
 
-    /// Adds a client and returns its id.
-    @discardableResult
-    public func addClient(named name: String, undoManager: UndoManager?) -> UUID {
-        let client = Client(name: name, updated: environment.now())
-        edit("Add Client", undoManager: undoManager) { ledger, now in
-            ledger.addClient(client, now: now)
-        }
-        return client.id
-    }
-
     public func updateClient(_ id: UUID, actionName: String = "Edit Client", undoManager: UndoManager?, _ change: (inout Client) -> Void) {
         edit(actionName, undoManager: undoManager) { ledger, now in
             ledger.updateClient(id, now: now, change)
-        }
-    }
-
-    /// Deletes a client and its projects. Throws `LedgerError.hasEntries`
-    /// if they have entries; archive the client instead.
-    public func deleteClient(_ id: UUID, undoManager: UndoManager?) throws {
-        try edit("Delete Client", undoManager: undoManager) { ledger, now in
-            try ledger.deleteClient(id, now: now)
         }
     }
 
@@ -147,16 +129,6 @@ extension AppModel {
         try edit("Merge Clients", undoManager: undoManager) { ledger, now in
             try ledger.mergeClient(id, into: target, now: now)
         }
-    }
-
-    /// Adds a project and returns its id.
-    @discardableResult
-    public func addProject(named name: String, client: UUID?, color: String, undoManager: UndoManager?) -> UUID {
-        let project = Project(clientID: client, name: name, color: color, updated: environment.now())
-        edit("Add Project", undoManager: undoManager) { ledger, now in
-            ledger.addProject(project, now: now)
-        }
-        return project.id
     }
 
     public func updateProject(_ id: UUID, actionName: String = "Edit Project", undoManager: UndoManager?, _ change: (inout Project) -> Void) {

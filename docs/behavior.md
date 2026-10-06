@@ -111,7 +111,7 @@ date,start,end,hours,client,project,tags,note
 - A project's page has its time this week, this month and in all, its last twelve weeks day by day, with days over 12 hours in amber, and its tags with their time, those that refer to issues grouped by repository. Selecting a tag renames it, merges it into another or removes it. Its settings are beside it on the Mac and a wide iPad window, and behind Edit on iPhone: its name, client, color, GitHub repositories, the calendar on this device, and archiving, merging or deleting it.
 - Pickers show "Acme › Website redesign"; a project without a client has no prefix.
 - Archiving a client hides it and its projects from pickers and the command line. Their history stays in reports.
-- Deleting a client or project that has entries isn't possible; archive it instead. A client has entries when any of its projects does. Deleting a client deletes its projects too.
+- A project that has entries can't be deleted; archive it instead. A client can be archived, or merged into another, but not deleted.
 - Another device may still log time to a project deleted here. An entry pointing at a deleted project shows that project as archived, and so does a project whose client was deleted.
 - Merging moves every entry of one project to another, or every project of one client to another, and deletes the first. It's for when two devices each added "Acme".
 - Entries point at the project, not the client, so moving a project to another client moves its history too, including in past reports.

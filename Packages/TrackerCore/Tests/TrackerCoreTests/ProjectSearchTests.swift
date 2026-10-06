@@ -3,82 +3,44 @@ import Testing
 @testable import TrackerCore
 
 @Suite struct ProjectSearchTests {
-    let now = t("2026-09-23T12:00:00Z")
-
-    var ledger: Ledger {
-        Ledger(
-            clients: [
-                Client(id: uuid(20), name: "Acme", updated: now),
-                Client(id: uuid(21), name: "Globex", updated: now),
-            ],
-            projects: [
-                Project(id: uuid(10), clientID: uuid(20), name: "Website redesign", updated: now),
-                Project(id: uuid(11), clientID: uuid(20), name: "Care plan", updated: now),
-                Project(id: uuid(12), clientID: uuid(21), name: "Brand refresh", updated: now),
-                Project(id: uuid(13), name: "Research", updated: now),
-                Project(id: uuid(14), name: "Café relaunch", updated: now),
-                Project(id: uuid(15), name: "Admin", archived: true, updated: now),
-            ]
-        )
+    /// How well what's typed matches a project, as the command line ranks
+    /// projects: 0 best, nil not at all.
+    func rank(_ query: String, _ project: String, client: String = "") -> Int? {
+        ProjectSearch.rank(ProjectSearch.terms(query), project: project, client: client)
     }
 
-    func titles(_ query: String, including extra: UUID? = nil) -> [String] {
-        let ledger = ledger
-        return ledger.pickerProjects(matching: query, including: extra).map { ledger.projectTitle($0.id) }
-    }
-
-    @Test func offersEveryLiveProjectWhenNothingIsTyped() {
-        #expect(titles("") == ["Café relaunch", "Research", "Acme › Care plan", "Acme › Website redesign", "Globex › Brand refresh"])
-        #expect(titles("   ") == titles(""))
+    @Test func matchesAnythingWhenNothingIsTyped() {
+        #expect(rank("", "Research") == 0)
+        #expect(rank("   ", "Research") == 0)
     }
 
     @Test func matchesTheClientOrTheProjectAnywhere() {
-        #expect(titles("web") == ["Acme › Website redesign"])
-        #expect(titles("WEB") == ["Acme › Website redesign"])
-        #expect(titles("site") == ["Acme › Website redesign"])
-        #expect(titles("glob") == ["Globex › Brand refresh"])
-        #expect(titles("zzz").isEmpty)
+        #expect(rank("web", "Website redesign", client: "Acme") != nil)
+        #expect(rank("WEB", "Website redesign", client: "Acme") != nil)
+        #expect(rank("site", "Website redesign", client: "Acme") != nil)
+        #expect(rank("glob", "Brand refresh", client: "Globex") != nil)
+        #expect(rank("zzz", "Website redesign", client: "Acme") == nil)
     }
 
     @Test func needsEveryWordTypedInAnyOrder() {
-        #expect(titles("acme web") == ["Acme › Website redesign"])
-        #expect(titles("web acme") == ["Acme › Website redesign"])
-        #expect(titles("  acme   web ") == ["Acme › Website redesign"])
-        #expect(titles("globex web").isEmpty)
+        #expect(rank("acme web", "Website redesign", client: "Acme") != nil)
+        #expect(rank("web acme", "Website redesign", client: "Acme") != nil)
+        #expect(rank("  acme   web ", "Website redesign", client: "Acme") != nil)
+        #expect(rank("globex web", "Website redesign", client: "Acme") == nil)
     }
 
     @Test func ignoresAccentsAndCase() {
-        #expect(titles("cafe") == ["Café relaunch"])
-        #expect(titles("CAFÉ") == ["Café relaunch"])
+        #expect(rank("cafe", "Café relaunch") == 0)
+        #expect(rank("CAFÉ", "Café relaunch") == 0)
     }
 
-    @Test func listsTheBestMatchesFirst() {
+    @Test func ranksANameThatStartsWithWhatsTypedFirst() {
         // "Research" starts with "re"; "relaunch", "redesign" and "refresh"
         // are words that do; "Care" only contains it.
-        #expect(titles("re") == [
-            "Research",
-            "Café relaunch",
-            "Acme › Website redesign",
-            "Globex › Brand refresh",
-            "Acme › Care plan",
-        ])
-    }
-
-    @Test func offersAnArchivedProjectOnlyWhenItsAlreadyChosen() {
-        #expect(titles("admin").isEmpty)
-        #expect(titles("admin", including: uuid(15)) == ["Admin"])
-        #expect(titles("", including: uuid(15)).last == "Admin")
-        #expect(titles("web", including: uuid(15)) == ["Acme › Website redesign"])
-        // A live project isn't listed twice.
-        #expect(titles("web", including: uuid(10)) == ["Acme › Website redesign"])
-    }
-
-    @Test func offersNoProjectWhenNothingOrItIsTyped() {
-        #expect(ProjectSearch.matchesNoProject(""))
-        #expect(ProjectSearch.matchesNoProject("no"))
-        #expect(ProjectSearch.matchesNoProject("No proj"))
-        #expect(ProjectSearch.matchesNoProject("unass"))
-        #expect(!ProjectSearch.matchesNoProject("web"))
-        #expect(!ProjectSearch.matchesNoProject("no web"))
+        #expect(rank("re", "Research") == 0)
+        #expect(rank("re", "Café relaunch") == 1)
+        #expect(rank("re", "Website redesign", client: "Acme") == 1)
+        #expect(rank("re", "Brand refresh", client: "Globex") == 1)
+        #expect(rank("re", "Care plan", client: "Acme") == 2)
     }
 }

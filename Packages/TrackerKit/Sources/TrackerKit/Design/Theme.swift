@@ -144,7 +144,6 @@ public enum Theme {
     /// A switch that's on.
     public static let on = Color(light: RGBA(0x355BD6), dark: RGBA(0x5B7FEB))
     public static let ok = Color(light: RGBA(0x1F7A4D), dark: RGBA(0x7FD1A3))
-    public static let okFill = Color(light: RGBA(0x1F7A4D, alpha: 0.12), dark: RGBA(0x7FD1A3, alpha: 0.16))
 
     /// The running timer and the line at the current time.
     public static let now = Color(light: RGBA(0xE5484D), dark: RGBA(0xFF5C5C))

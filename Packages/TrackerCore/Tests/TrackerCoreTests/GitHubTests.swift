@@ -165,15 +165,14 @@ import Testing
         #expect(ledger.entries[uuid(1)]?.tags == ["acme/api#1", "acme/api#2"])
     }
 
-    @Test func findsTheLinksOfAnEntrysTags() {
+    @Test func findsTheIssueATagRefersTo() {
         let ledger = Ledger(projects: [
             Project(id: uuid(10), name: "Website", repositories: ["https://github.com/acme/web"], updated: t("2026-09-23T09:00:00Z")),
             Project(id: uuid(11), name: "Internal", updated: t("2026-09-23T09:00:00Z")),
         ])
-        let links = ledger.issueLinks(tags: ["design", "#12"], projectID: uuid(10))
-        #expect(links.keys.sorted() == ["#12"])
-        #expect(links["#12"]?.absoluteString == "https://github.com/acme/web/issues/12")
-        #expect(ledger.issueLinks(tags: ["#12"], projectID: uuid(11)).isEmpty)
+        #expect(ledger.issueURL(forTag: "#12", projectID: uuid(10))?.absoluteString == "https://github.com/acme/web/issues/12")
+        #expect(ledger.issueURL(forTag: "design", projectID: uuid(10)) == nil)
+        #expect(ledger.issueURL(forTag: "#12", projectID: uuid(11)) == nil)
         #expect(ledger.issueURL(forTag: "#12", projectID: nil) == nil)
     }
 }

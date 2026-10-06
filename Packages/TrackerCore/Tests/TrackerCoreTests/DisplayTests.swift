@@ -82,23 +82,6 @@ import Testing
         #expect(byProject.count == 3)
     }
 
-    @Test func offersRecentCombinationsNewestFirst() {
-        var ledger = ledger
-        ledger.merge(entry(1, project: uuid(10), tags: ["design"], at: "20T09:00:00"))
-        ledger.merge(entry(2, project: uuid(11), at: "21T09:00:00"))
-        ledger.merge(entry(3, project: uuid(10), tags: ["Design"], at: "22T09:00:00"))
-        ledger.merge(entry(4, project: nil, at: "22T10:00:00"))
-        ledger.merge(entry(5, project: uuid(13), at: "22T11:00:00"))
-        ledger.merge(entry(6, project: nil, tags: ["admin"], at: "22T12:00:00"))
-        let recent = ledger.recentCombinations()
-        #expect(recent == [
-            Combination(projectID: nil, tags: ["admin"]),
-            Combination(projectID: uuid(10), tags: ["Design"]),
-            Combination(projectID: uuid(11), tags: []),
-        ])
-        #expect(ledger.recentCombinations(limit: 1).count == 1)
-    }
-
     @Test func matchesEntriesWithTheSameProjectAndTags() {
         let combination = Combination(projectID: uuid(10), tags: ["design", "#12"])
         #expect(combination.matches(entry(1, project: uuid(10), tags: ["#12", "Design"], at: "22T09:00:00")))

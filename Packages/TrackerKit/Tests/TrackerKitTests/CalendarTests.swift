@@ -93,7 +93,7 @@ final class FakeCalendars: CalendarProvider {
         #expect(!model.hasLinkedCalendars)
 
         let website = model.addProject(named: "Website", client: nil, color: "#4F7CAC", undoManager: nil)
-        model.link(calendars.list[0], to: website)
+        model.setCalendar(calendars.list[0].id, forProject: website)
         #expect(model.linkedProject(of: "acme") == website)
         #expect(model.hasLinkedCalendars)
         // Links are this device's settings.
@@ -125,7 +125,7 @@ final class FakeCalendars: CalendarProvider {
         #expect(model.resolved.map(\.id) == [kickoff])
 
         // Unlinking the calendar leaves nothing to import.
-        model.link(calendars.list[0], to: nil)
+        model.setCalendar(nil, forProject: website)
         #expect(!model.hasLinkedCalendars)
         #expect(model.calendarImportPlan(from: monday, through: tuesday).entries.isEmpty)
     }

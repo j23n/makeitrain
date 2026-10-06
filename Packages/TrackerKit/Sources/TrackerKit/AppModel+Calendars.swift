@@ -33,15 +33,6 @@ extension AppModel {
         return link.projectID
     }
 
-    /// Links a calendar to a project, or unlinks it.
-    public func link(_ calendar: CalendarInfo, to projectID: UUID?) {
-        var links = calendarLinks.filter { $0.calendarID != calendar.id }
-        if let projectID {
-            links.append(CalendarLink(calendarID: calendar.id, title: calendar.title, account: calendar.account, projectID: projectID))
-        }
-        calendarLinks = links
-    }
-
     /// The calendar on this device whose events become entries for a
     /// project, if there is one.
     public func linkedCalendar(ofProject projectID: UUID) -> CalendarInfo? {

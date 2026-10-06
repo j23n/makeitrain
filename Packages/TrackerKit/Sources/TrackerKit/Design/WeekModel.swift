@@ -180,15 +180,6 @@ public final class WeekModel {
         return months.sorted()
     }
 
-    /// The corrections that involve an entry, by number.
-    public func markers(of entryID: UUID) -> [Int] {
-        previews.filter { preview in
-            preview.correction.entryIDs.contains(entryID)
-                || preview.diff.entries.contains { $0.before?.id == entryID }
-        }
-        .map(\.number)
-    }
-
     /// The entry as a suggestion would leave it, if one would change it,
     /// with that suggestion's number.
     public func suggestedChange(of entryID: UUID) -> (number: Int, before: TimeEntry, after: TimeEntry)? {

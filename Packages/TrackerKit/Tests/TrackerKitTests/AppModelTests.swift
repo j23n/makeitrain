@@ -85,6 +85,19 @@ func eventually(_ condition: () -> Bool) async {
     }
 }
 
+extension AppModel {
+    /// Adds a project and returns its id, as "new project" on the command
+    /// line does.
+    @discardableResult
+    func addProject(named name: String, client: UUID?, color: String, undoManager: UndoManager?) -> UUID {
+        let project = Project(clientID: client, name: name, color: color, updated: environment.now())
+        edit("Add Project", undoManager: undoManager) { ledger, now in
+            ledger.addProject(project, now: now)
+        }
+        return project.id
+    }
+}
+
 func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
     let start = DateTimeFormat.parse(time)!
     return TimeEntry(id: id, start: start, end: start.adding(seconds: 3600), timeZone: "Europe/Berlin", note: note, updated: start)

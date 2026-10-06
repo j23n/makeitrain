@@ -52,10 +52,4 @@ public struct Ledger: Hashable, Sendable {
         for project in other.projects.values { merge(project) }
         for entry in other.entries.values { merge(entry) }
     }
-
-    public func merging(_ other: Ledger) -> Ledger {
-        var result = self
-        result.merge(other)
-        return result
-    }
 }

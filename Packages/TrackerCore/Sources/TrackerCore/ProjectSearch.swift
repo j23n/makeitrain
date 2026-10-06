@@ -1,20 +1,13 @@
 import Foundation
 
-/// Finding a project from what's typed into a picker. Each word typed has to
-/// appear in the client's or the project's name, ignoring case and accents,
-/// so "web", "site" and "acme web" all find "Acme › Website redesign".
+/// Finding a project from what's typed, on the command line or in the
+/// projects list's filter. Each word typed has to appear in the client's or
+/// the project's name, ignoring case and accents, so "web", "site" and
+/// "acme web" all find "Acme › Website redesign".
 public enum ProjectSearch {
     /// The words typed, folded for comparing.
     public static func terms(_ query: String) -> [String] {
         words(fold(query))
-    }
-
-    /// Whether a picker should offer "No Project" for what's typed: when
-    /// nothing is typed, or when each word starts a word of "No Project" or
-    /// "Unassigned".
-    public static func matchesNoProject(_ query: String) -> Bool {
-        let names = ["no", "project", "unassigned"]
-        return terms(query).allSatisfy { term in names.contains { $0.hasPrefix(term) } }
     }
 
     /// How well a project matches the words typed, best first: 0 when its
@@ -47,30 +40,5 @@ public enum ProjectSearch {
     /// Runs of letters and digits.
     static func words(_ text: String) -> [String] {
         text.split { !$0.isLetter && !$0.isNumber }.map(String.init)
-    }
-}
-
-extension Ledger {
-    /// The projects a picker offers for what's typed: the best matches
-    /// first, and otherwise in picker order, live projects grouped by client.
-    /// `including` adds a project pickers don't offer, such as the archived
-    /// project an entry already has, when it matches too.
-    public func pickerProjects(matching query: String, including extra: UUID? = nil) -> [Project] {
-        var candidates = pickerProjects()
-        if let extra, let project = projects[extra], !candidates.contains(where: { $0.id == extra }) {
-            candidates.append(project)
-        }
-        let terms = ProjectSearch.terms(query)
-        guard !terms.isEmpty else { return candidates }
-        var matches: [(rank: Int, index: Int, project: Project)] = []
-        for (index, project) in candidates.enumerated() {
-            let clientName = client(forProject: project.id)?.name ?? ""
-            if let rank = ProjectSearch.rank(terms, project: project.name, client: clientName) {
-                matches.append((rank, index, project))
-            }
-        }
-        return matches
-            .sorted { ($0.rank, $0.index) < ($1.rank, $1.index) }
-            .map { $0.project }
     }
 }

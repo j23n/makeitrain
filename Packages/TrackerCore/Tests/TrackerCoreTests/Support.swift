@@ -81,10 +81,6 @@ final class MemoryFiles: FileAccess, @unchecked Sendable {
         locked { files.keys.sorted() }
     }
 
-    func snapshot() -> [String: Data] {
-        locked { files }
-    }
-
     func fileNames(in folder: URL) throws -> [String] {
         let prefix = folder.path.hasSuffix("/") ? folder.path : folder.path + "/"
         return locked {
@@ -130,5 +126,23 @@ final class MemoryFiles: FileAccess, @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         return try body()
+    }
+}
+
+extension Ledger {
+    /// A copy with every record of `other` merged in.
+    func merging(_ other: Ledger) -> Ledger {
+        var result = self
+        result.merge(other)
+        return result
+    }
+}
+
+extension Changes {
+    /// These changes and `other`'s.
+    func union(_ other: Changes) -> Changes {
+        var result = self
+        result.formUnion(other)
+        return result
     }
 }
