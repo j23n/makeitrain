@@ -45,7 +45,7 @@ struct PhoneWeek: View {
             } else {
                 PhoneCommandBar(
                     model: model,
-                    placeholder: model.running == nil ? "start, or log time" : "switch, stop or log",
+                    placeholder: model.running == nil ? "start a timer or log time" : "switch, stop or log time",
                     open: { router.openCommandLine() }
                 )
             }
@@ -75,8 +75,8 @@ struct PhoneWeek: View {
                     .font(.system(size: 16))
                     .padding(.trailing, 4)
                 }
-                stepButton("chevron.left", "Week before", -7)
-                stepButton("chevron.right", "Week after", 7)
+                stepButton("chevron.left", "Previous week", -7)
+                stepButton("chevron.right", "Next week", 7)
             }
             .padding(.leading, 20)
             .padding(.trailing, 8)
@@ -124,7 +124,7 @@ struct PhoneWeek: View {
             }
             .monospacedDigit()
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(Text("\(Format.duration(totals.total)), \(Format.duration(corrected)) with the corrections"))
+            .accessibilityLabel(Text("\(Format.duration(totals.total)), \(Format.duration(corrected)) with corrections"))
         } else {
             Text(Format.duration(totals.total))
                 .font(.system(size: 15, weight: .semibold))
@@ -214,7 +214,7 @@ struct PhoneCorrectionPanel: View {
                     .font(.system(size: 13))
                     .foregroundStyle(Theme.text3)
                     .monospacedDigit()
-                stepButton("chevron.left", "Correction before", -1)
+                stepButton("chevron.left", "Previous correction", -1)
                 stepButton("chevron.right", "Next correction", 1)
             }
             Text(CorrectionText.title(correction, model: model))

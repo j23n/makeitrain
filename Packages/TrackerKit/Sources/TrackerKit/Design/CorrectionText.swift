@@ -36,7 +36,7 @@ public enum CorrectionText {
                 return "\(name(earlier, ledger)) and \(name(later, ledger)) start together"
             }
             if let earlierEnd = earlier.end, later.end.map({ earlierEnd > $0 }) ?? false {
-                return "\(name(later, ledger)) sits inside \(name(earlier, ledger))"
+                return "\(name(later, ledger)) is inside \(name(earlier, ledger))"
             }
             return "\(name(earlier, ledger)) runs \(words(overlap.duration)) into \(name(later, ledger))"
         case let .ranLong(id, overnight):
@@ -65,14 +65,14 @@ public enum CorrectionText {
         case .overlap:
             return nil
         case .ranLong:
-            return correction.fixes.isEmpty ? nil : "It probably ended when your day usually does."
+            return correction.fixes.isEmpty ? nil : "Suggested end: when your day usually ends."
         case .noProject:
             if case let .assign(_, projectID)? = correction.suggestion {
                 return "An entry with the same note is in \(ledger.projectTitle(projectID))."
             }
-            return "Choose its project, so it counts in reports."
+            return nil
         case let .notLogged(entry):
-            return "It's in the calendar linked to \(ledger.projectTitle(entry.projectID)), so it goes there."
+            return "From the calendar linked to \(ledger.projectTitle(entry.projectID))."
         }
     }
 
@@ -106,8 +106,7 @@ public enum CorrectionText {
         }
     }
 
-    /// "1 suggestion", in words up to ten, as in "Accept the four with a
-    /// suggestion".
+    /// A count in words up to ten, as in "Accept four suggestions".
     public static func number(_ count: Int) -> String {
         let words = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
         return count < words.count ? words[count] : "\(count)"

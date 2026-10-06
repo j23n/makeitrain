@@ -168,18 +168,6 @@ public final class WeekModel {
         return (total, corrected == total ? nil : corrected)
     }
 
-    /// The month files the suggestions change, for saying so.
-    public var monthsChanged: [MonthKey] {
-        var months = Set<MonthKey>()
-        for preview in previews {
-            for change in preview.diff.entries {
-                if let before = change.before { months.insert(before.month) }
-                if let after = change.after { months.insert(after.month) }
-            }
-        }
-        return months.sorted()
-    }
-
     /// The entry as a suggestion would leave it, if one would change it,
     /// with that suggestion's number.
     public func suggestedChange(of entryID: UUID) -> (number: Int, before: TimeEntry, after: TimeEntry)? {

@@ -112,8 +112,8 @@ struct WeekScreen: View {
                 .font(.system(size: 19, weight: .semibold))
                 .lineLimit(1)
             HStack(spacing: 2) {
-                stepButton("chevron.left", span == .day ? "Day before" : "Week before", -1)
-                stepButton("chevron.right", span == .day ? "Day after" : "Week after", 1)
+                stepButton("chevron.left", span == .day ? "Previous day" : "Previous week", -1)
+                stepButton("chevron.right", span == .day ? "Next day" : "Next week", 1)
             }
             if !range.contains(model.today) {
                 Button("Today") {
@@ -183,7 +183,7 @@ struct WeekScreen: View {
                 }
             }
             if hidesWeekend {
-                Text("Weekend: nothing logged")
+                Text("Weekend hidden: nothing logged")
             }
         }
         .font(.system(size: 12))
@@ -204,7 +204,7 @@ struct WeekScreen: View {
                 Text(Format.duration(corrected))
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(Theme.amberText)
-                Text("with the corrections")
+                Text("with corrections")
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.text2)
             }
@@ -267,13 +267,13 @@ struct LineEditor: View {
                     KeyCap("⏎")
                     Text("apply")
                     KeyCap("esc")
-                    Text("put back")
+                    Text("revert")
                 }
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.text2)
                 .fixedSize()
             } else {
-                Text("Select an entry to change it here as a line, such as 2 oct 13:30-16:30 bookings #153 Bug fix.")
+                Text("Select an entry to edit it here.")
                     .font(.system(size: 12.5))
                     .foregroundStyle(Theme.text3)
                     .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)

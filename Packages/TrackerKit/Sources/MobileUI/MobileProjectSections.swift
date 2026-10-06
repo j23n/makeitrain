@@ -50,7 +50,7 @@ struct MobileRepositoriesSection: View {
                             Button {
                                 makeFirst(item)
                             } label: {
-                                Label("Use for #123", systemImage: "arrow.up")
+                                Label("Make First", systemImage: "arrow.up")
                             }
                             .tint(.accentColor)
                         }
@@ -60,7 +60,7 @@ struct MobileRepositoriesSection: View {
                             Button {
                                 makeFirst(item)
                             } label: {
-                                Label("Use for Tags Like #123", systemImage: "arrow.up")
+                                Label("Make First", systemImage: "arrow.up")
                             }
                         }
                         Button(role: .destructive) {
@@ -77,7 +77,7 @@ struct MobileRepositoriesSection: View {
                 }
             }
             HStack {
-                TextField("owner/name or its address", text: $newRepository)
+                TextField("owner/repo or URL", text: $newRepository)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .keyboardType(.URL)
@@ -89,7 +89,7 @@ struct MobileRepositoriesSection: View {
                     .disabled(newRepository.trimmingCharacters(in: .whitespaces).isEmpty)
             }
             if invalid {
-                Text("That isn't a GitHub repository. Write it as owner/name, or paste its address.")
+                Text("Not a GitHub repository. Use owner/repo or a URL.")
                     .font(.callout)
                     .foregroundStyle(.red)
             }
@@ -97,8 +97,8 @@ struct MobileRepositoriesSection: View {
             Text("GitHub")
         } footer: {
             Text(repositories.count > 1
-                ? "A tag like #123 opens issue or pull request 123 in the first repository; for another one, write its name first, like \(repositories[1].repository.name)#123. Swipe right on a repository to make it the first: the project's tags like #123 are rewritten so they keep their issues."
-                : "A tag like #123 opens issue or pull request 123 in this repository.")
+                ? "#123 refers to an issue in the first repository. Swipe right to make another one first."
+                : "#123 refers to an issue in this repository.")
         }
     }
 
@@ -137,7 +137,7 @@ struct MobileProjectCalendarSection: View {
                     }
                 }
             case .restricted:
-                Text("Reading calendars isn't allowed on this device.")
+                Text("Calendar access is restricted on this device.")
                     .foregroundStyle(.secondary)
             case .granted:
                 Picker("Calendar", selection: Binding(
@@ -156,8 +156,6 @@ struct MobileProjectCalendarSection: View {
             }
         } header: {
             Text("Calendar on This Device")
-        } footer: {
-            Text("Settings › Import Calendar Events… adds the calendar's events to this project, with each event's title as the note. Each iPhone and Mac keeps its own calendar links.")
         }
         .onAppear {
             model.refreshCalendars()

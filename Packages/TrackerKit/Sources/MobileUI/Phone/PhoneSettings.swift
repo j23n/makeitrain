@@ -38,24 +38,10 @@ struct PhoneSettings: View {
                     .listRowInsets(EdgeInsets())
                 }
 
-                Section("Quick start") {
-                    Toggle(isOn: Binding(get: { preferences.showsLiveActivity }, set: { preferences.showsLiveActivity = $0 })) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Live Activity")
-                            Text("The running timer on the Lock Screen")
-                                .font(.footnote)
-                                .foregroundStyle(Theme.text3)
-                        }
-                    }
-                    NavigationLink {
+                Section {
+                    Toggle("Live Activity", isOn: Binding(get: { preferences.showsLiveActivity }, set: { preferences.showsLiveActivity = $0 }))
+                    NavigationLink("Shortcuts and controls") {
                         PhoneShortcutsHelp()
-                    } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Shortcuts and controls")
-                            Text("Start, stop or switch from Control Center, the Lock Screen or the Action button")
-                                .font(.footnote)
-                                .foregroundStyle(Theme.text3)
-                        }
                     }
                 }
 
@@ -87,7 +73,7 @@ struct PhoneSettings: View {
                     } label: {
                         LabeledContent("Files", value: filesSummary)
                     }
-                    LabeledContent("Backups", value: "daily, \(model.backupNames.count) kept")
+                    LabeledContent("Latest backup", value: model.backupNames.first ?? "None yet")
                     Button(backingUp ? "Backing Up…" : "Back Up Now") {
                         backingUp = true
                         Task {
@@ -111,8 +97,6 @@ struct PhoneSettings: View {
                         .disabled(!model.resolved.contains { !$0.isRunning })
                 } header: {
                     Text("Import and export")
-                } footer: {
-                    Text("Exports have the columns date, start, end, hours, client, project, tags, note. Imports show what they add before anything changes.")
                 }
 
                 calendars
@@ -191,10 +175,10 @@ struct PhoneSettings: View {
                     Task { await model.requestCalendarAccess() }
                 }
             case .denied:
-                Text("Time Tracker isn't allowed to read your calendars. Allow it in the Settings app, under Privacy & Security.")
+                Text("Denied. Allow it in Settings › Privacy & Security.")
                     .foregroundStyle(Theme.text2)
             case .restricted:
-                Text("Reading calendars isn't allowed on this iPhone.")
+                Text("Calendar access is restricted on this iPhone.")
                     .foregroundStyle(Theme.text2)
             case .granted:
                 if model.calendars.isEmpty {
@@ -221,8 +205,6 @@ struct PhoneSettings: View {
             }
         } header: {
             Text("Calendars on this iPhone")
-        } footer: {
-            Text("A project's calendar shows its events in the week until you log them. These settings stay on this iPhone; clients, projects and entries sync through your files.")
         }
     }
 
@@ -256,25 +238,25 @@ struct PhoneSettings: View {
             return "Saving…"
         }
         if let saved = model.lastSaved {
-            return "Up to date, saved at \(Format.time(saved, zone: model.environment.timeZone()))"
+            return "Saved at \(Format.time(saved, zone: model.environment.timeZone()))"
         }
-        return model.state == .ready ? "Up to date" : "Opening…"
+        return model.state == .ready ? "Saved" : "Opening…"
     }
 
     private var filesSummary: String {
         let files = model.dataFiles
         let unread = files.filter { $0.problem != nil }.count
-        return unread == 0 ? "\(files.count), all read" : "\(files.count), \(unread) not read"
+        return unread == 0 ? "\(files.count)" : "\(files.count), \(unread) can't be read"
     }
 
     private var storageExplanation: String {
         switch model.storage {
         case .iCloud:
-            "Turning this off copies everything to this iPhone and leaves iCloud as it is, so your other devices keep syncing."
+            "Turning it off copies your data to this iPhone. The copy in iCloud stays."
         case .local:
             model.isICloudAvailable
-                ? "Turning this on merges your data with any already in iCloud Drive."
-                : "Sign in to iCloud to sync your data."
+                ? "Turning it on merges your data with what's in iCloud Drive."
+                : "Sign in to iCloud to use it."
         }
     }
 
@@ -307,7 +289,7 @@ struct PhoneDataFiles: View {
                     HStack(spacing: 10) {
                         Image(systemName: file.problem == nil ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                             .foregroundStyle(file.problem == nil ? Theme.ok : Theme.amber)
-                            .accessibilityLabel(Text(file.problem == nil ? "Read" : "Not read"))
+                            .accessibilityLabel(Text(file.problem == nil ? "Loaded" : "Not loaded"))
                         VStack(alignment: .leading, spacing: 2) {
                             Text(file.path)
                                 .font(.system(size: 14, design: .monospaced))
@@ -317,8 +299,6 @@ struct PhoneDataFiles: View {
                         }
                     }
                 }
-            } footer: {
-                Text("Plain JSON, one file per month. Edit one by hand and the app merges your edit; a file it can't read is never overwritten.")
             }
         }
         .navigationTitle("Files")
@@ -327,9 +307,9 @@ struct PhoneDataFiles: View {
 
     private func describe(_ problem: FileProblem) -> String {
         switch problem {
-        case .unreadable: "Can't be read, so it's left as it is."
-        case let .newerVersion(version): "Written by a newer version of the app (\(version)), so it's left as it is."
-        case .notDownloaded: "Not downloaded from iCloud yet."
+        case .unreadable: "Can't be read. Left unchanged."
+        case let .newerVersion(version): "From a newer version (\(version)). Left unchanged."
+        case .notDownloaded: "Not downloaded yet."
         }
     }
 }
@@ -339,16 +319,16 @@ struct PhoneShortcutsHelp: View {
     var body: some View {
         List {
             Section {
-                row("Start a Timer", "Asks what you're working on, as you'd type it in the command line, such as bookings #227 export.")
-                row("Stop the Timer", "Stops the running timer.")
-                row("Open the Command Line", "Opens Time Tracker with the command line ready to type in.")
+                row("Start a Timer", "Asks what to start, as typed in the command line.")
+                Text("Stop the Timer")
+                Text("Open the Command Line")
             } header: {
-                Text("In the Shortcuts app")
+                Text("Shortcuts")
             } footer: {
-                Text("Ask Siri, or run them from the Shortcuts app, a widget, the Action button or Back Tap.")
+                Text("Run them with Siri, the Shortcuts app, the Action button or Back Tap.")
             }
             Section {
-                Text("In Control Center, tap + and add Time Tracker's Start or Stop control. On the Lock Screen, customize it and add one of the same controls. On iPhones with an Action button, choose a Time Tracker shortcut for it in the Settings app, under Action Button.")
+                Text("Add the Command Line or Stop the Timer control in Control Center or on the Lock Screen. For the Action button, choose a Time Tracker shortcut in Settings › Action Button.")
                     .foregroundStyle(Theme.text2)
             } header: {
                 Text("Controls")

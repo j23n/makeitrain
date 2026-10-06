@@ -1,6 +1,6 @@
 # Time Tracker
 
-A menu bar time tracker for the Mac, with an iPhone and iPad app. You start, switch, stop and log time by typing a line, such as `book #227 export from 9:30`, and the week shows what needs correcting, such as overlaps and timers left running, with a fix for each. It keeps everything in readable JSON files, in iCloud Drive or a local folder, and never touches the network.
+A menu bar time tracker for the Mac, with an iPhone and iPad app. You start, switch, stop and log time by typing a line, such as `web #12 fix login from 9:30`, and the week shows what needs correcting, such as overlaps and timers left running, with a fix for each. It keeps everything in readable JSON files, in iCloud Drive or a local folder, and never touches the network.
 
 ## Building
 

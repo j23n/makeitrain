@@ -96,7 +96,7 @@ struct GeneralSettings: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 SettingsSection(title: "Appearance") {
-                    SettingsRow(title: "Light or dark", detail: "System follows macOS and switches with it.", divided: false) {
+                    SettingsRow(title: "Light or dark", divided: false) {
                         SegmentPicker(
                             Preferences.Appearance.allCases.map { (value: $0, title: $0.title) },
                             selection: Binding(get: { preferences.appearance }, set: { preferences.appearance = $0 })
@@ -120,7 +120,7 @@ struct GeneralSettings: View {
                 }
 
                 SettingsSection(title: "Command line") {
-                    SettingsRow(title: "Open it from anywhere", detail: "Over any app, without touching the menu bar.", divided: false) {
+                    SettingsRow(title: "Keyboard shortcut", divided: false) {
                         HStack(spacing: 8) {
                             if recording {
                                 Text("Type a shortcut…")
@@ -146,36 +146,33 @@ struct GeneralSettings: View {
                             .buttonStyle(ChoiceButtonStyle(compact: true))
                         }
                     }
-                    SettingsRow(title: "Close it after Return", detail: "Leave it on to start a timer and get back to work.") {
-                        Toggle("Close it after Return", isOn: Binding(get: { preferences.closesAfterReturn }, set: { preferences.closesAfterReturn = $0 }))
+                    SettingsRow(title: "Close after Return") {
+                        Toggle("Close after Return", isOn: Binding(get: { preferences.closesAfterReturn }, set: { preferences.closesAfterReturn = $0 }))
                             .toggleStyle(.switch)
                             .labelsHidden()
                     }
-                    SettingsRow(title: "Everything you can type, with examples") {
-                        Button("Show the cheat sheet") {
+                    SettingsRow(title: "Commands") {
+                        Button("Show") {
                             showsCheatSheet = true
                         }
                         .buttonStyle(.link)
                     }
                 }
 
-                SettingsSection(
-                    title: "Menu bar",
-                    footer: "These settings stay on this Mac. Clients, projects and entries are in your data files, and those sync."
-                ) {
-                    SettingsRow(title: "Show the running time", divided: false) {
-                        Toggle("Show the running time", isOn: Binding(get: { preferences.menuBarShowsTime }, set: { preferences.menuBarShowsTime = $0 }))
+                SettingsSection(title: "Menu bar") {
+                    SettingsRow(title: "Show elapsed time", divided: false) {
+                        Toggle("Show elapsed time", isOn: Binding(get: { preferences.menuBarShowsTime }, set: { preferences.menuBarShowsTime = $0 }))
                             .toggleStyle(.switch)
                             .labelsHidden()
                     }
-                    SettingsRow(title: "Show the project's name too") {
-                        Toggle("Show the project's name too", isOn: Binding(get: { preferences.menuBarShowsProject }, set: { preferences.menuBarShowsProject = $0 }))
+                    SettingsRow(title: "Show project name") {
+                        Toggle("Show project name", isOn: Binding(get: { preferences.menuBarShowsProject }, set: { preferences.menuBarShowsProject = $0 }))
                             .toggleStyle(.switch)
                             .labelsHidden()
                             .disabled(!preferences.menuBarShowsTime)
                     }
-                    SettingsRow(title: "Mark it when something needs correcting", detail: "Overlaps, overnight timers, entries with no project, events not logged.") {
-                        Toggle("Mark it when something needs correcting", isOn: Binding(get: { preferences.menuBarMarksCorrections }, set: { preferences.menuBarMarksCorrections = $0 }))
+                    SettingsRow(title: "Show when there are corrections") {
+                        Toggle("Show when there are corrections", isOn: Binding(get: { preferences.menuBarMarksCorrections }, set: { preferences.menuBarMarksCorrections = $0 }))
                             .toggleStyle(.switch)
                             .labelsHidden()
                     }
@@ -236,38 +233,39 @@ struct CheatSheet: View {
 
     private let groups: [Topic] = [
         Topic(title: "Timers", rows: [
-            Row(example: "book #227 Export to PDF", meaning: "Start Bookings with the tag #227 and a note, or switch to it"),
-            Row(example: "book #227", meaning: "The note comes from the last entry with #227"),
-            Row(example: "harbor from 11:05", meaning: "Switch, as if you had at 11:05"),
-            Row(example: "harbor -15m", meaning: "Switch, as if you had 15 minutes ago"),
-            Row(example: "from 10:30", meaning: "The running timer started at 10:30"),
-            Row(example: "stop", meaning: "Stop now; stop 11:05 or stop -10m for earlier"),
+            Row(example: "web #12 Fix login", meaning: "Start Website with the tag #12 and a note, or switch to it"),
+            Row(example: "web #12", meaning: "Use the note of the last entry tagged #12"),
+            Row(example: "brand from 11:05", meaning: "Switch, starting at 11:05"),
+            Row(example: "brand -15m", meaning: "Switch, starting 15 minutes ago"),
+            Row(example: "from 10:30", meaning: "Change the running timer's start to 10:30"),
+            Row(example: "stop", meaning: "Stop now. Also stop 11:05 or stop -10m"),
         ]),
         Topic(title: "Logging time", rows: [
-            Row(example: "book review 9:00-10:30", meaning: "Log a finished entry; also 9-10:30, 9am-11am"),
-            Row(example: "book review wed 14-16", meaning: "On another day: yesterday, wed, 30 sep, 2026-09-30"),
-            Row(example: "book review for 45m", meaning: "Log 45 minutes that end now"),
-            Row(example: "⌥⏎", meaning: "Log what's typed as done, since the last entry ended"),
+            Row(example: "web review 9:00-10:30", meaning: "Log a finished entry. Also 9-10:30 or 9am-11am"),
+            Row(example: "web review wed 14-16", meaning: "Log on another day: yesterday, wed, 30 sep, 2026-09-30"),
+            Row(example: "web review for 45m", meaning: "Log 45 minutes ending now"),
+            Row(example: "⌥⏎", meaning: "Log the line as finished, from the end of the last entry"),
         ]),
         Topic(title: "Clients and projects", rows: [
-            Row(example: "new project Phoenix for zenith", meaning: "Add a project, and its client if that's new"),
-            Row(example: "new client Acme", meaning: "Add a client"),
-            Row(example: "archive harbor", meaning: "Archive a project or client; unarchive brings it back"),
-            Row(example: "color book teal", meaning: "Blue, red, green, purple, orange, teal, gold or gray"),
-            Row(example: "rename book to Bookings Pro", meaning: "Rename a project or client"),
-            Row(example: "merge zenith2 into zenith", meaning: "Move everything over, then delete the first"),
+            Row(example: "new project App for acme", meaning: "Add a project, and its client if it's new"),
+            Row(example: "new client Globex", meaning: "Add a client"),
+            Row(example: "archive brand", meaning: "Archive a project or client"),
+            Row(example: "unarchive brand", meaning: "Bring it back"),
+            Row(example: "color web teal", meaning: "Blue, red, green, purple, orange, teal, gold or gray"),
+            Row(example: "rename web to Website v2", meaning: "Rename a project or client"),
+            Row(example: "merge acme2 into acme", meaning: "Move everything to the second, then delete the first"),
         ]),
-        Topic(title: "Finding", rows: [
-            Row(example: "find export pdf", meaning: "List the entries with those words"),
-            Row(example: "↑ and ↓", meaning: "Earlier lines, and today so far"),
-            Row(example: "⇥", meaning: "Finish the line from the last entry like it"),
+        Topic(title: "Search", rows: [
+            Row(example: "find login", meaning: "List the entries with these words"),
+            Row(example: "↑ and ↓", meaning: "Previous lines, then today's entries"),
+            Row(example: "⇥", meaning: "Complete the line from the last matching entry"),
         ]),
     ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("Everything you can type")
+                Text("Commands")
                     .font(.title3.weight(.semibold))
                 Spacer()
                 Button("Done") { dismiss() }
@@ -316,7 +314,7 @@ struct DataSettings: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                SettingsSection(title: "Where your data is") {
+                SettingsSection(title: "Location") {
                     SettingsRow(title: location, detail: status, divided: false) {
                         Button("Show in Finder") {
                             show(model.dataFolder)
@@ -331,10 +329,7 @@ struct DataSettings: View {
                     }
                 }
 
-                SettingsSection(
-                    title: "Files",
-                    footer: "Plain JSON, one file per month. Edit one by hand and the app merges your edit; a file it can't read is never overwritten."
-                ) {
+                SettingsSection(title: "Files") {
                     ForEach(Array(model.dataFiles.prefix(13).enumerated()), id: \.element.id) { index, file in
                         VStack(spacing: 0) {
                             if index > 0 {
@@ -343,7 +338,7 @@ struct DataSettings: View {
                             HStack(spacing: 10) {
                                 Image(systemName: file.problem == nil ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                                     .foregroundStyle(file.problem == nil ? Theme.ok : Theme.amber)
-                                    .accessibilityLabel(Text(file.problem == nil ? "Read" : "Not read"))
+                                    .accessibilityLabel(Text(file.problem == nil ? "Loaded" : "Not loaded"))
                                 Text(file.path)
                                     .font(.system(size: 12, design: .monospaced))
                                     .frame(width: 190, alignment: .leading)
@@ -359,7 +354,7 @@ struct DataSettings: View {
                 }
 
                 SettingsSection(title: "Backups") {
-                    SettingsRow(title: "Every day, and before you switch storage", detail: backupDetail, divided: false) {
+                    SettingsRow(title: "Latest backup", detail: backupDetail, divided: false) {
                         HStack(spacing: 8) {
                             Button("Back Up Now") {
                                 backingUp = true
@@ -379,9 +374,9 @@ struct DataSettings: View {
 
                 SettingsSection(
                     title: "Calendars on this Mac",
-                    footer: "Links stay on this Mac, since each device names its calendars differently. Change one on the project's page."
+                    footer: "Link a calendar on a project's page."
                 ) {
-                    SettingsRow(title: "Access to your calendars", divided: false) {
+                    SettingsRow(title: "Calendar access", divided: false) {
                         calendarAccess
                     }
                     ForEach(model.calendars.filter { model.linkedProject(of: $0.id) != nil }) { calendar in
@@ -394,10 +389,7 @@ struct DataSettings: View {
                     }
                 }
 
-                SettingsSection(
-                    title: "Import and export",
-                    footer: "Exports have the columns date, start, end, hours, client, project, tags, note. Imports show what they add before anything changes."
-                ) {
+                SettingsSection(title: "Import and export") {
                     HStack(spacing: 8) {
                         Button("Import CSV…") { ask(.importCSV) }
                         Button("Import Calendar Events…") { ask(.importEvents) }
@@ -428,14 +420,13 @@ struct DataSettings: View {
             return "Saving…"
         }
         if let saved = model.lastSaved {
-            return "Up to date · saved at \(Format.time(saved, zone: model.environment.timeZone()))"
+            return "Saved at \(Format.time(saved, zone: model.environment.timeZone()))"
         }
-        return model.state == .ready ? "Up to date" : "Opening…"
+        return model.state == .ready ? "Saved" : "Opening…"
     }
 
     private var backupDetail: String {
-        let latest = model.backupNames.first.map { " The newest is \($0)." } ?? ""
-        return "The 30 newest are kept on this Mac." + latest
+        model.backupNames.first ?? "None yet"
     }
 
     @ViewBuilder
@@ -450,7 +441,7 @@ struct DataSettings: View {
             }
             .buttonStyle(ChoiceButtonStyle(compact: true))
         case .denied, .restricted:
-            Text("Not allowed: turn it on in System Settings › Privacy & Security")
+            Text("Denied. Allow it in System Settings › Privacy & Security.")
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.text2)
         }
@@ -458,9 +449,9 @@ struct DataSettings: View {
 
     private func describe(_ problem: FileProblem) -> String {
         switch problem {
-        case .unreadable: "Can't be read, so it's left as it is."
-        case let .newerVersion(version): "Written by a newer version of the app (\(version)), so it's left as it is."
-        case .notDownloaded: "Not downloaded from iCloud yet."
+        case .unreadable: "Can't be read. Left unchanged."
+        case let .newerVersion(version): "From a newer version (\(version)). Left unchanged."
+        case .notDownloaded: "Not downloaded yet."
         }
     }
 
@@ -491,11 +482,11 @@ struct DataSettings: View {
     private var storageExplanation: String {
         switch model.storage {
         case .iCloud:
-            "Turning this off copies everything to this Mac and leaves iCloud as it is, so your other devices keep syncing."
+            "Turning it off copies your data to this Mac. The copy in iCloud stays."
         case .local:
             model.isICloudAvailable
-                ? "Turning this on merges your data with any already in iCloud Drive."
-                : "Sign in to iCloud to sync your data."
+                ? "Turning it on merges your data with what's in iCloud Drive."
+                : "Sign in to iCloud to use it."
         }
     }
 

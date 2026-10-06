@@ -337,7 +337,7 @@ public final class AppModel {
         public var errorDescription: String? {
             switch self {
             case .iCloudNotDownloaded:
-                "Some of your data hasn't downloaded from iCloud yet. Try again once it has."
+                "Some data hasn't downloaded from iCloud yet. Try again later."
             case .iCloudUnavailable:
                 "Sign in to iCloud and turn on iCloud Drive first."
             }

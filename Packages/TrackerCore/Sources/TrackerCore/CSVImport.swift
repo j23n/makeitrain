@@ -76,7 +76,7 @@ public enum CSVImport {
             case .noRows:
                 "The file has no rows to import."
             case .noStartColumn:
-                "The file has no column for when entries start. Its first line should name the columns, such as \"start\", \"end\" and \"project\"."
+                "The file has no start column. Its first line should name the columns, such as \"start\", \"end\" and \"project\"."
             }
         }
 

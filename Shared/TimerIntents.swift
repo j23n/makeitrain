@@ -13,7 +13,7 @@ import MobileUI
 struct StartTimerIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Start a Timer"
     static let description = IntentDescription(
-        "Starts a timer for what you're working on, written as in the command line, such as “bookings #227 export”. A running timer stops first."
+        "Starts a timer for what you type, as in the command line. A running timer stops first."
     )
 
     @Parameter(title: "What", requestValueDialog: "What are you working on?")
@@ -56,7 +56,7 @@ struct StopTimerIntent: LiveActivityIntent {
 /// Opens the app with the command line ready to type in.
 struct OpenCommandLineIntent: AppIntent {
     static let title: LocalizedStringResource = "Open the Command Line"
-    static let description = IntentDescription("Opens Time Tracker with the command line ready to type in.")
+    static let description = IntentDescription("Opens the command line.")
     static let openAppWhenRun = true
 
     @MainActor

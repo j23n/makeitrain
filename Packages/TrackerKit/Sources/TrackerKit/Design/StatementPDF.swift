@@ -48,7 +48,7 @@ public enum StatementPDF {
         return data as Data
     }
 
-    /// The file name for a statement, such as "Northbridge 2026-09-01 to
+    /// The file name for a statement, such as "Acme 2026-09-01 to
     /// 2026-09-30.pdf".
     public static func fileName(for report: Report, title: String) -> String {
         let range = report.request.range

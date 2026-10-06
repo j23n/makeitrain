@@ -282,7 +282,7 @@ struct TargetLabel: View {
     }
 }
 
-/// What a command changes, in words: "Bookings ends at 10:40, after 1:10.
+/// What a command changes, in words: "Website ends at 10:40, after 1:10.
 /// No gap, no overlap." or the times that change, struck through.
 public struct CommandChanges: View {
     let model: AppModel
@@ -367,7 +367,7 @@ public struct CommandChanges: View {
             guard let after = change.after else { continue }
             if change.isNew {
                 let client = after.clientID.flatMap { ledger.clients[$0]?.name }
-                result.append(Text("Adds \(after.name)") + Text(client.map { " to \($0)" } ?? "") + Text(", in \(Palette.name(of: after.color)). Repositories and a calendar can wait for its page."))
+                result.append(Text("Adds \(after.name)") + Text(client.map { " to \($0)" } ?? "") + Text(", in \(Palette.name(of: after.color))."))
             }
         }
         if case .start(_, _, .none) = command, model.running != nil, preview.newOverlaps.isEmpty {

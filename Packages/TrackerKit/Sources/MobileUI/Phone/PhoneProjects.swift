@@ -227,14 +227,14 @@ struct PhoneProjects: View {
         .accessibilityLabel(Text("\(project.name)\(running ? ", running" : ""), \(row.thisWeek > 0 ? Format.duration(row.thisWeek) : "nothing") this week"))
     }
 
-    /// "Scheduler · Libs · Northbridge calendar", or the time in all.
+    /// "web · api · Work calendar", or the time in all.
     private func detail(_ project: Project, total: Int64) -> String {
         var parts = project.repositories.compactMap { GitHub.Repository($0)?.name }
         if let calendar = model.linkedCalendar(ofProject: project.id) {
             parts.append("\(calendar.title) calendar")
         }
         if parts.isEmpty {
-            return total > 0 ? "\(Format.duration(total)) in all" : "No time yet"
+            return total > 0 ? "\(Format.duration(total)) total" : "No time yet"
         }
         return parts.joined(separator: " · ")
     }
@@ -329,7 +329,7 @@ struct PhoneArchivedProjects: View {
                             .frame(width: 12, height: 12)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(model.ledger.projectTitle(project.id))
-                            Text("\(Format.duration(stats[project.id].total)) in all")
+                            Text("\(Format.duration(stats[project.id].total)) total")
                                 .font(.system(size: 12))
                                 .foregroundStyle(Theme.text3)
                         }

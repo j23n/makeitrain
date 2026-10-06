@@ -80,7 +80,7 @@ public struct TintDot: View {
     }
 }
 
-/// A project's dot and name, such as "● Bookings", or "Unassigned".
+/// A project's dot and name, such as "● Website", or "Unassigned".
 public struct ProjectName: View {
     let ledger: Ledger
     let projectID: UUID?

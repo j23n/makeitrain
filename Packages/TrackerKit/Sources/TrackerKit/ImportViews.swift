@@ -74,16 +74,16 @@ public struct ImportSummary: View {
         var notes: [String] = []
         if plan.alreadyThere > 0 {
             notes.append(plan.alreadyThere == 1
-                ? "1 entry is already there and is skipped."
-                : "\(plan.alreadyThere) entries are already there and are skipped.")
+                ? "1 entry already exists and is skipped."
+                : "\(plan.alreadyThere) entries already exist and are skipped.")
         }
         if plan.placed > 0 {
             notes.append(plan.placed == 1
-                ? "1 entry has a duration but no times, so it starts at 9:00."
-                : "\(plan.placed) entries have durations but no times, so they're placed one after another from 9:00.")
+                ? "1 entry has no times. It starts at 9:00."
+                : "\(plan.placed) entries have no times. They start at 9:00, one after another.")
         }
         if plan.entries.isEmpty, plan.alreadyThere == 0 {
-            notes.append("There's nothing to import.")
+            notes.append("Nothing to import.")
         }
         return notes
     }
@@ -135,11 +135,11 @@ public struct CalendarImportSummary: View {
         }
         if plan.deleted > 0 {
             Section {
-                Toggle(plan.deleted == 1 ? "Import the deleted entry again" : "Import the \(plan.deleted) deleted entries again", isOn: $includingDeleted)
+                Toggle(plan.deleted == 1 ? "Import deleted entry again" : "Import \(plan.deleted) deleted entries again", isOn: $includingDeleted)
             } footer: {
                 Text(plan.deleted == 1
-                    ? "An event was imported before, and its entry was deleted."
-                    : "\(plan.deleted) events were imported before, and their entries were deleted.")
+                    ? "1 event was imported before, then its entry was deleted."
+                    : "\(plan.deleted) events were imported before, then their entries were deleted.")
                     .foregroundStyle(.secondary)
             }
         }
@@ -166,7 +166,7 @@ public struct CalendarImportSummary: View {
     private var notes: [String] {
         var notes: [String] = []
         if plan.alreadyThere > 0 {
-            notes.append(plan.alreadyThere == 1 ? "1 event is already there." : "\(plan.alreadyThere) events are already there.")
+            notes.append(plan.alreadyThere == 1 ? "1 event is already imported." : "\(plan.alreadyThere) events are already imported.")
         }
         for reason in CalendarImport.Skip.allCases {
             if let count = plan.skipped[reason], count > 0 {
@@ -174,7 +174,7 @@ public struct CalendarImportSummary: View {
             }
         }
         if plan.entries.isEmpty, notes.isEmpty, plan.deleted == 0 {
-            notes.append("Linked calendars have no events on these days.")
+            notes.append("No events on these days.")
         }
         return notes
     }

@@ -28,7 +28,7 @@ struct PhoneProjectPage: View {
             if let project {
                 page(project)
             } else {
-                Text("This project is gone.")
+                Text("This project was deleted.")
                     .foregroundStyle(Theme.text2)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -117,7 +117,7 @@ struct PhoneProjectPage: View {
                 newName = tag.name
                 renaming = tag
             }
-            Button("Remove from \(project.name)'s Entries", role: .destructive) {
+            Button("Remove from All Entries", role: .destructive) {
                 model.removeTag(tag.name, fromProject: projectID, undoManager: undoManager)
             }
         } message: { tag in
@@ -134,7 +134,7 @@ struct PhoneProjectPage: View {
             Button("Rename") { rename(tag) }
             Button("Cancel", role: .cancel) {}
         } message: { tag in
-            Text("Renames it on \(tag.count) \(project.name) \(tag.count == 1 ? "entry" : "entries"). The name of another of its tags merges the two.")
+            Text("Renames it on \(tag.count) \(tag.count == 1 ? "entry" : "entries"). Another tag's name merges the two.")
         }
     }
 
@@ -245,7 +245,7 @@ struct PhoneProjectPage: View {
                 .font(.system(size: 14, weight: .semibold))
                 .padding(.horizontal, 2)
             if overview.repositories.isEmpty && overview.tags.isEmpty {
-                Text("No tags yet. Type them with a #, as in book #227.")
+                Text("No tags yet. Type them with #, as in #design.")
                     .font(.system(size: 13))
                     .foregroundStyle(Theme.text3)
                     .padding(.horizontal, 2)
@@ -441,8 +441,6 @@ struct PhoneProjectSettings: View {
                         }
                     }
                     .padding(.vertical, 4)
-                } footer: {
-                    Text("Saved in projects.json, so every device has them. Moving it to another client moves its history too.")
                 }
                 MobileRepositoriesSection(model: model, project: project)
                 MobileProjectCalendarSection(model: model, project: project)
@@ -466,9 +464,9 @@ struct PhoneProjectSettings: View {
                     }
                     .disabled(entries > 0)
                 } footer: {
-                    Text(entries > 0
-                        ? "It has \(entries) \(entries == 1 ? "entry" : "entries"), so it can be archived or merged but not deleted. Archived projects leave the pickers and stay in reports."
-                        : "It has no entries, so it can be deleted.")
+                    if entries > 0 {
+                        Text("A project with entries can't be deleted.")
+                    }
                 }
             }
             .disabled(model.isReadOnly)
@@ -495,7 +493,7 @@ struct PhoneProjectSettings: View {
                     }
                 }
             } message: { target in
-                Text("Every entry of “\(project.name)” moves to “\(target.name)”, and “\(project.name)” is deleted.")
+                Text("Its entries move to “\(target.name)”, and “\(project.name)” is deleted.")
             }
             .confirmationDialog("Delete “\(project.name)”?", isPresented: $confirmingDelete, titleVisibility: .visible) {
                 Button("Delete", role: .destructive) {

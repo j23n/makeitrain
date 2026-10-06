@@ -26,12 +26,6 @@ struct CorrectionsPanel: View {
                             .background(Capsule().fill(Theme.marker))
                     }
                 }
-                Text(week.previews.isEmpty
-                    ? "Overlaps, timers left running, entries without a project and calendar events you haven't logged show up here."
-                    : "Shown in place on the week. Nothing changes until you accept one.")
-                    .font(.system(size: 12.5))
-                    .foregroundStyle(Theme.text2)
-                    .fixedSize(horizontal: false, vertical: true)
             }
             if week.previews.isEmpty {
                 VStack(spacing: 8) {
@@ -75,7 +69,6 @@ struct CorrectionsPanel: View {
 
     private var footer: some View {
         let suggested = week.corrections.filter { $0.suggestion != nil }.count
-        let months = week.monthsChanged.map { "entries/\($0.fileName)" }
         return VStack(alignment: .leading, spacing: 10) {
             if suggested > 0 {
                 Button {
@@ -83,17 +76,11 @@ struct CorrectionsPanel: View {
                 } label: {
                     Text(suggested == week.corrections.count && suggested > 1
                         ? "Accept all \(CorrectionText.number(suggested))"
-                        : "Accept the \(CorrectionText.number(suggested)) with a suggestion")
+                        : "Accept \(CorrectionText.number(suggested)) \(suggested == 1 ? "suggestion" : "suggestions")")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(ChoiceButtonStyle())
                 .disabled(model.isReadOnly)
-                if !months.isEmpty {
-                    Text("They change \(months.formatted(.list(type: .and))). One step to undo.")
-                        .font(.system(size: 11.5))
-                        .foregroundStyle(Theme.text3)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
             }
             HStack(spacing: 12) {
                 HStack(spacing: 5) {
@@ -208,7 +195,7 @@ struct CorrectionCard: View {
                     .frame(minHeight: selected ? 32 : 28)
             }
             .buttonStyle(.plain)
-            .help("Skipped corrections aren't offered again on this \(deviceName).")
+            .help("Won't be shown again on this \(deviceName)")
         }
     }
 }

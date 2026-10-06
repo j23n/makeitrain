@@ -51,12 +51,12 @@ struct ProjectsScreen: View {
             .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.line))
             HStack(spacing: 18) {
                 KeyHint("↑ ↓", "move")
-                KeyHint("⏎", "open its page")
+                KeyHint("⏎", "open")
                 KeyHint("R", "rename")
                 KeyHint("C", "color")
                 KeyHint("A", "archive")
-                KeyHint("M", "merge into…")
-                KeyHint("N", "new project here")
+                KeyHint("M", "merge")
+                KeyHint("N", "new project")
             }
         }
         .padding(.horizontal, 28)
@@ -157,7 +157,7 @@ struct ProjectsScreen: View {
                     .foregroundStyle(Theme.text3)
                 Spacer(minLength: 4)
                 Menu {
-                    Button("New Project Here…") { model.request = .command("new project  for \(client.name.lowercased())") }
+                    Button("New Project…") { model.request = .command("new project  for \(client.name.lowercased())") }
                     Button("Rename…") { model.request = .command("rename \(client.name.lowercased()) to ") }
                     Button(client.archived ? "Unarchive" : "Archive") {
                         model.updateClient(client.id, actionName: client.archived ? "Unarchive Client" : "Archive Client", undoManager: undoManager) { $0.archived.toggle() }
@@ -169,7 +169,7 @@ struct ProjectsScreen: View {
                 .plainMenu()
                 .menuIndicator(.hidden)
                 .fixedSize()
-                .accessibilityLabel(Text("\(client.name)'s actions"))
+                .accessibilityLabel(Text("Actions for \(client.name)"))
             }
         } repositories: {
             EmptyView()
@@ -278,7 +278,7 @@ struct ProjectsScreen: View {
             focused = true
         }
         .contextMenu {
-            Button("Open Its Page") { navigator.go(.project(project.id)) }
+            Button("Open Project") { navigator.go(.project(project.id)) }
             Button("Rename…") { model.request = .command("rename \(project.name.lowercased()) to ") }
             Button("Archive") {
                 model.updateProject(project.id, actionName: "Archive Project", undoManager: undoManager) { $0.archived = true }
@@ -321,7 +321,7 @@ struct ProjectsScreen: View {
                     Text(latest.entry.note.isEmpty ? Format.longDay(latest.entry.day) : "\(latest.entry.note), \(Format.weekday(latest.entry.day))")
                         .foregroundStyle(Theme.text2)
                         .lineLimit(1)
-                    Button("Assign it in the week ›") {
+                    Button("Assign in Week ›") {
                         navigator.go(.week(latest.entry.day))
                     }
                     .linkButton()
@@ -350,7 +350,7 @@ struct ProjectsScreen: View {
                         Image(systemName: showsArchived ? "chevron.down" : "chevron.right")
                             .font(.system(size: 10, weight: .semibold))
                         Text("Archived").fontWeight(.semibold)
-                        Text(archived.prefix(4).map { "\($0.name) · \(Format.duration(stats[$0.id].total)) in all" }.joined(separator: ", "))
+                        Text(archived.prefix(4).map { "\($0.name) · \(Format.duration(stats[$0.id].total)) total" }.joined(separator: ", "))
                             .foregroundStyle(Theme.text3)
                             .lineLimit(1)
                         Spacer()

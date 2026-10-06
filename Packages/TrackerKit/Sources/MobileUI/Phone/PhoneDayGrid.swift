@@ -236,7 +236,7 @@ struct PhoneDayGrid: View {
         }
     }
 
-    /// " · Northbridge calendar", for an event from a project's calendar.
+    /// " · Work calendar", for an event from a project's calendar.
     private func calendarName(_ entry: TimeEntry) -> String {
         guard let projectID = entry.projectID, let calendar = model.linkedCalendar(ofProject: projectID) else { return "" }
         return " · \(calendar.title) calendar"

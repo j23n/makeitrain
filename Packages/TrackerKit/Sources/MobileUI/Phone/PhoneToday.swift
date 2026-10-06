@@ -48,7 +48,7 @@ struct PhoneToday: View {
         .safeAreaInset(edge: .bottom) {
             PhoneCommandBar(
                 model: model,
-                placeholder: model.running == nil ? "start, or log time" : "switch, stop or log",
+                placeholder: model.running == nil ? "start a timer or log time" : "switch, stop or log time",
                 open: { router.openCommandLine() }
             )
         }
@@ -104,7 +104,7 @@ struct PhoneEmptyDay: View {
                 .foregroundStyle(Theme.text3)
             Text("Nothing logged yet")
                 .font(.system(size: 15, weight: .semibold))
-            Text("Tap the line below and type a project, such as\nbookings #227 export, to start a timer.")
+            Text("Type a project in the line below to start a timer.")
                 .font(.system(size: 13))
                 .foregroundStyle(Theme.text2)
                 .multilineTextAlignment(.center)
@@ -115,7 +115,7 @@ struct PhoneEmptyDay: View {
 }
 
 /// An entry as a line to change by typing, such as "2 oct 13:30-16:30
-/// bookings #153 Bug fix", and what else can be done with it.
+/// web #12 Fix login", and what else can be done with it.
 struct PhoneEntrySheet: View {
     let model: AppModel
     let entryID: UUID
@@ -135,7 +135,7 @@ struct PhoneEntrySheet: View {
                 if let entry {
                     content(entry)
                 } else {
-                    Text("This entry is gone.")
+                    Text("This entry was deleted.")
                         .foregroundStyle(Theme.text2)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -185,11 +185,11 @@ struct PhoneEntrySheet: View {
                     .padding(.horizontal, 12)
                     .background(RoundedRectangle(cornerRadius: 12).fill(Theme.field))
                     .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(problem ? Theme.amber : Theme.strongLine))
-                    Text(problem
-                        ? "That line doesn't read as an entry. Write its times, then its project, tags and note."
-                        : "Change the times, project, tags or note, then Apply.")
-                        .font(.system(size: 12.5))
-                        .foregroundStyle(problem ? Theme.amberText : Theme.text3)
+                    if problem {
+                        Text("Can't read this as an entry. Start with its times, then its project, tags and note.")
+                            .font(.system(size: 12.5))
+                            .foregroundStyle(Theme.amberText)
+                    }
                 }
                 actions(entry)
             }

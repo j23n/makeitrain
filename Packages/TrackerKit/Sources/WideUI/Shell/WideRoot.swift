@@ -200,7 +200,7 @@ struct TopBar<Trailing: View>: View {
             }
             CommandField(
                 text: Binding(get: { line.text }, set: { line.text = $0 }),
-                placeholder: model.running == nil ? "› start, or log time" : "› type to switch, stop or log",
+                placeholder: model.running == nil ? "› start a timer or log time" : "› switch, stop or log time",
                 reading: line.reading,
                 ledger: model.ledger,
                 fontSize: 12.5,

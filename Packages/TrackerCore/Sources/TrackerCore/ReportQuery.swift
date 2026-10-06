@@ -1,6 +1,6 @@
 import Foundation
 
-/// A report typed as words, such as "northbridge sep by tag": the clients,
+/// A report typed as words, such as "acme sep by tag": the clients,
 /// projects and tags it covers, its days and how it's grouped. Words it
 /// doesn't know are marked and left out.
 public struct ReportQuery: Hashable, Sendable {

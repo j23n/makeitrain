@@ -102,9 +102,9 @@ struct MobileNotices: View {
                 case .loading:
                     Label("Loading…", systemImage: "hourglass")
                 case .waitingForICloud:
-                    Label("Looking for your data in iCloud…", systemImage: "icloud")
+                    Label("Looking for data in iCloud…", systemImage: "icloud")
                 case .iCloudUnavailable:
-                    Label("iCloud isn't available, so your data is read-only.", systemImage: "icloud.slash")
+                    Label("iCloud isn't available. Data is read-only.", systemImage: "icloud.slash")
                     Button("Use Local Storage") {
                         Task { try? await model.switchStorage(to: .local) }
                     }

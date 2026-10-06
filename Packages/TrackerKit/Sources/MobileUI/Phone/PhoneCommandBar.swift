@@ -82,7 +82,7 @@ struct PhoneCommandBar: View {
 
 /// The command line, open over the screen: the field, what Return would
 /// do, a button for it, and words to add to the line. On the Month tab it
-/// can read a report instead, such as "northbridge sep by tag".
+/// can read a report instead, such as "acme sep by tag".
 struct PhoneCommandSheet: View {
     let model: AppModel
     let router: PhoneRouter
@@ -94,7 +94,7 @@ struct PhoneCommandSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if router.tab == .month {
-                Picker("Reads", selection: Binding(get: { router.commandMode }, set: { router.commandMode = $0; router.focusRequest += 1 })) {
+                Picker("Mode", selection: Binding(get: { router.commandMode }, set: { router.commandMode = $0; router.focusRequest += 1 })) {
                     Text("Report").tag(PhoneCommandMode.report)
                     Text("Time").tag(PhoneCommandMode.command)
                 }
@@ -139,7 +139,7 @@ struct PhoneCommandSheet: View {
         }
         field(
             text: Binding(get: { line.text }, set: { line.text = $0 }),
-            placeholder: model.running == nil ? "start, or log time" : "switch, stop or log",
+            placeholder: model.running == nil ? "start a timer or log time" : "switch, stop or log time",
             reading: line.reading,
             submit: { alternate in submit(alternate: alternate) },
             onTab: { line.complete() },
@@ -225,10 +225,6 @@ struct PhoneCommandSheet: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(model.isReadOnly)
-                    Text("or press Return")
-                        .font(.system(size: 12.5))
-                        .foregroundStyle(Theme.text3)
-                        .fixedSize()
                 }
                 if let alternate = line.reading.alternate, line.alternatePreview != nil {
                     Button {
@@ -375,7 +371,7 @@ struct PhoneCommandSheet: View {
             let projectID = model.resolved.first { $0.id == completion.entryID }?.entry.projectID
             chips.append(Chip(
                 id: "complete",
-                title: "\(completion.text), as on \(Format.weekday(completion.day))",
+                title: "\(completion.text), from \(Format.weekday(completion.day))",
                 action: .complete,
                 tint: projectID.map { model.ledger.tint(ofProject: $0) }
             ))
@@ -426,7 +422,7 @@ struct PhoneCommandSheet: View {
                     .foregroundStyle(Theme.text4)
             }
             .font(.system(size: 15))
-            Text("Clients, projects and tags, a month, a quarter or dates such as 1-15 sep, and by client, project or tag.")
+            Text("Clients, projects or tags, a period such as sep or 1-15 sep, and by client, project or tag.")
                 .font(.system(size: 12.5))
                 .foregroundStyle(Theme.text2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -446,7 +442,7 @@ struct PhoneCommandSheet: View {
         .padding(16)
     }
 
-    /// Such as "Northbridge, Sep 1 – 30, 2026, by tag".
+    /// Such as "Acme, Sep 1 – 30, 2026, by tag".
     private func reportTitle(_ query: ReportQuery) -> String {
         let names = query.clients.compactMap { model.ledger.clients[$0]?.name }
             + query.projects.compactMap { model.ledger.projects[$0]?.name }

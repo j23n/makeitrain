@@ -68,14 +68,14 @@ struct PhoneMonth: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             Spacer(minLength: 4)
-            stepButton("chevron.left", "Before", -1)
-            stepButton("chevron.right", "After", 1)
+            stepButton("chevron.left", "Previous", -1)
+            stepButton("chevron.right", "Next", 1)
             Menu {
                 Button("Save CSV…", systemImage: "tablecells") {
                     csv = CSVDocument(data: CSVExport.data(for: report, ledger: model.ledger))
                     savingCSV = true
                 }
-                Button("PDF Statement…", systemImage: "doc.richtext") {
+                Button("Save PDF…", systemImage: "doc.richtext") {
                     pdf = PDFDocumentFile(data: StatementPDF.data(for: report, ledger: model.ledger, title: state.title, now: model.now))
                     savingPDF = true
                 }
@@ -85,7 +85,7 @@ struct PhoneMonth: View {
                     .frame(width: 44, height: 44)
             }
             .disabled(report.entries.isEmpty)
-            .accessibilityLabel(Text("Share the CSV or a PDF"))
+            .accessibilityLabel(Text("Export"))
         }
         .padding(.leading, 20)
         .padding(.trailing, 8)
@@ -226,17 +226,17 @@ struct PhoneMonth: View {
         .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Theme.line))
     }
 
-    /// "vs August", or "vs the week before".
+    /// "vs. August", or "vs. previous week".
     private var comparisonTitle: String {
         switch state.period {
         case .month:
-            "vs \(Format.monthName(state.comparison.previousRange.lowerBound))"
+            "vs. \(Format.monthName(state.comparison.previousRange.lowerBound))"
         case .week:
-            "vs the week before"
+            "vs. previous week"
         case .day:
-            "vs the day before"
+            "vs. previous day"
         case .custom:
-            "vs the days before"
+            "vs. previous days"
         }
     }
 
@@ -267,7 +267,7 @@ struct PhoneMonth: View {
                 .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(Theme.amber))
                 .clipShape(RoundedRectangle(cornerRadius: 3))
             (Text(Format.duration(report.doubleCounted)).fontWeight(.semibold).foregroundColor(Theme.amberText)
-                + Text(" counts twice, on \(days.map { Format.monthDay($0) }.formatted(.list(type: .and)))"))
+                + Text(" counted twice on \(days.map { Format.monthDay($0) }.formatted(.list(type: .and)))"))
                 .font(.system(size: 13))
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 4)
@@ -303,7 +303,7 @@ struct PhoneMonth: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(Theme.text2)
             if rows.isEmpty {
-                Text("Nothing logged in these days.")
+                Text("Nothing logged.")
                     .font(.system(size: 13))
                     .foregroundStyle(Theme.text3)
             }

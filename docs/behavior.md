@@ -10,27 +10,27 @@ What a line can say:
 
 | Line | What it does |
 | --- | --- |
-| `book #227 Export to PDF` | Starts a timer for Bookings with the tag #227 and a note, or switches to it |
-| `book #227` | The same, with the note of the last entry tagged #227 |
-| `harbor from 11:05`, `harbor -15m` | Switches as if you had at 11:05, or 15 minutes ago |
-| `from 10:30` | The running timer started at 10:30 |
+| `web #12 Fix login` | Starts a timer for Website with the tag #12 and a note, or switches to it |
+| `web #12` | The same, with the note of the last entry tagged #12 |
+| `brand from 11:05`, `brand -15m` | Switches, starting at 11:05 or 15 minutes ago |
+| `from 10:30` | Changes the running timer's start to 10:30 |
 | `stop`, `stop 11:05`, `stop -10m` | Stops the timer now, or earlier |
-| `book review 9:00-10:30` | Logs a finished entry; also `9-10:30`, `9am-11am` and `9:00 to 17:00` |
-| `book review wed 14-16` | On another day: `yesterday`, `wed`, `30 sep`, `sep 30` or `2026-09-30` |
-| `book review for 45m` | Logs 45 minutes that end now |
-| `new project Phoenix for zenith` | Adds a project, and its client if that's new |
+| `web review 9:00-10:30` | Logs a finished entry; also `9-10:30`, `9am-11am` and `9:00 to 17:00` |
+| `web review wed 14-16` | On another day: `yesterday`, `wed`, `30 sep`, `sep 30` or `2026-09-30` |
+| `web review for 45m` | Logs 45 minutes ending now |
+| `new project App for acme` | Adds a project, and its client if it's new |
 | `new client Acme` | Adds a client |
-| `archive harbor`, `unarchive harbor` | Archives a project or client, or brings it back |
-| `color book teal` | Blue, red, green, purple, orange, teal, gold or gray, or a hex color |
-| `rename book to Bookings Pro` | Renames a project or client |
-| `merge zenith2 into zenith` | Moves everything over, then deletes the first |
+| `archive brand`, `unarchive brand` | Archives a project or client, or brings it back |
+| `color web teal` | Blue, red, green, purple, orange, teal, gold or gray, or a hex color |
+| `rename web to Website v2` | Renames a project or client |
+| `merge acme2 into acme` | Moves everything to the second, then deletes the first |
 | `find export pdf` | Lists the entries with those words |
 
-- Under the line, the app says what Return would do and what that changes, before anything does: "Switch to Harbor, release call. Bookings ends at 10:40, after 1:10. No gap, no overlap." A change that would make an overlap says so. A line that can't be done says why, such as a start after the running timer's or an end in the future.
+- Under the line, the app says what Return would do and what that changes, before anything does: "Switch to Brand refresh, logo review. Website ends at 10:40, after 1:10. No gap, no overlap." A change that would make an overlap says so. A line that can't be done says why, such as a start after the running timer's or an end in the future.
 - Option-Return does what the line could also mean: for a timer, log it as done instead, from when the last entry today ended to now; for a new project, add it and start a timer for it. On iPhone it's a second button.
-- Tab finishes the line from the last entry like it, as "book #227 Export to PDF, as on Wed". Up and Down bring back earlier lines, and Down on an empty line lists today's entries. On iPhone, the lines run lately and the words to add, such as `from 10:30`, `−15m` and `#`, are buttons under the line.
+- Tab finishes the line from the last entry like it, as "web #12 Fix login, from Wed". Up and Down bring back earlier lines, and Down on an empty line lists today's entries. On iPhone, the lines run lately and the words to add, such as `from 10:30`, `−15m` and `#`, are buttons under the line.
 - The words are colored as they're read: a project underlined in its color, a client underlined, tags in blue, times in amber, words such as `stop` and `new project` in the accent color, a new name in bold, and a name that matches nothing dotted underneath.
-- A project is found by the start of its words or its client's: `book`, `bo tl` and `north book` all find Northbridge's Bookings, ignoring case and accents. When two match as well, the one used last wins. Short words such as "a", "the", "for" and "with" don't match a project on their own, so they stay part of the note.
+- A project is found by the start of its words or its client's: `web`, `acme web` and `ac we` all find Acme's Website, ignoring case and accents. When two match as well, the one used last wins. Short words such as "a", "the", "for" and "with" don't match a project on their own, so they stay part of the note.
 - A time typed without a day is today's, or yesterday's when today's hasn't come yet and yesterday's was in the last 12 hours, as when typing `from 23:30` just after midnight. A day counts only next to a time. An end hour below the start, as in `9-5`, is in the afternoon.
 - Tags are written with a `#` or as the project already has them. A tag typed in another case takes the project's spelling. `#daily` loses its `#`, unless the project has it with one; references such as `#227` and `api#12` keep it.
 - After a line runs, the popover and the shortcut's panel close, unless Settings says to keep them open. Every line run is remembered on that device, the latest 100.
@@ -72,7 +72,7 @@ On the Mac's and the iPad's week, each correction is numbered and listed beside 
 ## Editing entries
 
 - The week, or a day, shows entries as blocks on an hour grid, from 7:00 to 19:00, widened to any entry and to the time now. Blocks show their times, title and tags in the project's color. A day with nothing on a weekend is left out of the week.
-- On the Mac and a wide iPad window, drag a block to move it, to another day too, or its top or bottom edge to change its start or end. The selected entry is also a line under the week, such as `2 oct 13:30-16:30 bookings #153 Bug fix`, to change by typing: Return applies it, Escape puts it back.
+- On the Mac and a wide iPad window, drag a block to move it, to another day too, or its top or bottom edge to change its start or end. The selected entry is also a line under the week, such as `2 oct 13:30-16:30 web #12 Fix login`, to change by typing: Return applies it, Escape reverts it.
 - On iPhone, tap an entry to change it as a line, or to stop, continue, duplicate, split or delete it. Touching and holding an entry, or right-clicking one on the Mac, offers the same, and setting its project.
 - "Duplicate" puts a copy right after the entry, with the same project, tags, note and length, so it doesn't overlap the original. The running timer isn't copied.
 - "Split" cuts an entry in two in the middle, on five minutes. Both parts keep the project, tags and note. Splitting the running timer stops the first part there and keeps the second running.
@@ -81,12 +81,12 @@ On the Mac's and the iPad's week, each correction is numbered and listed beside 
 ## Month, year and reports
 
 - The month shows its days with each one's time as a bar by project and a mark where entries overlap, the year's weeks above them, and the statement beside them. Clicking a day shows it alone; Shift-clicking, or Shift and the arrows, stretches the range; Return opens the day and W its week. On iPhone, tap a day to show it alone, and hold and drag across days for a range. The year shows its weeks and a small month for each month.
-- What a report covers reads as a sentence of choices, "Northbridge in September 2026 by tag", and can be typed: ⌘L on the Mac, and the command line on iPhone's Month. A typed report takes clients, projects and tags by name; a period such as `today`, `yesterday`, `this week`, `last month`, `sep`, `sep 2026`, `sep-oct`, `1-15 sep`, `q3`, `2026`, `ytd` or `2026-09-01 to 2026-09-15`; and `by client`, `by project` or `by tag`. A month without a year is the last one up to today. Words it doesn't know are marked and left out.
+- What a report covers reads as a sentence of choices, "Acme in September 2026 by tag", and can be typed: ⌘L on the Mac, and the command line on iPhone's Month. A typed report takes clients, projects and tags by name; a period such as `today`, `yesterday`, `this week`, `last month`, `sep`, `sep 2026`, `sep-oct`, `1-15 sep`, `q3`, `2026`, `ytd` or `2026-09-01 to 2026-09-15`; and `by client`, `by project` or `by tag`. A month without a year is the last one up to today. Words it doesn't know are marked and left out.
 - The statement has the figures: the total, the average day worked, which leaves out days without time, how many days had time out of the weekdays, and the change from the period before, with the same filters. While a period is under way, its days so far are compared with as many days at the start of the period before. Then the time by client, project or tag, with each line's share; tags that refer to issues link to them.
-- Before you send it, the statement says how much time counts twice and on which days, with a link to correct them in the week, whether a timer is running, which counts once it stops, and whether every month file is downloaded.
+- Before sending, the statement shows time counted twice and on which days, with a link to fix them in the week, whether a timer is running, which isn't included until it stops, and whether all data is downloaded.
 - Groups: by client, with each client's projects under it, then "No client" and "Unassigned"; by project; or by tag, then "Untagged". An entry with two tags counts in full under each, so tag totals can add up to more than the total.
 - Every entry counts in full, so the total equals the sum of end minus start over the CSV's rows. A running timer isn't in the totals or the CSV.
-- Save CSV… (⌘E) saves the report's entries; PDF Statement… (⌘P) saves a statement to send, on A4 pages: who and when, the total, the time by project or by tag, and every entry.
+- Save CSV… (⌘E) saves the report's entries; Save PDF… (⌘P) saves a statement to send, on A4 pages: who and when, the total, the time by project or by tag, and every entry.
 - Weeks start on the day chosen in Settings.
 
 ## CSV export
@@ -107,8 +107,8 @@ date,start,end,hours,client,project,tags,note
 
 ## Clients and projects
 
-- The projects list has each client with its projects, then the projects without a client and the entries without a project, "Unassigned". Each project shows its GitHub repositories, its calendar on this device, its time this week and this month, a bar for each of its last twelve weeks, and its time in all. Archived clients and projects are folded away. On the Mac, the arrows move, Return opens a project's page, and R, C, A, M and N rename, color, archive, merge or add, by putting the line for it in the command line.
-- A project's page has its time this week, this month and in all, its last twelve weeks day by day, with days over 12 hours in amber, and its tags with their time, those that refer to issues grouped by repository. Selecting a tag renames it, merges it into another or removes it. Its settings are beside it on the Mac and a wide iPad window, and behind Edit on iPhone: its name, client, color, GitHub repositories, the calendar on this device, and archiving, merging or deleting it.
+- The projects list has each client with its projects, then the projects without a client and the entries without a project, "Unassigned". Each project shows its GitHub repositories, its calendar on this device, its time this week and this month, a bar for each of its last twelve weeks, and its total time. Archived clients and projects are folded away. On the Mac, the arrows move, Return opens a project's page, and R, C, A, M and N rename, color, archive, merge or add, by putting the line for it in the command line.
+- A project's page has its time this week, this month and in total, its last twelve weeks day by day, with days over 12 hours in amber, and its tags with their time, those that refer to issues grouped by repository. Selecting a tag renames it, merges it into another or removes it. Its settings are beside it on the Mac and a wide iPad window, and behind Edit on iPhone: its name, client, color, GitHub repositories, the calendar on this device, and archiving, merging or deleting it.
 - Pickers show "Acme › Website redesign"; a project without a client has no prefix.
 - Archiving a client hides it and its projects from pickers and the command line. Their history stays in reports.
 - A project that has entries can't be deleted; archive it instead. A client can be archived, or merged into another, but not deleted.
@@ -172,9 +172,9 @@ Each project can have a calendar on each device, chosen in the project's setting
 ## Settings
 
 - **Appearance:** light, dark, or following the system, on each device.
-- **On the Mac:** opening at login, the first day of the week, the shortcut that opens the command line over any app (none until you set one), whether the command line closes after Return, a cheat sheet of everything you can type, and what the menu bar shows.
+- **On the Mac:** opening at login, the first day of the week, the shortcut that opens the command line over any app (none until you set one), whether the command line closes after Return, a list of commands, and what the menu bar shows.
 - **On iPhone and iPad:** the Live Activity, how to add the controls and shortcuts, and the first day of the week.
-- **Data:** where the data is and whether it's up to date, keeping it in iCloud Drive or on the device, the data files and whether each was read, backups, and importing and exporting.
+- **Data:** where the data is and when it was saved, keeping it in iCloud Drive or on the device, the data files and whether each could be read, backups, and importing and exporting.
 - **Calendars:** which calendar on this device belongs to which project.
 
 These settings stay on the device. Clients, projects and entries are in the data files, and those sync.

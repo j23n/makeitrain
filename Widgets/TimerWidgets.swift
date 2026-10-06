@@ -121,7 +121,7 @@ struct CommandLineControl: ControlWidget {
             }
         }
         .displayName("Command Line")
-        .description("Opens the command line, to start, switch or log time.")
+        .description("Opens the command line.")
     }
 }
 

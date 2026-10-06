@@ -93,17 +93,17 @@ struct CommandBar: View {
                 KeyHint("⇥", "\(completion.text), from \(Format.weekday(completion.day))")
                     .lineLimit(1)
             } else if case .addProject? = line.reading.alternate {
-                KeyHint("⌥⏎", "add it and start a timer for it")
+                KeyHint("⌥⏎", "add and start")
             } else if line.reading.alternate != nil || line.text.isEmpty {
-                KeyHint("⌥⏎", "log it as done")
+                KeyHint("⌥⏎", "log as finished")
             }
             if line.text.isEmpty {
                 if line.model.running != nil {
-                    KeyHint("stop 11:05", "just stop")
-                    KeyHint("from 10:30", "started earlier")
+                    KeyHint("stop", "stop the timer")
+                    KeyHint("from 10:30", "change its start")
                 } else {
-                    KeyHint("↑", "earlier lines")
-                    KeyHint("↓", "today so far")
+                    KeyHint("↑", "history")
+                    KeyHint("↓", "today's entries")
                 }
             }
             Spacer(minLength: 0)

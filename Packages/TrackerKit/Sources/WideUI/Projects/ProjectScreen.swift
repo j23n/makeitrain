@@ -53,7 +53,7 @@ struct ProjectScreen: View {
             }
             .onChange(of: projectID) { load() }
             .confirmationDialog(
-                "Remove “\(removing?.name ?? "")” from every entry of \(project.name)?",
+                "Remove “\(removing?.name ?? "")” from all \(project.name) entries?",
                 isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
                 presenting: removing
             ) { tag in
@@ -63,7 +63,7 @@ struct ProjectScreen: View {
                 }
             }
         } else {
-            Text("This project is gone.")
+            Text("This project was deleted.")
                 .foregroundStyle(Theme.text2)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -144,7 +144,7 @@ struct ProjectScreen: View {
                 }
                 .buttonStyle(ChoiceButtonStyle(compact: true))
                 .disabled(model.isReadOnly)
-                .help(model.running == nil ? "Start a timer for \(project.name)" : "Stop the running timer and start one for \(project.name)")
+                .help(model.running == nil ? "Start a timer for \(project.name)" : "Switch the timer to \(project.name)")
             }
         }
     }
@@ -153,7 +153,7 @@ struct ProjectScreen: View {
         let running = model.running.flatMap { $0.entry.projectID == projectID ? $0 : nil }
         let longCorrection = monthCorrection
         return HStack(spacing: 1) {
-            figure("This week", Format.duration(overview.thisWeek), running.map { "\(Format.duration(model.duration(of: $0))) of it running now" } ?? " ")
+            figure("This week", Format.duration(overview.thisWeek), running.map { "\(Format.duration(model.duration(of: $0))) running" } ?? " ")
             VStack(alignment: .leading, spacing: 4) {
                 Text("This month")
                     .font(.system(size: 12))
@@ -164,7 +164,7 @@ struct ProjectScreen: View {
                 if let longCorrection {
                     HStack(spacing: 4) {
                         Text(longCorrection.text)
-                        Button("correct it") {
+                        Button("Fix") {
                             navigator.go(.week(longCorrection.day))
                         }
                         .linkButton()
@@ -189,14 +189,14 @@ struct ProjectScreen: View {
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.line))
     }
 
-    /// A timer this month that ran long, as "19:25 is Thursday's overnight
-    /// timer".
+    /// A timer this month that ran long, as "Includes a 19:25 overnight
+    /// timer on Thursday".
     private var monthCorrection: (text: String, day: LocalDate)? {
         let month = ReportPeriod.month.range(containing: model.today, firstWeekday: model.firstWeekday)
         for correction in Corrections.find(on: month, ledger: model.ledger, resolved: model.resolved, timeZone: model.environment.timeZone(), now: model.now) {
             if case let .ranLong(id, overnight) = correction.kind, let entry = model.ledger.entries[id], entry.projectID == projectID {
                 let length = Format.duration(entry.start.distance(to: entry.end ?? model.now))
-                return ("\(length) is \(Format.weekday(entry.day))'s \(overnight ? "overnight " : "")timer ·", correction.day)
+                return ("Includes a \(length) \(overnight ? "overnight " : "")timer on \(Format.weekday(entry.day)) ·", correction.day)
             }
         }
         return nil
@@ -228,12 +228,12 @@ struct ProjectScreen: View {
                 Text("Tags").font(.system(size: 14, weight: .semibold))
                     + Text(" · all time").foregroundColor(Theme.text3)
                 Spacer()
-                Text("Select one to rename it, merge it into another or remove it")
+                Text("Select a tag to edit it")
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.text3)
             }
             if overview.repositories.isEmpty && overview.tags.isEmpty {
-                Text("No tags yet. Type them with a #, as in book #227.")
+                Text("No tags yet. Type them with #, as in #design.")
                     .foregroundStyle(Theme.text3)
             }
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 16, alignment: .top)], alignment: .leading, spacing: 16) {
@@ -324,7 +324,7 @@ struct ProjectScreen: View {
         let others = (overview?.tagNames ?? []).filter { !Tags.same($0, tag.name) }
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                TextField("New name for the tag \(tag.name)", text: $newName)
+                TextField("New name", text: $newName)
                     .textFieldStyle(.roundedBorder)
                     .focused($renaming)
                     .onSubmit { rename(tag, to: newName) }
@@ -343,16 +343,16 @@ struct ProjectScreen: View {
                 .plainMenu()
                 .fixedSize()
                 .disabled(others.isEmpty)
-                .help("Merge it into another of \(project.name)'s tags")
+                .help("Merge into another tag")
                 Button {
                     removing = tag
                 } label: {
                     Image(systemName: "trash")
                 }
                 .buttonStyle(.plain)
-                .help("Remove the tag from \(project.name)'s entries")
+                .help("Remove from all entries")
             }
-            Text("Renames it on \(tag.count) \(project.name) \(tag.count == 1 ? "entry" : "entries"). The name of another of its tags merges the two. ⏎ rename, esc keep it.")
+            Text("Renames it on \(tag.count) \(tag.count == 1 ? "entry" : "entries"). Another tag's name merges the two.")
                 .font(.system(size: 11.5))
                 .foregroundStyle(Theme.text3)
                 .fixedSize(horizontal: false, vertical: true)
@@ -389,12 +389,8 @@ struct WeekDays: View {
                 Text("Last 12 weeks").font(.system(size: 14, weight: .semibold))
                 Spacer()
                 HStack(spacing: 5) {
-                    RoundedRectangle(cornerRadius: 2).fill(tint.bar).frame(width: 8, height: 8)
-                    Text("hours that day")
-                }
-                HStack(spacing: 5) {
                     RoundedRectangle(cornerRadius: 2).fill(Theme.amber).frame(width: 8, height: 8)
-                    Text("more than 12 hours")
+                    Text("over 12 hours")
                 }
                 Button("Open in Month ›", action: openMonth)
                     .linkButton()
@@ -476,18 +472,13 @@ struct ProjectSettingsPanel: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Settings").font(.system(size: 14, weight: .semibold))
-                    Text("Saved in projects.json, so every device has them")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.text3)
-                }
+                Text("Settings").font(.system(size: 14, weight: .semibold))
                 field("Name") {
                     TextField("Name", text: $name)
                         .textFieldStyle(.roundedBorder)
                         .onSubmit(rename)
                 }
-                field("Client", footer: "Its history moves with it, past reports included.") {
+                field("Client") {
                     Picker("Client", selection: Binding(
                         get: { project.clientID },
                         set: { clientID in
@@ -566,7 +557,7 @@ struct ProjectSettingsPanel: View {
     }
 
     private var repositories: some View {
-        field("GitHub repositories", footer: "A bare #123 means an issue in the first one. Making another the first rewrites tags so each still points at the same issue.") {
+        field("GitHub repositories", footer: "#123 refers to an issue in the first repository.") {
             VStack(spacing: 0) {
                 ForEach(Array(project.repositories.enumerated()), id: \.offset) { index, address in
                     let repository = GitHub.Repository(address)
@@ -603,7 +594,7 @@ struct ProjectSettingsPanel: View {
                     .overlay(alignment: .bottom) { Rectangle().fill(Theme.line).frame(height: 1) }
                 }
                 HStack(spacing: 8) {
-                    TextField("owner/name, or paste its address", text: $repository)
+                    TextField("owner/repo or URL", text: $repository)
                         .textFieldStyle(.plain)
                         .onSubmit(addRepository)
                     Button("Add", action: addRepository)
@@ -626,7 +617,7 @@ struct ProjectSettingsPanel: View {
     }
 
     private var calendar: some View {
-        field("Calendar · this \(deviceName) only", footer: "Its events show up in the week as corrections until you log them.") {
+        field("Calendar on this \(deviceName)") {
             switch model.calendarAccess {
             case .notDetermined:
                 Button("Allow Access to Calendars…") {
@@ -634,7 +625,7 @@ struct ProjectSettingsPanel: View {
                 }
             case .denied:
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Time Tracker isn't allowed to read your calendars.")
+                    Text("No access to calendars.")
                         .foregroundStyle(Theme.text2)
                     Button("Open Privacy & Security") {
                         if let url = calendarPrivacySettings {
@@ -644,7 +635,7 @@ struct ProjectSettingsPanel: View {
                 }
                 .font(.system(size: 12))
             case .restricted:
-                Text("Reading calendars isn't allowed on this \(deviceName).")
+                Text("Calendar access is restricted on this \(deviceName).")
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.text2)
             case .granted:
@@ -672,7 +663,7 @@ struct ProjectSettingsPanel: View {
         }
     }
 
-    /// Such as "Northbridge · Exchange (linked to Harbor)".
+    /// Such as "Work · Exchange (linked to Website)".
     private func calendarLabel(_ info: CalendarInfo) -> String {
         let account = info.account.isEmpty ? "" : " · \(info.account)"
         guard let other = model.linkedProject(of: info.id), other != project.id else { return info.title + account }
@@ -707,12 +698,12 @@ struct ProjectSettingsPanel: View {
                 .disabled(entries > 0)
             }
             .buttonStyle(ChoiceButtonStyle(compact: true))
-            Text(entries > 0
-                ? "It has \(entries) \(entries == 1 ? "entry" : "entries"), so it can be archived or merged but not deleted. Archived projects leave the pickers and stay in reports."
-                : "It has no entries, so it can be deleted.")
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.text3)
-                .fixedSize(horizontal: false, vertical: true)
+            if entries > 0 {
+                Text("A project with entries can't be deleted.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.text3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .confirmationDialog(
             "Merge “\(project.name)” into “\(mergeTarget.map { model.ledger.projectTitle($0.id) } ?? "")”?",
@@ -725,7 +716,7 @@ struct ProjectSettingsPanel: View {
                 }
             }
         } message: { target in
-            Text("Every entry of “\(project.name)” moves to “\(target.name)”, and “\(project.name)” is deleted.")
+            Text("Its entries move to “\(target.name)”, and “\(project.name)” is deleted.")
         }
         .confirmationDialog("Delete “\(project.name)”?", isPresented: $confirmingDelete) {
             Button("Delete", role: .destructive) {

@@ -40,7 +40,7 @@ struct CalendarImportSheet: View {
                     CalendarImportSummary(plan: plan, ledger: model.ledger, includingDeleted: $includingDeleted)
                 } else {
                     Section {
-                        Text("No project has a calendar yet. Open a project in the sidebar, click Settings in the toolbar, and choose its calendar.")
+                        Text("No project has a calendar. Link one on a project's page.")
                             .foregroundStyle(.secondary)
                     }
                 }

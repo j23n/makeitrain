@@ -17,14 +17,14 @@ public enum TimerActions {
         let reading = model.read(line)
         guard let command = reading.primary else {
             return reading.problem.map { CommandText.message($0, zone: zone) }
-                ?? "Say a project, tags or a note, such as bookings export."
+                ?? "Say a project, tags or a note."
         }
         let draft: EntryDraft
         switch command {
         case let .start(start, _, _), let .log(start, _, _):
             draft = start
         default:
-            return "That doesn't start a timer. Say a project, tags or a note, such as bookings export."
+            return "That doesn't start a timer. Say a project, tags or a note."
         }
         let switching = model.running != nil
         switch model.run(line, undoManager: nil) {
@@ -41,7 +41,7 @@ public enum TimerActions {
         case let .problem(problem):
             return CommandText.message(problem, zone: zone)
         case .nothing:
-            return "Say a project, tags or a note, such as bookings export."
+            return "Say a project, tags or a note."
         }
     }
 
@@ -64,7 +64,7 @@ public enum TimerActions {
         AppModel.shared.request = .command("")
     }
 
-    /// Such as "Bookings, export to PDF".
+    /// Such as "Website, fix login".
     private static func describe(_ draft: EntryDraft, in ledger: Ledger) -> String {
         let project = draft.projectID.flatMap { ledger.projects[$0]?.name }
         switch (project, draft.note.isEmpty) {

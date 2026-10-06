@@ -214,7 +214,7 @@ public final class ReportState {
     }
 
     /// The report as a typed line that reads back as it, such as
-    /// "northbridge sep 2026 by project".
+    /// "acme sep 2026 by project".
     public var typed: String {
         let ledger = model.ledger
         var words: [String] = []

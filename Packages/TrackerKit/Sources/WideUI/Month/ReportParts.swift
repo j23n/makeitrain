@@ -3,8 +3,8 @@ import TrackerCore
 import TrackerKit
 import UniformTypeIdentifiers
 
-/// What the report covers, as a sentence of choices: "Northbridge in
-/// September 2026 by tag", and the same typed, which ⌘L focuses.
+/// What the report covers, as a sentence of choices: "Acme in September
+/// 2026 by tag", and the same typed, which ⌘L focuses.
 struct QueryBar: View {
     let model: AppModel
     let state: ReportState
@@ -17,9 +17,9 @@ struct QueryBar: View {
                 filterMenu
                 Text("in")
                 HStack(alignment: .firstTextBaseline, spacing: 2) {
-                    stepButton("chevron.left", "Before", -1)
+                    stepButton("chevron.left", "Previous", -1)
                     periodMenu
-                    stepButton("chevron.right", "After", 1)
+                    stepButton("chevron.right", "Next", 1)
                 }
                 Text("by")
                 groupingMenu
@@ -193,10 +193,10 @@ struct YearRibbon: View {
             HStack(alignment: .firstTextBaseline) {
                 Text("\(String(state.range.lowerBound.year))")
                     .fontWeight(.semibold)
-                + Text(" · \(state.title)'s hours per week")
+                + Text(" · hours per week")
                     .foregroundColor(Theme.text3)
                 Spacer()
-                Text("drag across weeks for a longer range")
+                Text("Drag to select weeks")
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.text3)
             }
@@ -316,9 +316,9 @@ struct StatementPanel: View {
             GridRow {
                 figure("Days worked", "\(report.daysWorked)", "of \(state.weekdays) weekdays")
                 figure(
-                    "vs the \(state.period == .month ? "month" : state.period == .week ? "week" : "days") before",
+                    "vs. previous \(state.period == .month ? "month" : state.period == .week ? "week" : "days")",
                     (change >= 0 ? "+" : "−") + Format.duration(abs(change)),
-                    comparison.percent.map { "\($0 >= 0 ? "+" : "")\($0) % on \(Format.duration(comparison.previousTotal))" } ?? "nothing before"
+                    comparison.percent.map { "\($0 >= 0 ? "+" : "")\($0)% from \(Format.duration(comparison.previousTotal))" } ?? "nothing before"
                 )
             }
         }
@@ -438,7 +438,7 @@ struct StatementPanel: View {
         let overlapDays = state.overlapDaysInRange
         let notDownloaded = model.missingFiles + model.issues.filter { $0.problem == .notDownloaded }.count
         return VStack(alignment: .leading, spacing: 10) {
-            Text("Before you send")
+            Text("Before sending")
                 .font(.system(size: 13, weight: .semibold))
             if report.doubleCounted > 0 {
                 HStack(alignment: .top, spacing: 10) {
@@ -449,10 +449,10 @@ struct StatementPanel: View {
                         .padding(.top, 2)
                     VStack(alignment: .leading, spacing: 4) {
                         (Text(Format.duration(report.doubleCounted)).fontWeight(.semibold).foregroundColor(Theme.amberText)
-                            + Text(" counts twice, where entries overlap on \(overlapDays.map { Format.monthDay($0) }.formatted(.list(type: .and)))."))
+                            + Text(" is counted twice: entries overlap on \(overlapDays.map { Format.monthDay($0) }.formatted(.list(type: .and)))."))
                             .fixedSize(horizontal: false, vertical: true)
                         if let first = overlapDays.first {
-                            Button("Correct them in the week ›") {
+                            Button("Fix in Week ›") {
                                 navigator.go(.week(first))
                             }
                             .linkButton()
@@ -461,11 +461,11 @@ struct StatementPanel: View {
                 }
             }
             if report.running != nil {
-                Label("The running timer counts once it stops.", systemImage: "record.circle")
+                Label("The running timer isn't included until it stops.", systemImage: "record.circle")
                     .foregroundStyle(Theme.text2)
             }
             Label(
-                notDownloaded == 0 ? "Every month file is downloaded." : "\(notDownloaded) month files aren't downloaded yet, so time may be missing.",
+                notDownloaded == 0 ? "All data downloaded." : "\(notDownloaded) files not downloaded yet. Time may be missing.",
                 systemImage: notDownloaded == 0 ? "checkmark.circle" : "icloud.and.arrow.down"
             )
             .foregroundStyle(notDownloaded == 0 ? Theme.text2 : Theme.amberText)
@@ -489,7 +489,7 @@ struct StatementPanel: View {
                 Text("CSV · \(max(lines.count - 1, 0)) rows")
                     .font(.system(size: 13, weight: .semibold))
                 Spacer()
-                Text("hours add up to ") + Text(String(format: "%.4f", hours)).foregroundColor(Theme.text)
+                Text("Total hours: ") + Text(String(format: "%.4f", hours)).foregroundColor(Theme.text)
             }
             .font(.system(size: 12))
             .foregroundStyle(Theme.text2)
@@ -529,7 +529,7 @@ struct StatementPanel: View {
                 savingPDF = true
             } label: {
                 HStack {
-                    Text("PDF statement…")
+                    Text("Save PDF…")
                     Spacer()
                     KeyCap("⌘P")
                 }

@@ -67,7 +67,7 @@ extension AppModel {
     // MARK: - Entries as lines
 
     /// An entry written as a line the command line reads back, such as
-    /// "2 oct 13:30-16:30 Bookings #153 Bug fix", for editing it as text.
+    /// "2 oct 13:30-16:30 Website #12 Fix login", for editing it as text.
     public func line(for entry: ResolvedEntry) -> String {
         let zone = entry.entry.timeZone
         let start = entry.start.local(in: zone)
@@ -171,7 +171,7 @@ public enum CommandText {
     public static func title(_ command: Command, running: ResolvedEntry?, now: Timestamp, zone: String) -> String {
         switch command {
         case let .start(_, start, end):
-            if end != nil { return "Log it as done, from \(Format.time(start, zone: zone))" }
+            if end != nil { return "Log as finished, from \(Format.time(start, zone: zone))" }
             let atNow = abs(start.distance(to: now)) < 60000
             if running == nil {
                 return atNow ? "Start" : "Start from \(Format.time(start, zone: zone))"
@@ -182,7 +182,7 @@ public enum CommandText {
         case let .stop(time):
             return abs(time.distance(to: now)) < 60000 ? "Stop" : "Stop at \(Format.time(time, zone: zone))"
         case let .moveStart(time):
-            return "Started at \(Format.time(time, zone: zone))"
+            return "Change start to \(Format.time(time, zone: zone))"
         case .addProject:
             return "Add project"
         case .addClient:
@@ -212,13 +212,13 @@ public enum CommandText {
         case .stop:
             return "Stop"
         case .moveStart:
-            return "Change the start"
+            return "Change start"
         case .addProject, .addClient:
             return "Add"
         case let .archive(_, archived):
             return archived ? "Archive" : "Unarchive"
         case .setColor:
-            return "Change the color"
+            return "Change color"
         case .merge:
             return "Merge"
         case .rename:
@@ -234,31 +234,31 @@ public enum CommandText {
         case .notRunning:
             "No timer is running."
         case let .beforeRunningStart(time):
-            "That's before the running timer started, at \(Format.time(time, zone: zone))."
+            "That's before the timer started (\(Format.time(time, zone: zone)))."
         case .startsInFuture:
-            "That's later than now."
+            "That's in the future."
         case .endsInFuture:
-            "That ends later than now."
+            "That ends in the future."
         case .endsBeforeStart:
             "That ends before it starts."
         case .runningAlready:
-            "That's running already."
+            "That's already running."
         case .needsStart:
-            "Say when it started, as in from 10:10 or -30m."
+            "Add a start, such as from 10:10 or -30m."
         case .needsName:
             "Type a name."
         case .needsColor:
             "Type a color, such as teal."
         case let .unknownColor(name):
-            "There's no color called \(name). Try blue, red, green, purple, orange, teal, gold or gray."
+            "No color named \(name). Use blue, red, green, purple, orange, teal, gold or gray."
         case .needsTarget:
-            "Type into and what to merge it into."
+            "Type “into” and what to merge it into."
         case let .notFound(name):
-            name.isEmpty ? "That's gone." : "No client or project is called \(name)."
+            name.isEmpty ? "That was deleted." : "No client or project named \(name)."
         case let .nameTaken(name):
-            "There's one called \(name) already."
+            "\(name) already exists."
         case .sameTarget:
-            "That's the same one."
+            "Those are the same."
         case .mixedTargets:
             "Merge a project into a project, or a client into a client."
         }

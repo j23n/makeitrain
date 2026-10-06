@@ -95,21 +95,12 @@ struct MonthScreen: View {
 
     private var rangeLine: some View {
         HStack(alignment: .firstTextBaseline, spacing: 16) {
-            (Text(Format.days(state.range)).fontWeight(.semibold).foregroundColor(Theme.text)
-                + Text(rangeHint))
-                .font(.system(size: 13))
-                .foregroundStyle(Theme.text2)
+            Text(Format.days(state.range))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.text)
             Spacer()
             legend
         }
-    }
-
-    private var rangeHint: String {
-        #if os(macOS)
-        return " · Shift-click a day, or use Shift and the arrows, for another range"
-        #else
-        return " · Use Shift and the arrows for another range"
-        #endif
     }
 
     private var legend: some View {
@@ -133,7 +124,7 @@ struct MonthScreen: View {
                 }
             }
             if !state.clients.isEmpty || !state.projects.isEmpty, filteredOut > 0 {
-                Text("\(filteredOut) other \(filteredOut == 1 ? "project is" : "projects are") filtered out")
+                Text("\(filteredOut) \(filteredOut == 1 ? "project" : "projects") filtered out")
             }
         }
         .font(.system(size: 12))
@@ -142,10 +133,10 @@ struct MonthScreen: View {
 
     private var keyHints: some View {
         HStack(spacing: 18) {
-            KeyHint("← → ↑ ↓", "move between days")
-            KeyHint("⇧", "with the arrows stretches the range")
-            KeyHint("⏎", "opens the day")
-            KeyHint("W", "its week")
+            KeyHint("← → ↑ ↓", "move")
+            KeyHint("⇧", "extend")
+            KeyHint("⏎", "open day")
+            KeyHint("W", "open week")
         }
     }
 }
