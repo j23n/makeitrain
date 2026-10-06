@@ -23,11 +23,17 @@ public struct CommandField {
     var focusesWithWindow: Bool
     /// Changing it puts the keyboard in the field, as ⌘K does.
     var focusRequest: Int
+    /// Changing it puts the insertion point at `cursor`, a UTF-16 offset,
+    /// as after taking a suggestion.
+    var cursorRequest: Int
+    var cursor: Int?
     var onSubmit: (_ alternate: Bool) -> Void
     var onTab: () -> Bool
     var onUp: () -> Bool
     var onDown: () -> Bool
     var onCancel: () -> Void
+    /// Where the insertion point is, as a UTF-16 offset, when it moves.
+    var onCursorChange: (Int) -> Void
     var onFocusChange: (Bool) -> Void
 
     public init(
@@ -38,11 +44,14 @@ public struct CommandField {
         fontSize: CGFloat = 15.5,
         focusesWithWindow: Bool = false,
         focusRequest: Int = 0,
+        cursorRequest: Int = 0,
+        cursor: Int? = nil,
         onSubmit: @escaping (_ alternate: Bool) -> Void,
         onTab: @escaping () -> Bool = { false },
         onUp: @escaping () -> Bool = { false },
         onDown: @escaping () -> Bool = { false },
         onCancel: @escaping () -> Void = {},
+        onCursorChange: @escaping (Int) -> Void = { _ in },
         onFocusChange: @escaping (Bool) -> Void = { _ in }
     ) {
         _text = text
@@ -52,11 +61,14 @@ public struct CommandField {
         self.fontSize = fontSize
         self.focusesWithWindow = focusesWithWindow
         self.focusRequest = focusRequest
+        self.cursorRequest = cursorRequest
+        self.cursor = cursor
         self.onSubmit = onSubmit
         self.onTab = onTab
         self.onUp = onUp
         self.onDown = onDown
         self.onCancel = onCancel
+        self.onCursorChange = onCursorChange
         self.onFocusChange = onFocusChange
     }
 
@@ -143,11 +155,18 @@ extension CommandField: NSViewRepresentable {
         field.setContentHuggingPriority(.defaultLow, for: .horizontal)
         field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         context.coordinator.lastFocusRequest = focusRequest
+        context.coordinator.lastCursorRequest = cursorRequest
+        context.coordinator.watchSelection(of: field)
         return field
     }
 
     public func updateNSView(_ field: CommandTextField, context: Context) {
-        context.coordinator.parent = self
+        let coordinator = context.coordinator
+        coordinator.parent = self
+        // Moves of the insertion point from here on follow the line's
+        // state, so they aren't reported back.
+        coordinator.isUpdating = true
+        defer { coordinator.isUpdating = false }
         if field.stringValue != text {
             field.stringValue = text
             if let editor = field.currentEditor() {
@@ -155,9 +174,15 @@ extension CommandField: NSViewRepresentable {
             }
         }
         field.placeholderAttributedString = NSAttributedString(string: placeholder, attributes: placeholderAttributes)
-        context.coordinator.highlight(field)
-        if context.coordinator.lastFocusRequest != focusRequest {
-            context.coordinator.lastFocusRequest = focusRequest
+        coordinator.highlight(field)
+        if coordinator.lastCursorRequest != cursorRequest {
+            coordinator.lastCursorRequest = cursorRequest
+            if let cursor, let editor = field.currentEditor() {
+                editor.selectedRange = NSRange(location: min(cursor, (field.stringValue as NSString).length), length: 0)
+            }
+        }
+        if coordinator.lastFocusRequest != focusRequest {
+            coordinator.lastFocusRequest = focusRequest
             DispatchQueue.main.async {
                 field.window?.makeKeyAndOrderFront(nil)
                 field.window?.makeFirstResponder(field)
@@ -168,14 +193,52 @@ extension CommandField: NSViewRepresentable {
     public final class Coordinator: NSObject, NSTextFieldDelegate {
         var parent: CommandField
         var lastFocusRequest = 0
+        var lastCursorRequest = 0
+        /// Whether the field is being changed to match the line, rather
+        /// than by the person typing.
+        var isUpdating = false
+        private weak var field: NSTextField?
+        private var selectionObserver: NSObjectProtocol?
 
         init(_ parent: CommandField) {
             self.parent = parent
         }
 
+        deinit {
+            if let selectionObserver {
+                NotificationCenter.default.removeObserver(selectionObserver)
+            }
+        }
+
+        /// Reports the insertion point whenever it moves in the field. The
+        /// window's fields share one field editor, so a move counts only
+        /// while the editor is this field's.
+        func watchSelection(of field: NSTextField) {
+            self.field = field
+            selectionObserver = NotificationCenter.default.addObserver(
+                forName: NSTextView.didChangeSelectionNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] notification in
+                MainActor.assumeIsolated {
+                    guard let self, let editor = notification.object as? NSText, editor === self.field?.currentEditor() else { return }
+                    self.reportCursor(editor)
+                }
+            }
+        }
+
+        /// The end of the selection, where typing goes on.
+        func reportCursor(_ editor: NSText) {
+            guard !isUpdating else { return }
+            parent.onCursorChange(NSMaxRange(editor.selectedRange))
+        }
+
         public func controlTextDidChange(_ notification: Notification) {
             guard let field = notification.object as? NSTextField else { return }
             parent.text = field.stringValue
+            if let editor = field.currentEditor() {
+                reportCursor(editor)
+            }
         }
 
         public func controlTextDidBeginEditing(_ notification: Notification) {
@@ -309,14 +372,25 @@ extension CommandField: UIViewRepresentable {
     }
 
     public func updateUIView(_ field: CommandTextField, context: Context) {
-        context.coordinator.parent = self
+        let coordinator = context.coordinator
+        coordinator.parent = self
+        // Moves of the caret from here on follow the line's state, so they
+        // aren't reported back.
+        coordinator.isUpdating = true
+        defer { coordinator.isUpdating = false }
         if field.text != text {
             field.text = text
         }
         field.attributedPlaceholder = NSAttributedString(string: placeholder, attributes: placeholderAttributes)
-        context.coordinator.highlight(field)
-        if context.coordinator.focusRequest != focusRequest {
-            context.coordinator.focusRequest = focusRequest
+        coordinator.highlight(field)
+        if coordinator.cursorRequest != cursorRequest {
+            coordinator.cursorRequest = cursorRequest
+            if let cursor, let position = field.position(from: field.beginningOfDocument, offset: min(cursor, (field.text ?? "").utf16.count)) {
+                field.selectedTextRange = field.textRange(from: position, to: position)
+            }
+        }
+        if coordinator.focusRequest != focusRequest {
+            coordinator.focusRequest = focusRequest
             DispatchQueue.main.async {
                 field.becomeFirstResponder()
             }
@@ -326,14 +400,30 @@ extension CommandField: UIViewRepresentable {
     public final class Coordinator: NSObject, UITextFieldDelegate {
         var parent: CommandField
         var focusRequest: Int
+        var cursorRequest: Int
+        /// Whether the field is being changed to match the line, rather
+        /// than by the person typing.
+        var isUpdating = false
 
         init(_ parent: CommandField) {
             self.parent = parent
             focusRequest = parent.focusRequest
+            cursorRequest = parent.cursorRequest
         }
 
         @objc func changed(_ field: UITextField) {
             parent.text = field.text ?? ""
+            reportCursor(field)
+        }
+
+        public func textFieldDidChangeSelection(_ field: UITextField) {
+            reportCursor(field)
+        }
+
+        /// The end of the selection, where typing goes on.
+        private func reportCursor(_ field: UITextField) {
+            guard !isUpdating, let range = field.selectedTextRange else { return }
+            parent.onCursorChange(field.offset(from: field.beginningOfDocument, to: range.end))
         }
 
         public func textFieldShouldReturn(_ field: UITextField) -> Bool {

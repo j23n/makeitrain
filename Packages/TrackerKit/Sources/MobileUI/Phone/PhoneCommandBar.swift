@@ -142,9 +142,12 @@ struct PhoneCommandSheet: View {
             placeholder: model.running == nil ? "start a timer or log time" : "switch, stop or log time",
             reading: line.reading,
             submit: { alternate in submit(alternate: alternate) },
-            onTab: { line.complete() },
-            onUp: { line.previousLine() },
-            onDown: { line.nextLine() }
+            onTab: { line.acceptSuggestion() || line.complete() },
+            onUp: { line.moveSuggestion(by: -1) || line.previousLine() },
+            onDown: { line.moveSuggestion(by: 1) || line.nextLine() },
+            cursorRequest: line.cursorRequest,
+            cursor: line.requestedCursor,
+            onCursorChange: { line.cursor = $0 }
         )
         if case .find? = line.reading.primary {
             foundEntries
@@ -168,7 +171,10 @@ struct PhoneCommandSheet: View {
         submit: @escaping (_ alternate: Bool) -> Void,
         onTab: @escaping () -> Bool = { false },
         onUp: @escaping () -> Bool = { false },
-        onDown: @escaping () -> Bool = { false }
+        onDown: @escaping () -> Bool = { false },
+        cursorRequest: Int = 0,
+        cursor: Int? = nil,
+        onCursorChange: @escaping (Int) -> Void = { _ in }
     ) -> some View {
         HStack(spacing: 10) {
             Text("›")
@@ -183,11 +189,14 @@ struct PhoneCommandSheet: View {
                 fontSize: 17,
                 focusesWithWindow: true,
                 focusRequest: router.focusRequest,
+                cursorRequest: cursorRequest,
+                cursor: cursor,
                 onSubmit: submit,
                 onTab: onTab,
                 onUp: onUp,
                 onDown: onDown,
-                onCancel: close
+                onCancel: close,
+                onCursorChange: onCursorChange
             )
             .frame(height: 56)
             if !text.wrappedValue.isEmpty {
@@ -292,9 +301,9 @@ struct PhoneCommandSheet: View {
         }
     }
 
-    /// Words to add to the line: a start, a time ago, a tag, and the
-    /// completion of a project's name. With nothing typed, the lines run
-    /// lately.
+    /// Words to add to the line: what could replace the word being typed,
+    /// a start, a time ago, a tag, and the completion of a project's name.
+    /// With nothing typed, the lines run lately.
     private var additions: some View {
         let chips = self.chips
         return Group {
@@ -340,6 +349,8 @@ struct PhoneCommandSheet: View {
             case append(String)
             case replace(String)
             case complete
+            /// Takes the line's suggestion at this index.
+            case suggestion(Int)
         }
 
         var id: String
@@ -357,7 +368,19 @@ struct PhoneCommandSheet: View {
                 .prefix(4)
                 .map { Chip(id: "again " + $0, title: $0, action: .replace($0)) }
         }
-        var chips: [Chip] = []
+        var chips: [Chip] = line.suggestions.enumerated().map { index, suggestion -> Chip in
+            var tint: ProjectTint?
+            switch suggestion.kind {
+            case let .project(id):
+                tint = model.ledger.tint(ofProject: id)
+            case let .color(hex):
+                tint = ProjectTint(hex: hex)
+            default:
+                tint = nil
+            }
+            let title = suggestion.detail.isEmpty ? suggestion.title : "\(suggestion.title) · \(suggestion.detail)"
+            return Chip(id: "suggestion \(index) \(suggestion.title)", title: title, action: .suggestion(index), tint: tint, isTag: suggestion.kind == .tag)
+        }
         let words = line.text.lowercased().split(separator: " ")
         if let end = lastEndToday, !words.contains("from") {
             let time = Format.time(end, zone: model.environment.timeZone())
@@ -394,6 +417,8 @@ struct PhoneCommandSheet: View {
             line.text = text
         case .complete:
             _ = line.complete()
+        case let .suggestion(index):
+            line.acceptSuggestion(at: index)
         }
         router.focusRequest += 1
     }

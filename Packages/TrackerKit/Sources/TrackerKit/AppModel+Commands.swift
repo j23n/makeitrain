@@ -98,30 +98,58 @@ extension AppModel {
     }
 
     /// What a line typed over an entry would make of it: its project, tags,
-    /// note and times, or nil when the line doesn't describe an entry.
+    /// note and times, or nil when the line doesn't describe an entry. A
+    /// line without times keeps the entry's.
     public func entryChange(_ line: String, for id: UUID) -> (draft: EntryDraft, start: Timestamp, end: Timestamp?)? {
         guard let current = resolved.first(where: { $0.id == id }) else { return nil }
-        // Read as if the entry weren't there, so it isn't the running timer
-        // its own start has to come after.
-        var context = commandContext
-        context.resolved = resolved.filter { $0.id != id }
-        switch CommandReading(line, in: context).primary {
+        let reading = entryReading(line, for: id)
+        switch reading.primary {
         case let .log(draft, start, end)?:
             return (draft, start, end)
         case let .start(draft, start, _)?:
-            return (draft, start, current.isRunning ? nil : current.end)
+            guard reading.tokens.contains(where: { $0.kind == .time }) else {
+                return (draft, current.start, current.end)
+            }
+            if let end = current.end, end <= start {
+                return nil
+            }
+            return (draft, start, current.end)
         default:
             return nil
         }
     }
 
+    /// A line typed over an entry, read as if the entry weren't there, so
+    /// it isn't the running timer its own start has to come after.
+    private func entryReading(_ line: String, for id: UUID) -> CommandReading {
+        var context = commandContext
+        context.resolved = resolved.filter { $0.id != id }
+        return CommandReading(line, in: context)
+    }
+
+    /// What a line typed over an entry reads as, part by part, or nil when
+    /// it doesn't describe an entry.
+    public func entryLineParts(_ line: String, for id: UUID) -> EntryLineParts? {
+        guard let change = entryChange(line, for: id) else { return nil }
+        return EntryLineParts(start: change.start, end: change.end, zone: environment.timeZone(), draft: change.draft)
+    }
+
+    /// What could replace the word at `cursor`, a UTF-16 offset, in a line
+    /// typed in the command line or, with `entryID`, over that entry.
+    public func suggestions(for line: String, cursor: Int, editing entryID: UUID? = nil) -> [LineSuggestion] {
+        LineSuggestions.suggestions(for: line, cursor: cursor, in: commandContext, editing: entryID)
+    }
+
     /// Why a line typed over an entry can't change it, or nil when it can.
     public func entryProblem(_ line: String, for id: UUID) -> String? {
         guard entryChange(line, for: id) == nil else { return nil }
-        var context = commandContext
-        context.resolved = resolved.filter { $0.id != id }
-        if let problem = CommandReading(line, in: context).problem {
+        let reading = entryReading(line, for: id)
+        if let problem = reading.problem {
             return CommandText.message(problem, zone: environment.timeZone())
+        }
+        if case .start? = reading.primary {
+            // A start after the end the entry keeps.
+            return CommandText.message(.endsBeforeStart, zone: environment.timeZone())
         }
         return "Can't read this as an entry. Start with its times, then its project, tags and note."
     }
@@ -274,4 +302,14 @@ public enum CommandText {
             "Merge a project into a project, or a client into a client."
         }
     }
+}
+
+/// What a line typed over an entry reads as, for the guide under it.
+public struct EntryLineParts: Equatable {
+    public var start: Timestamp
+    /// Nil while it runs.
+    public var end: Timestamp?
+    /// The zone its times are shown in.
+    public var zone: String
+    public var draft: EntryDraft
 }

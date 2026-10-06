@@ -205,18 +205,21 @@ struct TopBar<Trailing: View>: View {
                 ledger: model.ledger,
                 fontSize: 12.5,
                 focusRequest: focusRequest,
+                cursorRequest: line.cursorRequest,
+                cursor: line.requestedCursor,
                 onSubmit: { alternate in
                     if line.submit(alternate: alternate, undoManager: undoManager) {
                         finish()
                     }
                 },
-                onTab: { line.complete() },
-                onUp: { line.previousLine() },
-                onDown: { line.nextLine() },
+                onTab: { line.acceptSuggestion() || line.complete() },
+                onUp: { line.moveSuggestion(by: -1) || line.previousLine() },
+                onDown: { line.moveSuggestion(by: 1) || line.nextLine() },
                 onCancel: {
                     line.clear()
                     finish()
                 },
+                onCursorChange: { line.cursor = $0 },
                 onFocusChange: { focused in commandFocused = focused }
             )
             .frame(height: 20)
@@ -257,6 +260,14 @@ struct CommandDropdown: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            if !line.suggestions.isEmpty {
+                SuggestionStrip(suggestions: line.suggestions, highlighted: line.highlightedSuggestion, ledger: line.model.ledger) { index in
+                    line.acceptSuggestion(at: index)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                Divider().overlay(Theme.line)
+            }
             CommandPreviewView(line: line)
             if case .find? = line.reading.primary {
                 EntryList(model: line.model, entries: Array(line.found.prefix(12)))

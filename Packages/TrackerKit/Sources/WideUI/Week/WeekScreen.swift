@@ -225,61 +225,60 @@ struct WeekScreen: View {
 }
 
 /// The selected entry as a line, to change it by typing: Return applies
-/// the line, Escape puts it back.
+/// the line, Escape puts it back. While it's edited, what could replace the
+/// word being typed shows under it, and what the line reads as.
 struct LineEditor: View {
     let model: AppModel
     let entryID: UUID?
-    @State private var text = ""
+    @State private var line: EntryLineModel
     @State private var editing = false
-    /// Why Return couldn't apply the line, until it's typed in again.
-    @State private var problem: String?
     @Environment(\.undoManager) private var undoManager
 
-    private var entry: ResolvedEntry? {
-        entryID.flatMap { id in model.resolved.first { $0.id == id } }
+    init(model: AppModel, entryID: UUID?) {
+        self.model = model
+        self.entryID = entryID
+        _line = State(initialValue: EntryLineModel(model: model))
     }
 
     var body: some View {
-        HStack(spacing: 14) {
-            Text("Selected")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(Theme.text3)
-            if let entry {
-                HStack(spacing: 10) {
-                    CommandField(
-                        text: $text,
-                        placeholder: "",
-                        reading: model.read(text),
-                        ledger: model.ledger,
-                        fontSize: 13.5,
-                        onSubmit: { _ in
-                            problem = model.entryProblem(text, for: entry.id)
-                            if problem == nil {
-                                model.apply(line: text, to: entry.id, undoManager: undoManager)
-                            }
-                        },
-                        onCancel: {
-                            text = model.line(for: entry)
-                        },
-                        onFocusChange: { editing = $0 }
-                    )
-                    .frame(height: 22)
-                    Text(Format.duration(model.duration(of: entry)))
-                        .font(.system(size: 13))
-                        .monospacedDigit()
-                        .foregroundStyle(Theme.text2)
-                }
-                .padding(.horizontal, 10)
-                .frame(height: 38)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Theme.field))
-                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(problem != nil ? Theme.amber : editing ? Theme.accent : Theme.strongLine, lineWidth: editing || problem != nil ? 1.5 : 1))
-                if let problem {
-                    Text(problem)
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.amberText)
-                        .lineLimit(2)
-                        .frame(maxWidth: 260, alignment: .leading)
-                } else {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 14) {
+                Text("Selected")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.text3)
+                    .frame(width: 52, alignment: .leading)
+                if let entry = line.entry {
+                    HStack(spacing: 10) {
+                        CommandField(
+                            text: Binding(get: { line.text }, set: { line.text = $0 }),
+                            placeholder: "",
+                            reading: model.read(line.text),
+                            ledger: model.ledger,
+                            fontSize: 13.5,
+                            cursorRequest: line.cursorRequest,
+                            cursor: line.requestedCursor,
+                            onSubmit: { _ in
+                                if line.apply(undoManager: undoManager) {
+                                    line.revert()
+                                }
+                            },
+                            onTab: { line.acceptSuggestion() },
+                            onUp: { line.moveSuggestion(by: -1) },
+                            onDown: { line.moveSuggestion(by: 1) },
+                            onCancel: { line.revert() },
+                            onCursorChange: { line.cursor = $0 },
+                            onFocusChange: { editing = $0 }
+                        )
+                        .frame(height: 22)
+                        Text(Format.duration(model.duration(of: entry)))
+                            .font(.system(size: 13))
+                            .monospacedDigit()
+                            .foregroundStyle(Theme.text2)
+                    }
+                    .padding(.horizontal, 10)
+                    .frame(height: 38)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(Theme.field))
+                    .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(line.refused ? Theme.amber : editing ? Theme.accent : Theme.strongLine, lineWidth: editing || line.refused ? 1.5 : 1))
                     HStack(spacing: 6) {
                         KeyCap("⏎")
                         Text("apply")
@@ -289,12 +288,23 @@ struct LineEditor: View {
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.text2)
                     .fixedSize()
+                } else {
+                    Text("Select an entry to edit it here.")
+                        .font(.system(size: 12.5))
+                        .foregroundStyle(Theme.text3)
+                        .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
                 }
-            } else {
-                Text("Select an entry to edit it here.")
-                    .font(.system(size: 12.5))
-                    .foregroundStyle(Theme.text3)
-                    .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
+            }
+            if line.entry != nil, editing || line.refused {
+                VStack(alignment: .leading, spacing: 8) {
+                    if !line.suggestions.isEmpty {
+                        SuggestionStrip(suggestions: line.suggestions, highlighted: line.highlightedSuggestion, ledger: model.ledger) { index in
+                            line.acceptSuggestion(at: index)
+                        }
+                    }
+                    EntryLineGuide(model: model, line: line)
+                }
+                .padding(.leading, 66)
             }
         }
         .padding(.horizontal, 12)
@@ -302,15 +312,11 @@ struct LineEditor: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(Theme.panel))
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.line))
         .onChange(of: entryID, initial: true) {
-            text = entry.map { model.line(for: $0) } ?? ""
-            problem = nil
-        }
-        .onChange(of: text) {
-            problem = nil
+            line.show(entryID)
         }
         .onChange(of: model.revision) {
             if !editing {
-                text = entry.map { model.line(for: $0) } ?? ""
+                line.revert()
             }
         }
     }

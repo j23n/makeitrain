@@ -119,11 +119,16 @@ struct PhoneEmptyDay: View {
 struct PhoneEntrySheet: View {
     let model: AppModel
     let entryID: UUID
-    @State private var text = ""
+    @State private var line: EntryLineModel
     @State private var focusRequest = 0
-    @State private var problem = false
     @Environment(\.undoManager) private var undoManager
     @Environment(\.dismiss) private var dismiss
+
+    init(model: AppModel, entryID: UUID) {
+        self.model = model
+        self.entryID = entryID
+        _line = State(initialValue: EntryLineModel(model: model))
+    }
 
     private var entry: ResolvedEntry? {
         model.resolved.first { $0.id == entryID }
@@ -149,13 +154,13 @@ struct PhoneEntrySheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Apply", action: apply)
-                        .disabled(model.isReadOnly || text == entry.map { model.line(for: $0) })
+                        .disabled(model.isReadOnly || line.isUnchanged)
                 }
             }
         }
         .presentationDetents([.medium, .large])
         .onAppear {
-            text = entry.map { model.line(for: $0) } ?? ""
+            line.show(entryID)
             focusRequest += 1
         }
     }
@@ -166,15 +171,21 @@ struct PhoneEntrySheet: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
                         CommandField(
-                            text: $text,
+                            text: Binding(get: { line.text }, set: { line.text = $0 }),
                             placeholder: "",
-                            reading: model.read(text),
+                            reading: model.read(line.text),
                             ledger: model.ledger,
                             fontSize: 15,
                             focusesWithWindow: true,
                             focusRequest: focusRequest,
+                            cursorRequest: line.cursorRequest,
+                            cursor: line.requestedCursor,
                             onSubmit: { _ in apply() },
-                            onCancel: { dismiss() }
+                            onTab: { line.acceptSuggestion() },
+                            onUp: { line.moveSuggestion(by: -1) },
+                            onDown: { line.moveSuggestion(by: 1) },
+                            onCancel: { dismiss() },
+                            onCursorChange: { line.cursor = $0 }
                         )
                         .frame(height: 44)
                         Text(Format.duration(model.duration(of: entry)))
@@ -184,12 +195,13 @@ struct PhoneEntrySheet: View {
                     }
                     .padding(.horizontal, 12)
                     .background(RoundedRectangle(cornerRadius: 12).fill(Theme.field))
-                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(problem ? Theme.amber : Theme.strongLine))
-                    if problem {
-                        Text("Can't read this as an entry. Start with its times, then its project, tags and note.")
-                            .font(.system(size: 12.5))
-                            .foregroundStyle(Theme.amberText)
+                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(line.refused ? Theme.amber : Theme.strongLine))
+                    if !line.suggestions.isEmpty {
+                        SuggestionStrip(suggestions: line.suggestions, highlighted: line.highlightedSuggestion, ledger: model.ledger, showsKeys: false) { index in
+                            line.acceptSuggestion(at: index)
+                        }
                     }
+                    EntryLineGuide(model: model, line: line)
                 }
                 actions(entry)
             }
@@ -251,10 +263,8 @@ struct PhoneEntrySheet: View {
 
     private func apply() {
         guard entry != nil else { return }
-        if model.apply(line: text, to: entryID, undoManager: undoManager) {
+        if line.apply(undoManager: undoManager) {
             dismiss()
-        } else {
-            problem = true
         }
     }
 }

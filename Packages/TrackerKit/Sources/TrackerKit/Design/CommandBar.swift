@@ -11,6 +11,9 @@ public final class CommandLineModel {
     public var text: String = "" {
         didSet {
             if text != oldValue {
+                if text != recalledLine {
+                    recalledLine = nil
+                }
                 refresh()
             }
         }
@@ -28,10 +31,29 @@ public final class CommandLineModel {
     public var showsToday = false
     /// The entries "find" lists.
     public private(set) var found: [ResolvedEntry] = []
+    /// Where the insertion point is, as a UTF-16 offset; nil for the end.
+    public var cursor: Int? {
+        didSet {
+            if cursor != oldValue {
+                refreshSuggestions()
+            }
+        }
+    }
+    /// What could replace the word at the insertion point.
+    public private(set) var suggestions: [LineSuggestion] = []
+    /// The suggestion Tab takes.
+    public var highlightedSuggestion = 0
+    /// Changes when the field should put its insertion point at
+    /// `requestedCursor`, as after taking a suggestion.
+    public private(set) var cursorRequest = 0
+    public private(set) var requestedCursor: Int?
 
     public let model: AppModel
     @ObservationIgnored private var historyIndex: Int?
     @ObservationIgnored private var draftBeforeHistory = ""
+    /// A line Up or Down brought back. It gets no suggestions until it's
+    /// changed, so the keys keep going through the earlier lines.
+    @ObservationIgnored private var recalledLine: String?
 
     public init(model: AppModel) {
         self.model = model
@@ -58,6 +80,40 @@ public final class CommandLineModel {
         if !text.isEmpty {
             showsToday = false
         }
+        refreshSuggestions()
+    }
+
+    /// Works out what could replace the word at the insertion point.
+    public func refreshSuggestions() {
+        if text.isEmpty || text == recalledLine {
+            suggestions = []
+        } else {
+            suggestions = model.suggestions(for: text, cursor: cursor ?? text.utf16.count)
+        }
+        highlightedSuggestion = 0
+    }
+
+    /// Puts the highlighted suggestion, or the one at `index`, in place of
+    /// the word. Returns whether there was one.
+    @discardableResult
+    public func acceptSuggestion(at index: Int? = nil) -> Bool {
+        let chosen = index ?? highlightedSuggestion
+        guard suggestions.indices.contains(chosen) else { return false }
+        let suggestion = suggestions[chosen]
+        historyIndex = nil
+        text = suggestion.text
+        cursor = suggestion.cursor
+        requestedCursor = suggestion.cursor
+        cursorRequest += 1
+        return true
+    }
+
+    /// Moves the highlight through the suggestions. Returns false when
+    /// there are none, so the key does what it otherwise does.
+    public func moveSuggestion(by step: Int) -> Bool {
+        guard !suggestions.isEmpty else { return false }
+        highlightedSuggestion = (highlightedSuggestion + step + suggestions.count) % suggestions.count
+        return true
     }
 
     /// Runs the line. Returns whether something was done, so the field
@@ -70,6 +126,7 @@ public final class CommandLineModel {
         case .done:
             historyIndex = nil
             text = ""
+            cursor = nil
             return true
         case let .problem(problem):
             message = CommandText.message(problem, zone: model.environment.timeZone())
@@ -83,6 +140,7 @@ public final class CommandLineModel {
     public func complete() -> Bool {
         guard let completion = reading.completion else { return false }
         text = completion.text + " "
+        cursor = nil
         return true
     }
 
@@ -95,7 +153,9 @@ public final class CommandLineModel {
         }
         let index = max(0, (historyIndex ?? history.count) - 1)
         historyIndex = index
+        recalledLine = history[index]
         text = history[index]
+        cursor = nil
         return true
     }
 
@@ -112,17 +172,20 @@ public final class CommandLineModel {
         }
         if index + 1 < history.count {
             historyIndex = index + 1
+            recalledLine = history[index + 1]
             text = history[index + 1]
         } else {
             historyIndex = nil
             text = draftBeforeHistory
         }
+        cursor = nil
         return true
     }
 
     public func clear() {
         historyIndex = nil
         text = ""
+        cursor = nil
         showsToday = false
     }
 

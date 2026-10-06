@@ -33,11 +33,14 @@ struct CommandBar: View {
                     ledger: line.model.ledger,
                     focusesWithWindow: focusesWithWindow,
                     focusRequest: focusRequest,
+                    cursorRequest: line.cursorRequest,
+                    cursor: line.requestedCursor,
                     onSubmit: submit,
-                    onTab: { line.complete() },
-                    onUp: { line.previousLine() },
-                    onDown: { line.nextLine() },
-                    onCancel: cancel
+                    onTab: { line.acceptSuggestion() || line.complete() },
+                    onUp: { line.moveSuggestion(by: -1) || line.previousLine() },
+                    onDown: { line.moveSuggestion(by: 1) || line.nextLine() },
+                    onCancel: cancel,
+                    onCursorChange: { line.cursor = $0 }
                 )
                 .frame(height: 24)
                 .accessibilityLabel(Text(placeholder))
@@ -47,6 +50,13 @@ struct CommandBar: View {
             .padding(.trailing, 12)
             .frame(height: 54)
 
+            if !line.suggestions.isEmpty {
+                SuggestionStrip(suggestions: line.suggestions, highlighted: line.highlightedSuggestion, ledger: line.model.ledger) { index in
+                    line.acceptSuggestion(at: index)
+                }
+                .padding(.horizontal, 14)
+                .padding(.bottom, 10)
+            }
             if hasPreview {
                 Divider().overlay(Theme.line)
                 CommandPreviewView(line: line)
