@@ -115,6 +115,17 @@ extension AppModel {
         }
     }
 
+    /// Why a line typed over an entry can't change it, or nil when it can.
+    public func entryProblem(_ line: String, for id: UUID) -> String? {
+        guard entryChange(line, for: id) == nil else { return nil }
+        var context = commandContext
+        context.resolved = resolved.filter { $0.id != id }
+        if let problem = CommandReading(line, in: context).problem {
+            return CommandText.message(problem, zone: environment.timeZone())
+        }
+        return "Can't read this as an entry. Start with its times, then its project, tags and note."
+    }
+
     /// Changes an entry to what a line typed over it says. Returns false
     /// when the line doesn't describe an entry.
     @discardableResult

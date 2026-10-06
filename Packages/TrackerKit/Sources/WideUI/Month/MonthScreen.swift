@@ -51,6 +51,7 @@ struct MonthScreen: View {
         .focusEffectDisabled()
         .focused($focused)
         .onKeyPress(keys: [.leftArrow, .rightArrow, .upArrow, .downArrow]) { press in
+            guard !isEditingText() else { return .ignored }
             let step = switch press.key {
             case .leftArrow: -1
             case .rightArrow: 1
@@ -68,10 +69,12 @@ struct MonthScreen: View {
             return .handled
         }
         .onKeyPress(.return) {
+            guard !isEditingText() else { return .ignored }
             navigator.go(.day(cursor))
             return .handled
         }
         .onKeyPress(characters: CharacterSet(charactersIn: "wW")) { _ in
+            guard !isEditingText() else { return .ignored }
             navigator.go(.week(cursor))
             return .handled
         }

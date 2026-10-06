@@ -66,14 +66,17 @@ struct ProjectsScreen: View {
         .focusEffectDisabled()
         .focused($focused)
         .onKeyPress(keys: [.upArrow, .downArrow]) { press in
+            guard !isEditingText() else { return .ignored }
             moveSelection(by: press.key == .upArrow ? -1 : 1, tree: tree)
             return .handled
         }
         .onKeyPress(.return) {
+            guard !isEditingText() else { return .ignored }
             if let selection { navigator.go(.project(selection)) }
             return .handled
         }
         .onKeyPress(characters: CharacterSet(charactersIn: "rRcCaAmMnN")) { press in
+            guard !isEditingText() else { return .ignored }
             handleKey(press.characters.lowercased())
             return .handled
         }

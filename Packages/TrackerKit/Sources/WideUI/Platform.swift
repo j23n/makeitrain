@@ -76,6 +76,32 @@ func endTextEditing() {
     #endif
 }
 
+/// Whether a text field has the keyboard, so that keys are text and not
+/// the screen's shortcuts: a screen's key handlers run before a field
+/// inside it gets the key.
+@MainActor
+func isEditingText() -> Bool {
+    #if os(macOS)
+    return NSApp.keyWindow?.firstResponder is NSText
+    #else
+    foundFirstResponder = nil
+    UIApplication.shared.sendAction(#selector(UIResponder.reportAsFirstResponder), to: nil, from: nil, for: nil)
+    return foundFirstResponder is UITextField || foundFirstResponder is UITextView
+    #endif
+}
+
+#if os(iOS)
+/// The first responder, as the last search for it found it.
+private weak var foundFirstResponder: UIResponder?
+
+extension UIResponder {
+    /// Answers a search for the first responder, which UIKit sends to it.
+    @objc fileprivate func reportAsFirstResponder() {
+        foundFirstResponder = self
+    }
+}
+#endif
+
 /// What this device is called in sentences, such as "Calendar on this
 /// Mac".
 @MainActor

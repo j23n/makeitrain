@@ -71,22 +71,27 @@ struct WeekScreen: View {
         .focusEffectDisabled()
         .focused($focused)
         .onKeyPress(keys: ["j", "k"]) { press in
+            guard !isEditingText() else { return .ignored }
             week.moveSelection(by: press.key == "j" ? 1 : -1)
             return .handled
         }
         .onKeyPress(.return) {
+            guard !isEditingText() else { return .ignored }
             week.acceptSelected(undoManager: undoManager)
             return .handled
         }
         .onKeyPress(.tab) {
+            guard !isEditingText() else { return .ignored }
             week.skipSelected()
             return .handled
         }
         .onKeyPress(.leftArrow) {
+            guard !isEditingText() else { return .ignored }
             step(-1)
             return .handled
         }
         .onKeyPress(.rightArrow) {
+            guard !isEditingText() else { return .ignored }
             step(1)
             return .handled
         }
@@ -226,6 +231,8 @@ struct LineEditor: View {
     let entryID: UUID?
     @State private var text = ""
     @State private var editing = false
+    /// Why Return couldn't apply the line, until it's typed in again.
+    @State private var problem: String?
     @Environment(\.undoManager) private var undoManager
 
     private var entry: ResolvedEntry? {
@@ -246,7 +253,10 @@ struct LineEditor: View {
                         ledger: model.ledger,
                         fontSize: 13.5,
                         onSubmit: { _ in
-                            model.apply(line: text, to: entry.id, undoManager: undoManager)
+                            problem = model.entryProblem(text, for: entry.id)
+                            if problem == nil {
+                                model.apply(line: text, to: entry.id, undoManager: undoManager)
+                            }
                         },
                         onCancel: {
                             text = model.line(for: entry)
@@ -262,16 +272,24 @@ struct LineEditor: View {
                 .padding(.horizontal, 10)
                 .frame(height: 38)
                 .background(RoundedRectangle(cornerRadius: 8).fill(Theme.field))
-                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(editing ? Theme.accent : Theme.strongLine, lineWidth: editing ? 1.5 : 1))
-                HStack(spacing: 6) {
-                    KeyCap("⏎")
-                    Text("apply")
-                    KeyCap("esc")
-                    Text("revert")
+                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(problem != nil ? Theme.amber : editing ? Theme.accent : Theme.strongLine, lineWidth: editing || problem != nil ? 1.5 : 1))
+                if let problem {
+                    Text(problem)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Theme.amberText)
+                        .lineLimit(2)
+                        .frame(maxWidth: 260, alignment: .leading)
+                } else {
+                    HStack(spacing: 6) {
+                        KeyCap("⏎")
+                        Text("apply")
+                        KeyCap("esc")
+                        Text("revert")
+                    }
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.text2)
+                    .fixedSize()
                 }
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.text2)
-                .fixedSize()
             } else {
                 Text("Select an entry to edit it here.")
                     .font(.system(size: 12.5))
@@ -285,6 +303,10 @@ struct LineEditor: View {
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.line))
         .onChange(of: entryID, initial: true) {
             text = entry.map { model.line(for: $0) } ?? ""
+            problem = nil
+        }
+        .onChange(of: text) {
+            problem = nil
         }
         .onChange(of: model.revision) {
             if !editing {
