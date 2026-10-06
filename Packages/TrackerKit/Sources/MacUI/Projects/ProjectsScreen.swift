@@ -80,11 +80,11 @@ struct ProjectsScreen: View {
             return .handled
         }
         .onAppear {
-            stats = ProjectStats(model: model)
+            self.stats = ProjectStats(model: model)
             focused = true
         }
         .onChange(of: model.revision) {
-            stats = ProjectStats(model: model)
+            self.stats = ProjectStats(model: model)
         }
     }
 
