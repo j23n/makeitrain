@@ -297,11 +297,17 @@ struct LineEditor: View {
             }
             if line.entry != nil, editing || line.refused {
                 VStack(alignment: .leading, spacing: 8) {
-                    if !line.suggestions.isEmpty {
-                        SuggestionStrip(suggestions: line.suggestions, highlighted: line.highlightedSuggestion, ledger: model.ledger) { index in
-                            line.acceptSuggestion(at: index)
+                    // The row stays while suggestions come and go, so the
+                    // line above doesn't move.
+                    Color.clear
+                        .frame(height: 24)
+                        .overlay(alignment: .leading) {
+                            if !line.suggestions.isEmpty {
+                                SuggestionStrip(suggestions: line.suggestions, highlighted: line.highlightedSuggestion, ledger: model.ledger) { index in
+                                    line.acceptSuggestion(at: index)
+                                }
+                            }
                         }
-                    }
                     EntryLineGuide(model: model, line: line)
                 }
                 .padding(.leading, 66)
