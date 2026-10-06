@@ -38,10 +38,10 @@ import TrackerCore
         return TimeEntry(projectID: project, start: startTime, end: endTime, timeZone: "Europe/Berlin", tags: tags, updated: startTime)
     }
 
-    func overview(_ entries: [TimeEntry], of projects: Set<UUID?>) -> ProjectOverview {
+    func overview(_ entries: [TimeEntry], of project: UUID?) -> ProjectOverview {
         var ledger = ledger
         for entry in entries { ledger.merge(entry) }
-        return ProjectOverview(projects: projects, ledger: ledger, resolved: ledger.resolvedEntries(), today: today, firstWeekday: 2, now: now)
+        return ProjectOverview(project: project, ledger: ledger, resolved: ledger.resolvedEntries(), today: today, firstWeekday: 2, now: now)
     }
 
     @Test func addsUpThisWeekThisMonthAndAllTime() {
@@ -52,7 +52,7 @@ import TrackerCore
             // Running for an hour so far.
             entry(website, "09-23T14:40", nil),
             entry(app, "09-22T09:00", "09-22T17:00"),
-        ], of: [website])
+        ], of: website)
 
         #expect(result.thisWeek == 4 * hour)
         #expect(result.thisMonth == 5 * hour)
@@ -60,13 +60,6 @@ import TrackerCore
         #expect(result.entryCount == 4)
         #expect(result.firstDay == LocalDate(year: 2026, month: 7, day: 1))
         #expect(result.isRunning)
-        #expect(result.projects == [website: 7 * hour])
-        // Twelve weeks from July 6, so July 1 is before them.
-        #expect(result.weeks.count == 12)
-        #expect(result.weeks.first?.id == "2026-07-06")
-        #expect(result.weeks.last?.milliseconds == 4 * hour)
-        #expect(result.weeks.last?.isCurrent == true)
-        #expect(result.weeks.map(\.milliseconds).reduce(0, +) == 5 * hour)
     }
 
     @Test func groupsTheTagsThatReferToIssuesByRepository() {
@@ -76,7 +69,7 @@ import TrackerCore
             entry(website, "09-22T09:00", "09-22T11:00", tags: ["api#7"]),
             entry(website, "09-22T13:00", "09-22T14:00"),
             entry(website, "09-23T09:00", "09-23T09:30", tags: ["Design"]),
-        ], of: [website])
+        ], of: website)
 
         // The latest spelling wins.
         #expect(result.tags.map(\.name) == ["Design"])
@@ -96,26 +89,11 @@ import TrackerCore
         #expect(Set(result.tagNames) == ["Design", "#12", "web#30", "api#7"])
     }
 
-    @Test func sumsUpAClientsProjectsWithoutTheirTags() {
-        let result = overview([
-            entry(website, "09-21T09:00", "09-21T11:00", tags: ["design"]),
-            entry(app, "09-22T09:00", "09-22T12:00"),
-            entry(nil, "09-22T13:00", "09-22T14:00"),
-        ], of: [website, app])
-
-        #expect(result.total == 5 * hour)
-        #expect(result.projects == [website: 2 * hour, app: 3 * hour])
-        #expect(result.tags.isEmpty)
-        #expect(result.repositories.isEmpty)
-        // This week's bar is stacked by project, the busiest at the bottom.
-        #expect(result.weeks.last?.parts.map(\.id) == [app.uuidString, website.uuidString])
-    }
-
     @Test func listsTheUnassignedEntriesTags() {
         let result = overview([
             entry(nil, "09-22T13:00", "09-22T14:00", tags: ["#5", "email"]),
             entry(website, "09-22T09:00", "09-22T12:00", tags: ["email"]),
-        ], of: [nil])
+        ], of: nil)
 
         // Without a project, "#5" has no repository to refer to.
         #expect(result.tags.map(\.name) == ["#5", "email"])

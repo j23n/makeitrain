@@ -1,6 +1,5 @@
 import Foundation
 import Observation
-import SwiftUI
 
 /// Settings that stay on this device. Clients, projects and entries are
 /// in the data files, which sync; these don't.
@@ -18,15 +17,6 @@ public final class Preferences {
             case .system: "System"
             case .light: "Light"
             case .dark: "Dark"
-            }
-        }
-
-        /// The color scheme to ask for, or nil to follow the system.
-        public var colorScheme: ColorScheme? {
-            switch self {
-            case .system: nil
-            case .light: .light
-            case .dark: .dark
             }
         }
     }
@@ -135,12 +125,6 @@ public final class Preferences {
     public func skip(_ id: String) {
         guard !isSkipped(id) else { return }
         skippedCorrections = Array((skippedCorrections + [id]).suffix(Self.skippedLimit))
-        defaults.set(skippedCorrections, forKey: Keys.skippedCorrections)
-    }
-
-    /// Offers a skipped correction again.
-    public func unskip(_ id: String) {
-        skippedCorrections.removeAll { $0 == id }
         defaults.set(skippedCorrections, forKey: Keys.skippedCorrections)
     }
 

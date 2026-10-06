@@ -3,7 +3,7 @@ import Testing
 import TrackerCore
 @testable import TrackerKit
 
-@Suite struct TimelineTests {
+@Suite struct CalendarGridTests {
     let day = LocalDate(year: 2026, month: 9, day: 23)
 
     /// A block for an entry on September 23 in Berlin, with times such as "09:00".
@@ -17,12 +17,6 @@ import TrackerCore
     func second(_ time: String) -> Int {
         let parts = time.split(separator: ":").map { Int($0)! }
         return parts[0] * 3600 + parts[1] * 60
-    }
-
-    @Test func startsAtSevenUnlessAnEntryStartsEarlier() {
-        #expect(HourGrid.firstHour([]) == HourGrid.morning)
-        #expect(HourGrid.firstHour([[block("09:00", "10:00")]]) == 7)
-        #expect(HourGrid.firstHour([[block("09:00", "10:00")], [block("06:30", "08:00")]]) == 6)
     }
 
     @Test func movingSnapsToFiveMinutesAndKeepsTheLength() {
@@ -86,32 +80,9 @@ import TrackerCore
         let (_, lateEnd) = HourGrid.adjusted(block("09:00", "10:00"), kind: .end, by: 20 * 3600)
         #expect(lateEnd == 86400)
     }
-
-    @Test func spansCoverTheirDays() {
-        let september = LocalDate(year: 2026, month: 9, day: 1)...LocalDate(year: 2026, month: 9, day: 30)
-        #expect(TimelineSpan.day.range(around: day, firstWeekday: 2) == day...day)
-        #expect(TimelineSpan.week.range(around: day, firstWeekday: 2) == LocalDate(year: 2026, month: 9, day: 21)...LocalDate(year: 2026, month: 9, day: 27))
-        #expect(TimelineSpan.week.range(around: day, firstWeekday: 1) == LocalDate(year: 2026, month: 9, day: 20)...LocalDate(year: 2026, month: 9, day: 26))
-        #expect(TimelineSpan.month.range(around: day, firstWeekday: 2) == september)
-    }
-
-    @Test func steppingAMonthKeepsTheDayOfTheMonth() {
-        #expect(TimelineSpan.day.day(day, movedBy: -1, firstWeekday: 2) == LocalDate(year: 2026, month: 9, day: 22))
-        #expect(TimelineSpan.week.day(day, movedBy: 1, firstWeekday: 2) == LocalDate(year: 2026, month: 9, day: 30))
-        #expect(TimelineSpan.month.day(day, movedBy: -1, firstWeekday: 2) == LocalDate(year: 2026, month: 8, day: 23))
-        #expect(TimelineSpan.month.day(LocalDate(year: 2026, month: 12, day: 15), movedBy: 1, firstWeekday: 2) == LocalDate(year: 2027, month: 1, day: 15))
-        // September has no 31st.
-        #expect(TimelineSpan.month.day(LocalDate(year: 2026, month: 8, day: 31), movedBy: 1, firstWeekday: 2) == LocalDate(year: 2026, month: 9, day: 30))
-    }
-
-    @Test func anHourAddedOnTheGridStartsOnFiveMinutesAndEndsByMidnight() {
-        #expect(HourGrid.newEntrySecond(atY: HourGrid.hourHeight * 9.3) == second("09:15"))
-        #expect(HourGrid.newEntrySecond(atY: -10) == 0)
-        #expect(HourGrid.newEntrySecond(atY: HourGrid.hourHeight * 23.9) == second("23:00"))
-    }
 }
 
-@Suite @MainActor struct TimelineEditTests {
+@Suite @MainActor struct GridDragTests {
     let monday = LocalDate(year: 2026, month: 9, day: 21)
 
     func time(_ text: String) -> Timestamp {
@@ -162,18 +133,5 @@ import TrackerCore
         model.applyDrag(.start, to: block, on: today, startSecond: 8 * 3600, endSecond: block.endSecond, undoManager: nil)
         #expect(model.running?.start == time("2026-09-23T08:00:00+02:00"))
         #expect(model.running?.entry.note == "Running")
-    }
-
-    @Test func addsAnHourInThisDevicesZone() async {
-        let harness = Harness()
-        defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
-
-        let id = model.addHour(on: LocalDate(year: 2026, month: 9, day: 24), at: 10 * 3600, undoManager: nil)
-        let added = model.resolved.first { $0.id == id }
-        #expect(added?.start == time("2026-09-24T10:00:00+02:00"))
-        #expect(added?.end == time("2026-09-24T11:00:00+02:00"))
-        #expect(added?.entry.timeZone == "Europe/Berlin")
     }
 }

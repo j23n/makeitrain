@@ -71,7 +71,7 @@ struct ProjectScreen: View {
 
     private func load() {
         overview = ProjectOverview(
-            projects: [projectID],
+            project: projectID,
             ledger: model.ledger,
             resolved: model.resolved,
             today: model.today,

@@ -16,21 +16,14 @@ public enum Format {
 
     /// The numbers of `duration(_:)` and their units: one number without a
     /// unit under a day, such as ("1:05", nil), and from a day up the
-    /// hours and any minutes, such as ("574", "h") and ("46", "m"). Views
-    /// that set the units smaller than the numbers use them.
-    public static func durationParts(_ milliseconds: Int64) -> [(number: String, unit: String?)] {
+    /// hours and any minutes, such as ("574", "h") and ("46", "m").
+    static func durationParts(_ milliseconds: Int64) -> [(number: String, unit: String?)] {
         let minutes = max(0, milliseconds) / 60000
         let (hours, rest) = (minutes / 60, minutes % 60)
         guard hours >= 24 else {
             return [("\(hours):\(rest < 10 ? "0" : "")\(rest)", nil)]
         }
         return rest == 0 ? [("\(hours)", "h")] : [("\(hours)", "h"), ("\(rest)", "m")]
-    }
-
-    /// Reads a duration typed as "1:30", "1.5" (hours), "90m", "1h 30m" or
-    /// "1h30". Nil if it can't be read.
-    public static func parseDuration(_ text: String) -> Int64? {
-        Durations.parse(text)
     }
 
     /// The wall-clock time in a time zone, such as "09:15" or "9:15 AM",
@@ -93,7 +86,7 @@ public enum Format {
         )
     }
 
-    /// An hour of the day for a timeline's gutter, such as "09" or "9 AM",
+    /// An hour of the day for an hour grid's gutter, such as "09" or "9 AM",
     /// following the user's settings.
     public static func hour(_ hour: Int) -> String {
         Date(timeIntervalSince1970: Double(hour) * 3600).formatted(Date.FormatStyle(timeZone: utc).hour())
@@ -108,16 +101,6 @@ public enum Format {
     public static func percent(_ part: Int64, of total: Int64) -> String {
         guard total > 0 else { return "" }
         return "\(Int((Double(part) / Double(total) * 100).rounded()))%"
-    }
-
-    /// A short name for a time zone, such as "CEST", shown next to times
-    /// recorded in a zone other than the current one. Nil when it's the
-    /// current zone.
-    public static func zoneLabel(_ zone: String, at time: Timestamp) -> String? {
-        let current = TimeZone.current
-        let other = Zones.zone(zone)
-        guard other.secondsFromGMT(for: time.date) != current.secondsFromGMT(for: time.date) else { return nil }
-        return other.abbreviation(for: time.date) ?? zone
     }
 
     /// A date at noon UTC, for formatting a calendar day in the UTC zone.

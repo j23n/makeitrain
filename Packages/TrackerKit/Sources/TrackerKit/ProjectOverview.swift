@@ -1,17 +1,12 @@
 import SwiftUI
 import TrackerCore
 
-// What the pages of projects and clients show, and how the sidebars list
-// clients and projects, on the Mac and the iPad.
+// What a project's page shows, and how the projects list groups them.
 
 /// A project's time and tags, for its page: its time this week, this month
-/// and in all, its last twelve weeks, and its tags with their time, the
-/// ones that refer to issues grouped by repository. The running timer
-/// counts as far as it has run.
-///
-/// A client's page sums up its projects, with each project's time and the
-/// weeks stacked by project, and lists no tags, since each project has its
-/// own. Nil stands for the entries without a project.
+/// and in all, and its tags with their time, the ones that refer to issues
+/// grouped by repository. The running timer counts as far as it has run.
+/// Nil stands for the entries without a project.
 public struct ProjectOverview {
     /// A tag with how many of the entries have it, and their time.
     public struct Tag: Identifiable, Hashable {
@@ -48,26 +43,18 @@ public struct ProjectOverview {
     public var firstDay: LocalDate?
     /// Whether the running timer is one of the entries.
     public var isRunning: Bool
-    /// The last twelve weeks, this week last, stacked by project.
-    public var weeks: [ChartColumn]
-    /// Each project's time in all, nil's for the unassigned entries.
-    public var projects: [UUID?: Int64]
-    /// The tags that don't refer to issues, the most time first. Only for
-    /// a single project, or the unassigned entries.
+    /// The tags that don't refer to issues, the most time first.
     public var tags: [Tag]
     /// The time of the entries without tags.
     public var untagged: Int64
     /// The tags that refer to issues, by repository, the most time first.
     public var repositories: [Repository]
 
-    /// The overview of the entries of `projects`, nil standing for the
+    /// The overview of the entries of `projectID`, nil standing for the
     /// unassigned ones. Weeks start on `firstWeekday`.
-    public init(projects ids: Set<UUID?>, ledger: Ledger, resolved: [ResolvedEntry], today: LocalDate, firstWeekday: Int, now: Timestamp) {
+    public init(project projectID: UUID?, ledger: Ledger, resolved: [ResolvedEntry], today: LocalDate, firstWeekday: Int, now: Timestamp) {
         let week = ReportPeriod.week.range(containing: today, firstWeekday: firstWeekday)
         let month = ReportPeriod.month.range(containing: today, firstWeekday: firstWeekday)
-        let firstWeek = week.lowerBound.adding(days: -7 * 11)
-        let listsTags = ids.count == 1
-        let projectID = ids.first ?? nil
 
         var thisWeek: Int64 = 0
         var thisMonth: Int64 = 0
@@ -75,8 +62,6 @@ public struct ProjectOverview {
         var entryCount = 0
         var firstDay: LocalDate?
         var isRunning = false
-        var byWeek = Array(repeating: [UUID?: Int64](), count: 12)
-        var byProject: [UUID?: Int64] = [:]
         var spelling: [String: String] = [:]
         var tagCount: [String: Int] = [:]
         var tagTime: [String: Int64] = [:]
@@ -104,7 +89,7 @@ public struct ProjectOverview {
             return found
         }
 
-        for entry in resolved where ids.contains(entry.entry.projectID) {
+        for entry in resolved where entry.entry.projectID == projectID {
             let duration = entry.duration(now: now)
             let day = entry.entry.day
             entryCount += 1
@@ -113,13 +98,6 @@ public struct ProjectOverview {
             if month.contains(day) { thisMonth += duration }
             firstDay = min(firstDay ?? day, day)
             isRunning = isRunning || entry.isRunning
-            byProject[entry.entry.projectID, default: 0] += duration
-            let sinceFirstWeek = day.daysSince1970 - firstWeek.daysSince1970
-            if (0..<84).contains(sinceFirstWeek) {
-                byWeek[sinceFirstWeek / 7][entry.entry.projectID, default: 0] += duration
-            }
-
-            guard listsTags else { continue }
             if entry.entry.tags.isEmpty {
                 untagged += duration
             }
@@ -162,28 +140,6 @@ public struct ProjectOverview {
             byRepository[key, default: (repository: issue.repository, issues: [])].issues.append(tag)
         }
 
-        let order = byProject.keys.sorted { a, b in
-            let (timeA, timeB) = (byProject[a, default: 0], byProject[b, default: 0])
-            return timeA != timeB ? timeA > timeB : ledger.projectTitle(a) < ledger.projectTitle(b)
-        }
-        weeks = (0..<12).map { index in
-            let start = firstWeek.adding(days: 7 * index)
-            return ChartColumn(
-                id: start.description,
-                label: Format.monthDay(start),
-                title: Format.days(start...start.adding(days: 6)),
-                parts: order.compactMap { projectID in
-                    guard let milliseconds = byWeek[index][projectID], milliseconds > 0 else { return nil }
-                    return ChartColumn.Part(
-                        id: projectID?.uuidString ?? "",
-                        title: ledger.projectTitle(projectID),
-                        color: ledger.color(ofProject: projectID),
-                        milliseconds: milliseconds
-                    )
-                },
-                isCurrent: index == 11
-            )
-        }
         tags = allTags.filter { $0.url == nil }.sorted(by: busiestFirst)
         repositories = byRepository
             .map { key, value in
@@ -196,7 +152,6 @@ public struct ProjectOverview {
         self.entryCount = entryCount
         self.firstDay = firstDay
         self.isRunning = isRunning
-        self.projects = byProject
         self.untagged = untagged
     }
 
@@ -211,9 +166,9 @@ public struct ProjectOverview {
     }
 }
 
-/// Clients and their projects, as the sidebars list them: the clients with
-/// their projects, then the projects without a client, and apart from them
-/// the archived clients and projects, each by name.
+/// Clients and their projects, as the projects list groups them: the
+/// clients with their projects, then the projects without a client, and
+/// apart from them the archived clients and projects, each by name.
 public struct ProjectTree {
     /// A client and its projects.
     public struct Branch: Identifiable {

@@ -38,27 +38,27 @@ import TrackerCore
     @Test func readsBackWhatItWrites() {
         let hour = 60 * minute
         for duration in [5 * minute, 7 * hour + 45 * minute, 24 * hour, 574 * hour + 46 * minute] {
-            #expect(Format.parseDuration(Format.duration(duration)) == duration)
+            #expect(Durations.parse(Format.duration(duration)) == duration)
         }
     }
 
     @Test func readsTypedDurations() {
-        #expect(Format.parseDuration("1:30") == 90 * minute)
-        #expect(Format.parseDuration(" 0:05 ") == 5 * minute)
-        #expect(Format.parseDuration(":45") == 45 * minute)
-        #expect(Format.parseDuration("1.5") == 90 * minute)
-        #expect(Format.parseDuration("0,25") == 15 * minute)
-        #expect(Format.parseDuration("2") == 120 * minute)
-        #expect(Format.parseDuration("90m") == 90 * minute)
-        #expect(Format.parseDuration("1h 30m") == 90 * minute)
-        #expect(Format.parseDuration("1H30") == 90 * minute)
-        #expect(Format.parseDuration("1.5h") == 90 * minute)
-        #expect(Format.parseDuration("0") == 0)
+        #expect(Durations.parse("1:30") == 90 * minute)
+        #expect(Durations.parse(" 0:05 ") == 5 * minute)
+        #expect(Durations.parse(":45") == 45 * minute)
+        #expect(Durations.parse("1.5") == 90 * minute)
+        #expect(Durations.parse("0,25") == 15 * minute)
+        #expect(Durations.parse("2") == 120 * minute)
+        #expect(Durations.parse("90m") == 90 * minute)
+        #expect(Durations.parse("1h 30m") == 90 * minute)
+        #expect(Durations.parse("1H30") == 90 * minute)
+        #expect(Durations.parse("1.5h") == 90 * minute)
+        #expect(Durations.parse("0") == 0)
     }
 
     @Test func rejectsWhatItCantRead() {
         for text in ["", "abc", "1:5", "1:60", "1:30:00", "-1", "h", "30m15", "1h 2x", "1e9"] {
-            #expect(Format.parseDuration(text) == nil, "\(text)")
+            #expect(Durations.parse(text) == nil, "\(text)")
         }
     }
 }

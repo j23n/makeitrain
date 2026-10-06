@@ -83,18 +83,6 @@ extension AppModel {
         }
     }
 
-    /// Applies a one-click overlap fix.
-    public func apply(_ fix: OverlapFix, undoManager: UndoManager?) {
-        let name: String
-        switch fix {
-        case .split: name = "Split Entry"
-        case .trimEarlier, .trimLater: name = "Trim Entry"
-        }
-        edit(name, undoManager: undoManager) { ledger, now in
-            ledger.apply(fix, now: now)
-        }
-    }
-
     // MARK: - Import
 
     /// What importing a CSV file would add, without adding anything. New
