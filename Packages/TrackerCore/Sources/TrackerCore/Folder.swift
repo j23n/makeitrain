@@ -115,14 +115,14 @@ public struct Folder: Sendable {
         var result = FolderResult(ledger: Ledger(), issues: [], pending: Changes())
 
         for name in try access.fileNames(in: root).sorted() {
-            guard let fileName = DataFileName(name), fileName.base == "projects" else { continue }
+            guard let fileName = DataFileName(name), fileName.kind == .projects else { continue }
             let url = root.appendingPathComponent(name)
             do {
                 guard let data = try access.coordinateReading(url, { try access.read(url) }) else { continue }
                 let contents = try FileFormat.decodeProjects(from: data)
                 for client in contents.clients { result.ledger.merge(client) }
                 for project in contents.projects { result.ledger.merge(project) }
-                if fileName.copy != nil {
+                if fileName.isCopy {
                     result.pending.projects = true
                 }
             } catch {
@@ -132,14 +132,14 @@ public struct Folder: Sendable {
 
         var filed: [(month: MonthKey, entries: [TimeEntry])] = []
         for name in try access.fileNames(in: entriesFolder).sorted() {
-            guard let fileName = DataFileName(name), let month = MonthKey(fileName.base) else { continue }
+            guard let fileName = DataFileName(name), case .month(let month) = fileName.kind else { continue }
             let url = entriesFolder.appendingPathComponent(name)
             do {
                 guard let data = try access.coordinateReading(url, { try access.read(url) }) else { continue }
                 let entries = try FileFormat.decodeEntries(from: data)
                 for entry in entries { result.ledger.merge(entry) }
                 filed.append((month, entries))
-                if fileName.copy != nil {
+                if fileName.isCopy {
                     result.pending.months.insert(month)
                 }
             } catch {
@@ -210,7 +210,7 @@ public struct Folder: Sendable {
     ) throws -> Set<MonthKey>? {
         let file = monthFile(month)
         let copies = names
-            .filter { DataFileName($0).map { $0.base == month.description && $0.copy != nil } ?? false }
+            .filter { DataFileName($0) == DataFileName(kind: .month(month), isCopy: true) }
             .sorted()
             .map { entriesFolder.appendingPathComponent($0) }
 
@@ -265,7 +265,7 @@ public struct Folder: Sendable {
     /// Read-merge-writes `projects.json` and folds in its numbered copies.
     private func saveProjects(into result: inout FolderResult) throws {
         let copies = try access.fileNames(in: root)
-            .filter { DataFileName($0).map { $0.base == "projects" && $0.copy != nil } ?? false }
+            .filter { DataFileName($0) == DataFileName(kind: .projects, isCopy: true) }
             .sorted()
             .map { root.appendingPathComponent($0) }
 
@@ -317,13 +317,7 @@ public enum DataFileKind: Hashable, Sendable {
 
     public init?(fileName: String) {
         guard let name = DataFileName(fileName) else { return nil }
-        if name.base == "projects" {
-            self = .projects
-        } else if let month = MonthKey(name.base) {
-            self = .month(month)
-        } else {
-            return nil
-        }
+        self = name.kind
     }
 
     /// The file to save when a copy of this kind of file had changes.
@@ -335,25 +329,34 @@ public enum DataFileKind: Hashable, Sendable {
     }
 }
 
-/// A data file's name split into its base and iCloud's copy number:
-/// "2026-10 2.json" is "2026-10", copy 2.
+/// A data file's name read as what the file holds, and whether it's one of
+/// iCloud's numbered copies: "2026-10 2.json" is a copy of the file for
+/// 2026-10.
 struct DataFileName: Hashable {
-    var base: String
-    var copy: Int?
+    var kind: DataFileKind
+    var isCopy: Bool
+}
 
+extension DataFileName {
+    /// Nil for a name that isn't a data file's.
     init?(_ name: String) {
         guard name.hasSuffix(".json"), !name.hasPrefix(".") else { return nil }
-        let stem = String(name.dropLast(".json".count))
-        if let space = stem.lastIndex(of: " ") {
-            let number = stem[stem.index(after: space)...]
-            if !number.isEmpty, number.allSatisfy(\.isASCIIDigit), let copy = Int(number) {
-                base = String(stem[..<space])
-                self.copy = copy
-                return
+        var base = String(name.dropLast(".json".count))
+        isCopy = false
+        if let space = base.lastIndex(of: " ") {
+            let number = base[base.index(after: space)...]
+            if !number.isEmpty, number.allSatisfy(\.isASCIIDigit), Int(number) != nil {
+                base = String(base[..<space])
+                isCopy = true
             }
         }
-        base = stem
-        copy = nil
+        if base == "projects" {
+            kind = .projects
+        } else if let month = MonthKey(base) {
+            kind = .month(month)
+        } else {
+            return nil
+        }
     }
 }
 

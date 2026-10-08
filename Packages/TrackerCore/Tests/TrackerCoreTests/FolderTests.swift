@@ -202,6 +202,16 @@ import Testing
         #expect(loaded.ledger == Ledger())
     }
 
+    @Test func tellsWhatAFileHoldsByItsName() {
+        #expect(DataFileKind(fileName: "projects.json") == .projects)
+        #expect(DataFileKind(fileName: "projects 2.json") == .projects)
+        #expect(DataFileKind(fileName: "2026-10.json") == .month(october))
+        #expect(DataFileKind(fileName: "2026-10 2.json") == .month(october))
+        for name in ["other.json", "2026-10 copy.json", ".2026-10.json.icloud", "2026-13.json", "notes.txt"] {
+            #expect(DataFileKind(fileName: name) == nil, "\(name)")
+        }
+    }
+
     @Test func worksOnDisk() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("TrackerCoreTests-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
