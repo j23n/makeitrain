@@ -21,6 +21,17 @@ public struct DataFileSummary: Identifiable, Hashable, Sendable {
     public var problem: FileProblem?
 
     public var id: String { path }
+
+    /// What it holds, or why it can't be used, such as "Not downloaded
+    /// yet."
+    public var detail: String {
+        guard let problem else { return contents }
+        switch problem {
+        case .unreadable: return "Can't be read. Left unchanged."
+        case let .newerVersion(version): return "From a newer version (\(version)). Left unchanged."
+        case .notDownloaded: return "Not downloaded yet."
+        }
+    }
 }
 
 extension AppModel {
@@ -70,5 +81,18 @@ extension AppModel {
         let snapshot = ledger
         let name = "\(today) \(label)"
         _ = try await Task.detached { try backups.write(snapshot, named: name) }.value
+    }
+
+    /// Whether there's an entry to export: one that isn't running.
+    public var hasFinishedEntries: Bool {
+        resolved.contains { !$0.isRunning }
+    }
+
+    /// Every finished entry as a CSV file, with the columns of a report's
+    /// export, and the file's name; nil when there's none yet.
+    public func finishedEntriesCSV() -> (document: CSVDocument, fileName: String)? {
+        let entries = resolved.filter { !$0.isRunning }
+        guard let fileName = CSVExport.fileName(for: entries) else { return nil }
+        return (document: CSVDocument(data: CSVExport.data(for: entries, ledger: ledger)), fileName: fileName)
     }
 }

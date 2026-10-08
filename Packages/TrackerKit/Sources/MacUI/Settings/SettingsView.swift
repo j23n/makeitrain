@@ -85,7 +85,7 @@ struct SettingsRow<Control: View>: View {
 // MARK: - General
 
 struct GeneralSettings: View {
-    @Bindable var model: AppModel
+    let model: AppModel
     @State private var recording = false
     @State private var monitor: Any?
     @State private var showsCheatSheet = false
@@ -108,13 +108,9 @@ struct GeneralSettings: View {
                         LaunchAtLoginToggle()
                     }
                     SettingsRow(title: "Weeks start on") {
-                        Picker("Weeks start on", selection: $model.firstWeekday) {
-                            ForEach([2, 1, 7], id: \.self) { day in
-                                Text(Calendar.current.weekdaySymbols[day - 1]).tag(day)
-                            }
-                        }
-                        .labelsHidden()
-                        .fixedSize()
+                        WeekStartPicker(model: model)
+                            .labelsHidden()
+                            .fixedSize()
                     }
                 }
 
@@ -300,25 +296,21 @@ struct CheatSheet: View {
 struct DataSettings: View {
     let model: AppModel
     @Environment(\.openWindow) private var openWindow
-    @State private var switching = false
-    @State private var switchError: String?
-    @State private var backingUp = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 SettingsSection(title: "Location") {
-                    SettingsRow(title: location, detail: status, divided: false) {
+                    SettingsRow(title: model.storageLocation, detail: model.saveStatus, divided: false) {
                         Button("Show in Finder") {
                             show(model.dataFolder)
                         }
                         .buttonStyle(ChoiceButtonStyle(compact: true))
                     }
-                    SettingsRow(title: "Keep data in iCloud Drive", detail: storageExplanation) {
-                        Toggle("Keep data in iCloud Drive", isOn: iCloudBinding)
+                    SettingsRow(title: "Keep data in iCloud Drive", detail: model.storageExplanation) {
+                        ICloudToggle(model: model)
                             .toggleStyle(.switch)
                             .labelsHidden()
-                            .disabled(switching || (!model.isICloudAvailable && model.storage == .local))
                     }
                 }
 
@@ -335,7 +327,7 @@ struct DataSettings: View {
                                 Text(file.path)
                                     .font(.system(size: 12, design: .monospaced))
                                     .frame(width: 190, alignment: .leading)
-                                Text(file.problem.map { describe($0) } ?? file.contents)
+                                Text(file.detail)
                                     .font(.system(size: 12))
                                     .foregroundStyle(file.problem == nil ? Theme.text2 : Theme.amberText)
                                 Spacer(minLength: 0)
@@ -347,16 +339,9 @@ struct DataSettings: View {
                 }
 
                 SettingsSection(title: "Backups") {
-                    SettingsRow(title: "Latest backup", detail: backupDetail, divided: false) {
+                    SettingsRow(title: "Latest backup", detail: model.latestBackup ?? "None yet", divided: false) {
                         HStack(spacing: 8) {
-                            Button("Back Up Now") {
-                                backingUp = true
-                                Task {
-                                    try? await model.backUpNow()
-                                    backingUp = false
-                                }
-                            }
-                            .disabled(backingUp)
+                            BackUpButton(model: model)
                             Button("Show in Finder") {
                                 show(model.backupsFolder)
                             }
@@ -397,29 +382,6 @@ struct DataSettings: View {
         }
         .background(Theme.background)
         .onAppear { model.refreshCalendars() }
-        .alert("Couldn't Switch Storage", isPresented: Binding(get: { switchError != nil }, set: { if !$0 { switchError = nil } })) {
-            Button("OK") { switchError = nil }
-        } message: {
-            Text(switchError ?? "")
-        }
-    }
-
-    private var location: String {
-        model.storage == .iCloud ? "iCloud Drive › Time Tracker" : "On this Mac"
-    }
-
-    private var status: String {
-        if model.hasUnsavedChanges {
-            return "Saving…"
-        }
-        if let saved = model.lastSaved {
-            return "Saved at \(Format.time(saved, zone: model.environment.timeZone()))"
-        }
-        return model.state == .ready ? "Saved" : "Opening…"
-    }
-
-    private var backupDetail: String {
-        model.latestBackup ?? "None yet"
     }
 
     @ViewBuilder
@@ -440,47 +402,11 @@ struct DataSettings: View {
         }
     }
 
-    private func describe(_ problem: FileProblem) -> String {
-        switch problem {
-        case .unreadable: "Can't be read. Left unchanged."
-        case let .newerVersion(version): "From a newer version (\(version)). Left unchanged."
-        case .notDownloaded: "Not downloaded yet."
-        }
-    }
-
     /// Asks the main window to import or export, opening it first.
     private func ask(_ request: AppRequest) {
         model.request = request
         openWindow(id: WindowID.main)
         NSApp.activate()
-    }
-
-    private var iCloudBinding: Binding<Bool> {
-        Binding(
-            get: { model.storage == .iCloud },
-            set: { on in
-                switching = true
-                Task {
-                    do {
-                        try await model.switchStorage(to: on ? .iCloud : .local)
-                    } catch {
-                        switchError = error.localizedDescription
-                    }
-                    switching = false
-                }
-            }
-        )
-    }
-
-    private var storageExplanation: String {
-        switch model.storage {
-        case .iCloud:
-            "Turning it off copies your data to this Mac. The copy in iCloud stays."
-        case .local:
-            model.isICloudAvailable
-                ? "Turning it on merges your data with what's in iCloud Drive."
-                : "Sign in to iCloud to use it."
-        }
     }
 
     private func show(_ folder: URL) {

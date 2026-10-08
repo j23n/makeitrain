@@ -69,11 +69,10 @@ struct MainWindow: View {
     }
 
     private var fileActions: FileActions {
-        let hasFinishedEntries = model.resolved.contains { !$0.isRunning }
-        return FileActions(
+        FileActions(
             importCSV: { importing = true },
             importEvents: { importingEvents = true },
-            exportEntries: hasFinishedEntries ? { exportEntries() } : nil
+            exportEntries: model.hasFinishedEntries ? { exportEntries() } : nil
         )
     }
 
@@ -96,10 +95,9 @@ struct MainWindow: View {
     /// Saves every finished entry through the save dialog, with the columns
     /// of a report's export.
     private func exportEntries() {
-        let entries = model.resolved.filter { !$0.isRunning }
-        guard let name = CSVExport.fileName(for: entries) else { return }
-        exportDocument = CSVDocument(data: CSVExport.data(for: entries, ledger: model.ledger))
-        exportFileName = name
+        guard let csv = model.finishedEntriesCSV() else { return }
+        exportDocument = csv.document
+        exportFileName = csv.fileName
         exporting = true
     }
 }
