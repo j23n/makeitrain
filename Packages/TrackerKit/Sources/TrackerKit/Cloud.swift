@@ -159,11 +159,13 @@ public final class ICloudProvider: CloudProvider {
 /// `NSFileCoordinator`, and a file that isn't downloaded yet counts as
 /// `FileProblem.notDownloaded` instead of missing, so it's never overwritten.
 public struct CoordinatedFileAccess: FileAccess {
+    /// The file operations themselves, without coordination.
+    private let plain = LocalFileAccess()
+
     public init() {}
 
     public func fileNames(in folder: URL) throws -> [String] {
-        guard FileManager.default.fileExists(atPath: folder.path) else { return [] }
-        let names = try FileManager.default.contentsOfDirectory(atPath: folder.path)
+        let names = try plain.fileNames(in: folder)
         // Some systems show a file iCloud hasn't downloaded as a hidden
         // ".name.icloud" placeholder.
         return Array(Set(names.map { name in
@@ -173,24 +175,21 @@ public struct CoordinatedFileAccess: FileAccess {
 
     public func read(_ file: URL) throws -> Data? {
         try checkDownloaded(file)
-        guard FileManager.default.fileExists(atPath: file.path) else { return nil }
-        return try Data(contentsOf: file)
+        return try plain.read(file)
     }
 
     public func write(_ data: Data, to file: URL) throws {
-        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try data.write(to: file, options: .atomic)
+        try plain.write(data, to: file)
     }
 
     public func remove(_ file: URL) throws {
-        guard FileManager.default.fileExists(atPath: file.path) else { return }
-        try FileManager.default.removeItem(at: file)
+        try plain.remove(file)
     }
 
-    public func coordinateReading<T>(_ file: URL, _ body: () throws -> T) throws -> T {
+    public func readCoordinated(_ file: URL) throws -> Data? {
         // Fail fast rather than wait for a download inside the coordination.
         try checkDownloaded(file)
-        return try coordinate(reading: true, files: [file], body)
+        return try coordinate(reading: true, files: [file]) { try read(file) }
     }
 
     public func coordinateWriting<T>(_ files: [URL], _ body: () throws -> T) throws -> T {

@@ -18,9 +18,7 @@ public struct Backups: Sendable {
 
     /// The names of the backups, oldest first.
     public func names() throws -> [String] {
-        let fileManager = FileManager.default
-        guard fileManager.fileExists(atPath: root.path) else { return [] }
-        return try fileManager.contentsOfDirectory(atPath: root.path)
+        try LocalFileAccess().fileNames(in: root)
             .filter { !$0.hasPrefix(".") }
             .sorted()
     }

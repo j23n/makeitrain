@@ -114,8 +114,8 @@ final class MemoryFiles: FileAccess, @unchecked Sendable {
         locked { files[file.path] = nil }
     }
 
-    func coordinateReading<T>(_ file: URL, _ body: () throws -> T) throws -> T {
-        try body()
+    func readCoordinated(_ file: URL) throws -> Data? {
+        try read(file)
     }
 
     func coordinateWriting<T>(_ files: [URL], _ body: () throws -> T) throws -> T {

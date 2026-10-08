@@ -13,8 +13,9 @@ public protocol FileAccess: Sendable {
     func write(_ data: Data, to file: URL) throws
     /// Deletes a file if it exists.
     func remove(_ file: URL) throws
-    /// Runs `body`, which reads `file`, while no one else writes it.
-    func coordinateReading<T>(_ file: URL, _ body: () throws -> T) throws -> T
+    /// A file's contents, or nil if it doesn't exist, read while no one else
+    /// writes it.
+    func readCoordinated(_ file: URL) throws -> Data?
     /// Runs `body`, which reads and then writes `files`, while no one else
     /// reads or writes them, on this Mac or through iCloud.
     func coordinateWriting<T>(_ files: [URL], _ body: () throws -> T) throws -> T
@@ -44,8 +45,8 @@ public struct LocalFileAccess: FileAccess {
         try FileManager.default.removeItem(at: file)
     }
 
-    public func coordinateReading<T>(_ file: URL, _ body: () throws -> T) throws -> T {
-        try body()
+    public func readCoordinated(_ file: URL) throws -> Data? {
+        try read(file)
     }
 
     public func coordinateWriting<T>(_ files: [URL], _ body: () throws -> T) throws -> T {
@@ -118,7 +119,7 @@ public struct Folder: Sendable {
             guard let fileName = DataFileName(name), fileName.kind == .projects else { continue }
             let url = root.appendingPathComponent(name)
             do {
-                guard let data = try access.coordinateReading(url, { try access.read(url) }) else { continue }
+                guard let data = try access.readCoordinated(url) else { continue }
                 let contents = try FileFormat.decodeProjects(from: data)
                 for client in contents.clients { result.ledger.merge(client) }
                 for project in contents.projects { result.ledger.merge(project) }
@@ -135,7 +136,7 @@ public struct Folder: Sendable {
             guard let fileName = DataFileName(name), case .month(let month) = fileName.kind else { continue }
             let url = entriesFolder.appendingPathComponent(name)
             do {
-                guard let data = try access.coordinateReading(url, { try access.read(url) }) else { continue }
+                guard let data = try access.readCoordinated(url) else { continue }
                 let entries = try FileFormat.decodeEntries(from: data)
                 for entry in entries { result.ledger.merge(entry) }
                 filed.append((month, entries))
