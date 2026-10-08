@@ -10,6 +10,13 @@ public enum ProjectSearch {
         words(fold(query))
     }
 
+    /// Whether a project shows in the projects list for what's typed in its
+    /// filter: each word appears somewhere in the client's or the project's
+    /// name. Every project does while nothing is typed.
+    public static func matches(_ query: String, project: String, client: String) -> Bool {
+        rank(terms(query), project: project, client: client) != nil
+    }
+
     /// How well a project matches the words typed, best first: 0 when its
     /// name starts with them, 1 when each starts a word of the client's or
     /// the project's name, 2 when each appears anywhere in them. Nil when a

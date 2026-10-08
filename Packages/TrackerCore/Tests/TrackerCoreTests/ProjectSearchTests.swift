@@ -43,4 +43,13 @@ import Testing
         #expect(rank("re", "Brand refresh", client: "Globex") == 1)
         #expect(rank("re", "Care plan", client: "Acme") == 2)
     }
+
+    @Test func filtersTheProjectsList() {
+        #expect(ProjectSearch.matches("cafe", project: "Café relaunch", client: ""))
+        #expect(ProjectSearch.matches("CAFÉ", project: "Cafe relaunch", client: ""))
+        #expect(ProjectSearch.matches("lau", project: "Café relaunch", client: ""))
+        #expect(ProjectSearch.matches("site acme", project: "Website redesign", client: "Acme"))
+        #expect(ProjectSearch.matches("", project: "Website redesign", client: "Acme"))
+        #expect(!ProjectSearch.matches("globex", project: "Website redesign", client: "Acme"))
+    }
 }
