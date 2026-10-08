@@ -88,13 +88,7 @@ extension AppModel {
     /// What importing a CSV file would add, without adding anything. New
     /// projects get the palette's next colors.
     public func importPlan(for data: Data) throws -> CSVImport.Plan {
-        var plan = try CSVImport.plan(data, into: ledger, timeZone: environment.timeZone(), now: environment.now())
-        var colored = ledger
-        for index in plan.projects.indices {
-            plan.projects[index].color = Palette.next(in: colored)
-            colored.merge(plan.projects[index])
-        }
-        return plan
+        try CSVImport.plan(data, into: ledger, timeZone: environment.timeZone(), now: environment.now())
     }
 
     /// Reads a CSV file picked in a file importer, which may be outside the
