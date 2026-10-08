@@ -60,13 +60,7 @@ public final class ReportState {
 
     /// The filters and days as a report request.
     public var request: ReportRequest {
-        ReportRequest(
-            range: range,
-            grouping: grouping,
-            clients: clients.isEmpty ? nil : Set(clients.map { Optional($0) }),
-            projects: projects.isEmpty ? nil : Set(projects.map { Optional($0) }),
-            tags: tags.isEmpty ? nil : tags
-        )
+        ReportRequest(range: range, grouping: grouping, clients: clients, projects: projects, tags: tags)
     }
 
     /// Shows other days.

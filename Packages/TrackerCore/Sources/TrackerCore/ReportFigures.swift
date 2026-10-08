@@ -56,9 +56,9 @@ public struct ReportComparison: Hashable, Sendable {
 
         // The entries a report of those days would have: stopped ones that
         // pass the same filters.
-        var request = report.request
-        request.range = previous
-        let matches = request.filter.matcher(in: ledger)
+        var filter = report.request.filter
+        filter.range = previous
+        let matches = filter.matcher(in: ledger)
         previousTotal = resolved.reduce(0) { sum, entry in
             !entry.isRunning && matches(entry) ? sum + entry.length : sum
         }

@@ -180,11 +180,11 @@ import Testing
             report(entries, request).entries.map(\.id)
         }
 
-        #expect(ids(ReportRequest(range: days(21, 27), projects: [website, nil])) == [uuid(1), uuid(4)])
+        #expect(ids(ReportRequest(range: days(21, 27), projects: [website, inHouse])) == [uuid(1), uuid(3)])
         #expect(ids(ReportRequest(range: days(21, 27), clients: [acme])) == [uuid(1), uuid(2)])
-        // No client covers projects without one and unassigned entries.
-        #expect(ids(ReportRequest(range: days(21, 27), clients: [nil])) == [uuid(3), uuid(4)])
         #expect(ids(ReportRequest(range: days(21, 27), tags: ["DESIGN"])) == [uuid(1), uuid(3)])
+        // Entries with any of the tags.
+        #expect(ids(ReportRequest(range: days(21, 27), tags: ["design", "Call"])) == [uuid(1), uuid(2), uuid(3)])
         #expect(ids(ReportRequest(range: days(21, 27), tags: [])) == [uuid(1), uuid(2), uuid(3), uuid(4), uuid(5)])
         #expect(ids(ReportRequest(range: days(21, 27), clients: [acme], tags: ["call"])) == [uuid(2)])
     }

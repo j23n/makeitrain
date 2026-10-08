@@ -2,19 +2,9 @@ import Foundation
 
 /// What a report covers.
 public struct ReportRequest: Hashable, Sendable {
-    /// Calendar days. An entry is in range when the day of its start, in its
-    /// own time zone, is.
-    public var range: ClosedRange<LocalDate>
+    /// The entries it covers.
+    public var filter: EntryFilter
     public var grouping: Grouping
-    /// Only entries for these clients, or all when nil. `nil` in the set
-    /// stands for entries without a client.
-    public var clients: Set<UUID?>?
-    /// Only entries for these projects, or all when nil. `nil` in the set
-    /// stands for unassigned entries.
-    public var projects: Set<UUID?>?
-    /// Only entries with at least one of these tags, ignoring case, or all
-    /// when nil or empty.
-    public var tags: Set<String>?
 
     public enum Grouping: String, CaseIterable, Hashable, Sendable {
         case client, project, tag
@@ -23,15 +13,17 @@ public struct ReportRequest: Hashable, Sendable {
     public init(
         range: ClosedRange<LocalDate>,
         grouping: Grouping = .client,
-        clients: Set<UUID?>? = nil,
-        projects: Set<UUID?>? = nil,
-        tags: Set<String>? = nil
+        clients: Set<UUID> = [],
+        projects: Set<UUID> = [],
+        tags: Set<String> = []
     ) {
-        self.range = range
+        filter = EntryFilter(range: range, clients: clients, projects: projects, tags: tags)
         self.grouping = grouping
-        self.clients = clients
-        self.projects = projects
-        self.tags = tags
+    }
+
+    /// The days it covers.
+    public var range: ClosedRange<LocalDate> {
+        filter.range
     }
 }
 

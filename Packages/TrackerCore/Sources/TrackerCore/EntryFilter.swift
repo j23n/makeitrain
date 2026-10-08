@@ -1,26 +1,24 @@
 import Foundation
 
 /// Which entries to show: those on some days, for some clients or projects,
-/// or with some tags. Reports and the entries list filter the same way.
+/// or with some tags. A report covers the entries of one.
 public struct EntryFilter: Hashable, Sendable {
-    /// Calendar days, or every day when nil. An entry is on the day of its
-    /// start, in its own time zone.
-    public var range: ClosedRange<LocalDate>?
-    /// Only entries for these clients, or all when nil. `nil` in the set
-    /// stands for entries without a client.
-    public var clients: Set<UUID?>?
-    /// Only entries for these projects, or all when nil. `nil` in the set
-    /// stands for unassigned entries.
-    public var projects: Set<UUID?>?
+    /// Calendar days. An entry is on the day of its start, in its own time
+    /// zone.
+    public var range: ClosedRange<LocalDate>
+    /// Only entries for these clients, or all when empty.
+    public var clients: Set<UUID>
+    /// Only entries for these projects, or all when empty.
+    public var projects: Set<UUID>
     /// Only entries with at least one of these tags, ignoring case, or all
-    /// when nil or empty.
-    public var tags: Set<String>?
+    /// when empty.
+    public var tags: Set<String>
 
     public init(
-        range: ClosedRange<LocalDate>? = nil,
-        clients: Set<UUID?>? = nil,
-        projects: Set<UUID?>? = nil,
-        tags: Set<String>? = nil
+        range: ClosedRange<LocalDate>,
+        clients: Set<UUID> = [],
+        projects: Set<UUID> = [],
+        tags: Set<String> = []
     ) {
         self.range = range
         self.clients = clients
@@ -28,25 +26,20 @@ public struct EntryFilter: Hashable, Sendable {
         self.tags = tags
     }
 
-    /// Whether it lets every entry through.
-    public var isEmpty: Bool {
-        range == nil && clients == nil && projects == nil && (tags ?? []).isEmpty
-    }
-
     /// A test for entries, with what it needs worked out once, for going
     /// through many.
     public func matcher(in ledger: Ledger) -> (ResolvedEntry) -> Bool {
-        let days = range.map(DaySpan.init)
-        let wantedTags = Set((tags ?? []).map { $0.lowercased() })
+        let days = DaySpan(range)
+        let wantedTags = Set(tags.map { $0.lowercased() })
         return { entry in
-            if let days, !days.contains(entry.entry) {
+            if !days.contains(entry.entry) {
                 return false
             }
-            if let projects = self.projects, !projects.contains(entry.entry.projectID) {
-                return false
+            if !projects.isEmpty {
+                guard let projectID = entry.entry.projectID, projects.contains(projectID) else { return false }
             }
-            if let clients = self.clients, !clients.contains(ledger.client(forProject: entry.entry.projectID)?.id) {
-                return false
+            if !clients.isEmpty {
+                guard let client = ledger.client(forProject: entry.entry.projectID), clients.contains(client.id) else { return false }
             }
             if !wantedTags.isEmpty, !entry.entry.tags.contains(where: { wantedTags.contains($0.lowercased()) }) {
                 return false
@@ -94,12 +87,5 @@ private struct DaySpan {
             return true
         }
         return days.contains(entry.day)
-    }
-}
-
-extension ReportRequest {
-    /// The entries the report covers.
-    public var filter: EntryFilter {
-        EntryFilter(range: range, clients: clients, projects: projects, tags: tags)
     }
 }
