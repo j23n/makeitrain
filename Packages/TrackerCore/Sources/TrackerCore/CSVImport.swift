@@ -35,11 +35,6 @@ public enum CSVImport {
         /// The row's line in the file; the heading is line 1.
         public var line: Int
         public var message: String
-
-        public init(line: Int, message: String) {
-            self.line = line
-            self.message = message
-        }
     }
 
     /// What importing a file adds.
@@ -54,8 +49,6 @@ public enum CSVImport {
         public var placed = 0
         public var problems: [Problem] = []
 
-        public init() {}
-
         /// The days the new entries are on, in their own time zones.
         public var days: ClosedRange<LocalDate>? {
             LocalDate.span(of: entries.map(\.day))
@@ -69,17 +62,13 @@ public enum CSVImport {
         /// No heading says when entries start, such as "start" or "date".
         case noStartColumn
 
-        public var message: String {
+        public var errorDescription: String? {
             switch self {
             case .noRows:
                 "The file has no rows to import."
             case .noStartColumn:
                 "The file has no start column. Its first line should name the columns, such as \"start\", \"end\" and \"project\"."
             }
-        }
-
-        public var errorDescription: String? {
-            message
         }
     }
 

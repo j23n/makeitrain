@@ -1,7 +1,7 @@
 import Foundation
 
 /// A JSON value for `JSONWriter`.
-enum JSON: Equatable {
+enum JSON {
     case string(String)
     case number(Int)
     case bool(Bool)

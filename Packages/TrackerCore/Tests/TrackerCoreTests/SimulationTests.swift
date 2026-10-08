@@ -116,8 +116,7 @@ import Testing
 
         // The files are settled: saving every month again writes nothing.
         let writes = files.writes
-        let everything = Changes(months: Set(settled.ledger.entries.values.map(\.month)), projects: true)
-        _ = try folder.save(settled.ledger, changes: everything)
+        _ = try folder.save(settled.ledger, changes: .all(in: settled.ledger))
         #expect(files.writes == writes)
     }
 }

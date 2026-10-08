@@ -49,7 +49,7 @@ public enum Durations {
     /// "15m", "15min", "1h", "2hrs", "1h30", "1h30m" or "1.5h". Unlike
     /// `parse(_:)`, it doesn't take "1:30" or a bare number, which read as
     /// times of day there.
-    public static func parseWithUnit(_ text: some StringProtocol) -> Int64? {
+    public static func parseWithUnit(_ text: String) -> Int64? {
         var typed = text.lowercased()
         for (long, short) in [("minutes", "m"), ("minute", "m"), ("mins", "m"), ("min", "m"), ("hours", "h"), ("hour", "h"), ("hrs", "h"), ("hr", "h")] {
             typed = typed.replacingOccurrences(of: long, with: short)

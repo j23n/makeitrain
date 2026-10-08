@@ -89,7 +89,7 @@ public struct FolderResult: Sendable {
 /// written.
 public struct Folder: Sendable {
     public let root: URL
-    public let access: any FileAccess
+    let access: any FileAccess
 
     public init(root: URL, access: any FileAccess = LocalFileAccess()) {
         self.root = root
