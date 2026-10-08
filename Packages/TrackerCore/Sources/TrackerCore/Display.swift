@@ -39,9 +39,7 @@ extension Ledger {
             .sorted { a, b in
                 let clientA = client(forProject: a.id)?.name.lowercased() ?? ""
                 let clientB = client(forProject: b.id)?.name.lowercased() ?? ""
-                if clientA != clientB { return clientA < clientB }
-                let nameA = a.name.lowercased(), nameB = b.name.lowercased()
-                return nameA != nameB ? nameA < nameB : a.id.uuidString < b.id.uuidString
+                return clientA != clientB ? clientA < clientB : Project.fileOrder(a, b)
             }
     }
 

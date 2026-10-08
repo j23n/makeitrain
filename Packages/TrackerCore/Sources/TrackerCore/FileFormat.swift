@@ -201,8 +201,7 @@ extension Client: Decodable {
 
     /// The order clients are written in: by name, then id.
     static func fileOrder(_ a: Client, _ b: Client) -> Bool {
-        let (nameA, nameB) = (a.name.lowercased(), b.name.lowercased())
-        return nameA != nameB ? nameA < nameB : a.id.uuidString < b.id.uuidString
+        byName(a.name, a.id, b.name, b.id)
     }
 }
 
@@ -246,10 +245,16 @@ extension Project: Decodable {
     }
 
     /// The order projects are written in: by name, then id.
-    static func fileOrder(_ a: Project, _ b: Project) -> Bool {
-        let (nameA, nameB) = (a.name.lowercased(), b.name.lowercased())
-        return nameA != nameB ? nameA < nameB : a.id.uuidString < b.id.uuidString
+    public static func fileOrder(_ a: Project, _ b: Project) -> Bool {
+        byName(a.name, a.id, b.name, b.id)
     }
+}
+
+/// Whether a record named `nameA` with id `idA` comes before one named
+/// `nameB` with id `idB`: by name ignoring case, then by id.
+private func byName(_ nameA: String, _ idA: UUID, _ nameB: String, _ idB: UUID) -> Bool {
+    let (a, b) = (nameA.lowercased(), nameB.lowercased())
+    return a != b ? a < b : idA.uuidString < idB.uuidString
 }
 
 extension KeyedDecodingContainer {
