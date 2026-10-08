@@ -41,7 +41,7 @@ public protocol CloudProvider: AnyObject {
 /// iCloud Drive, through the app's ubiquity container.
 @MainActor
 public final class ICloudProvider: CloudProvider {
-    public let containerIdentifier: String
+    private let containerIdentifier: String
     public var onAccountChange: (() -> Void)?
 
     private var query: NSMetadataQuery?

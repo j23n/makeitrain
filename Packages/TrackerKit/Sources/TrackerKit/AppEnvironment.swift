@@ -40,13 +40,13 @@ public struct AppEnvironment {
     /// is inside its sandbox, the standard settings, iCloud, and the
     /// calendars in the Calendar app.
     @MainActor
-    public static func live(containerIdentifier: String = "iCloud.com.j23n.TimeTracker") -> AppEnvironment {
+    public static func live() -> AppEnvironment {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         return AppEnvironment(
             localFolder: support.appendingPathComponent("Data", isDirectory: true),
             backupsFolder: support.appendingPathComponent("Backups", isDirectory: true),
             defaults: .standard,
-            cloud: ICloudProvider(containerIdentifier: containerIdentifier),
+            cloud: ICloudProvider(containerIdentifier: "iCloud.com.j23n.TimeTracker"),
             calendars: EventKitCalendars()
         )
     }
