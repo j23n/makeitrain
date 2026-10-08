@@ -16,11 +16,11 @@ import TrackerCore
 
         line.text = "web review"
         line.cursor = 3
-        #expect(line.suggestions.map(\.title) == ["Website"])
+        #expect(line.suggestions.items.map(\.title) == ["Website"])
         #expect(line.acceptSuggestion())
         #expect(line.text == "Website review")
         #expect(line.cursor == 8)
-        #expect(line.requestedCursor == 8)
+        #expect(line.suggestions.requestedCursor == 8)
         #expect(line.suggestions.isEmpty)
     }
 
@@ -37,12 +37,13 @@ import TrackerCore
         #expect(line.previousLine())
         #expect(line.text == "web")
         #expect(line.suggestions.isEmpty)
-        #expect(!line.moveSuggestion(by: -1))
+        #expect(line.up())
+        #expect(line.text == "web")
 
         line.text = "webs"
-        #expect(line.suggestions.map(\.title) == ["Website"])
+        #expect(line.suggestions.items.map(\.title) == ["Website"])
         line.text = "web"
-        #expect(line.suggestions.map(\.title) == ["Website"])
+        #expect(line.suggestions.items.map(\.title) == ["Website"])
     }
 
     @Test func tabUpAndDownGoThroughTheSuggestionsFirst() async throws {
@@ -56,13 +57,13 @@ import TrackerCore
         let line = CommandLineModel(model: model)
 
         line.text = "we"
-        let titles = line.suggestions.map(\.title)
+        let titles = line.suggestions.items.map(\.title)
         try #require(titles.count == 2)
         #expect(line.down())
-        #expect(line.highlightedSuggestion == 1)
+        #expect(line.suggestions.highlighted == 1)
         #expect(line.up())
         #expect(line.up())
-        #expect(line.highlightedSuggestion == 1)
+        #expect(line.suggestions.highlighted == 1)
         #expect(line.tab())
         #expect(line.text == titles[1] + " ")
         // No suggestion is left, and no earlier entry finishes the line.
@@ -140,12 +141,12 @@ import TrackerCore
         line.show(workshop.id)
 
         line.text = "22 sep 9:00-10:00 we"
-        let titles = line.suggestions.map(\.title)
+        let titles = line.suggestions.items.map(\.title)
         try #require(titles.count == 2)
         #expect(line.down())
-        #expect(line.highlightedSuggestion == 1)
+        #expect(line.suggestions.highlighted == 1)
         #expect(line.up())
-        #expect(line.highlightedSuggestion == 0)
+        #expect(line.suggestions.highlighted == 0)
         #expect(line.tab())
         #expect(line.text == "22 sep 9:00-10:00 \(titles[0]) ")
         // Without suggestions the keys are left to the field.
@@ -220,7 +221,7 @@ import TrackerCore
 
         // The times offered are the day's in New York too.
         line.text = "22 sep 10:00-1"
-        #expect(line.suggestions.map(\.title) == ["10:00-12:30", "10:00-13:30"])
+        #expect(line.suggestions.items.map(\.title) == ["10:00-12:30", "10:00-13:30"])
 
         line.text = "22 sep 10:00-12:00 Client call"
         #expect(line.apply(undoManager: nil))

@@ -43,7 +43,7 @@ struct CommandBar: View {
             .frame(height: 54)
 
             if !line.suggestions.isEmpty {
-                SuggestionStrip(suggestions: line.suggestions, highlighted: line.highlightedSuggestion, ledger: line.model.ledger) { index in
+                SuggestionStrip(suggestions: line.suggestions.items, highlighted: line.suggestions.highlighted, ledger: line.model.ledger) { index in
                     line.acceptSuggestion(at: index)
                 }
                 .padding(.horizontal, 14)

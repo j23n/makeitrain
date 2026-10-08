@@ -185,7 +185,7 @@ struct PhoneEntrySheet: View {
                     .background(RoundedRectangle(cornerRadius: 12).fill(Theme.field))
                     .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(line.refused ? Theme.amber : Theme.strongLine))
                     if !line.suggestions.isEmpty {
-                        SuggestionStrip(suggestions: line.suggestions, highlighted: line.highlightedSuggestion, ledger: model.ledger, showsKeys: false) { index in
+                        SuggestionStrip(suggestions: line.suggestions.items, highlighted: line.suggestions.highlighted, ledger: model.ledger, showsKeys: false) { index in
                             line.acceptSuggestion(at: index)
                         }
                     }

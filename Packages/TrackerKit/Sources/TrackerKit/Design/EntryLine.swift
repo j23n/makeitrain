@@ -37,13 +37,7 @@ public final class EntryLineModel {
     /// it's changed.
     public private(set) var refused = false
     /// What could replace the word at the insertion point.
-    public private(set) var suggestions: [LineSuggestion] = []
-    /// The suggestion Tab takes.
-    public var highlightedSuggestion = 0
-    /// Changes when the field should put its insertion point at
-    /// `requestedCursor`, as after taking a suggestion.
-    public private(set) var cursorRequest = 0
-    public private(set) var requestedCursor: Int?
+    public private(set) var suggestions = LineSuggestionState()
 
     public init(model: AppModel) {
         self.model = model
@@ -94,21 +88,9 @@ public final class EntryLineModel {
     /// the word. Returns whether there was one.
     @discardableResult
     public func acceptSuggestion(at index: Int? = nil) -> Bool {
-        let chosen = index ?? highlightedSuggestion
-        guard suggestions.indices.contains(chosen) else { return false }
-        let suggestion = suggestions[chosen]
+        guard let suggestion = suggestions.take(at: index) else { return false }
         text = suggestion.text
         cursor = suggestion.cursor
-        requestedCursor = suggestion.cursor
-        cursorRequest += 1
-        return true
-    }
-
-    /// Moves the highlight through the suggestions. Returns false when
-    /// there are none, so the key does what it otherwise does.
-    public func moveSuggestion(by step: Int) -> Bool {
-        guard !suggestions.isEmpty else { return false }
-        highlightedSuggestion = (highlightedSuggestion + step + suggestions.count) % suggestions.count
         return true
     }
 
@@ -120,12 +102,12 @@ public final class EntryLineModel {
 
     /// What Up does: moves the highlight through the suggestions.
     public func up() -> Bool {
-        moveSuggestion(by: -1)
+        suggestions.move(by: -1)
     }
 
     /// What Down does: moves the highlight the other way.
     public func down() -> Bool {
-        moveSuggestion(by: 1)
+        suggestions.move(by: 1)
     }
 
     private func refresh() {
@@ -144,10 +126,9 @@ public final class EntryLineModel {
 
     private func refreshSuggestions() {
         if let entryID, !text.isEmpty {
-            suggestions = model.suggestions(for: text, cursor: cursor ?? text.utf16.count, editing: entryID)
+            suggestions.reset(to: model.suggestions(for: text, cursor: cursor ?? text.utf16.count, editing: entryID))
         } else {
-            suggestions = []
+            suggestions.reset(to: [])
         }
-        highlightedSuggestion = 0
     }
 }

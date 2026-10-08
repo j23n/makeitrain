@@ -38,13 +38,7 @@ public final class CommandLineModel {
         }
     }
     /// What could replace the word at the insertion point.
-    public private(set) var suggestions: [LineSuggestion] = []
-    /// The suggestion Tab takes.
-    public var highlightedSuggestion = 0
-    /// Changes when the field should put its insertion point at
-    /// `requestedCursor`, as after taking a suggestion.
-    public private(set) var cursorRequest = 0
-    public private(set) var requestedCursor: Int?
+    public private(set) var suggestions = LineSuggestionState()
 
     public let model: AppModel
     @ObservationIgnored private var historyIndex: Int?
@@ -80,33 +74,20 @@ public final class CommandLineModel {
     /// Works out what could replace the word at the insertion point.
     private func refreshSuggestions() {
         if text.isEmpty || text == recalledLine {
-            suggestions = []
+            suggestions.reset(to: [])
         } else {
-            suggestions = model.suggestions(for: text, cursor: cursor ?? text.utf16.count)
+            suggestions.reset(to: model.suggestions(for: text, cursor: cursor ?? text.utf16.count))
         }
-        highlightedSuggestion = 0
     }
 
     /// Puts the highlighted suggestion, or the one at `index`, in place of
     /// the word. Returns whether there was one.
     @discardableResult
     public func acceptSuggestion(at index: Int? = nil) -> Bool {
-        let chosen = index ?? highlightedSuggestion
-        guard suggestions.indices.contains(chosen) else { return false }
-        let suggestion = suggestions[chosen]
+        guard let suggestion = suggestions.take(at: index) else { return false }
         historyIndex = nil
         text = suggestion.text
         cursor = suggestion.cursor
-        requestedCursor = suggestion.cursor
-        cursorRequest += 1
-        return true
-    }
-
-    /// Moves the highlight through the suggestions. Returns false when
-    /// there are none, so the key does what it otherwise does.
-    public func moveSuggestion(by step: Int) -> Bool {
-        guard !suggestions.isEmpty else { return false }
-        highlightedSuggestion = (highlightedSuggestion + step + suggestions.count) % suggestions.count
         return true
     }
 
@@ -186,13 +167,13 @@ public final class CommandLineModel {
     /// What Up does: moves the highlight through the suggestions, or else
     /// brings back the line before.
     public func up() -> Bool {
-        moveSuggestion(by: -1) || previousLine()
+        suggestions.move(by: -1) || previousLine()
     }
 
     /// What Down does: moves the highlight the other way, or else goes
     /// forward through the earlier lines, or lists today's entries.
     public func down() -> Bool {
-        moveSuggestion(by: 1) || nextLine()
+        suggestions.move(by: 1) || nextLine()
     }
 
     public func clear() {
@@ -206,6 +187,49 @@ public final class CommandLineModel {
     public var todaysEntries: [ResolvedEntry] {
         let today = model.today
         return model.resolved.filter { $0.entry.day == today }.reversed()
+    }
+}
+
+/// What could replace the word at a line's insertion point, the one Tab
+/// takes, and where the insertion point goes once one is taken. The
+/// command line and an entry's line keep one each.
+public struct LineSuggestionState {
+    /// The suggestions, the likeliest first.
+    public private(set) var items: [LineSuggestion] = []
+    /// The index of the one Tab takes.
+    public private(set) var highlighted = 0
+    /// Changes when the field should put its insertion point at
+    /// `requestedCursor`, as after taking a suggestion.
+    public private(set) var cursorRequest = 0
+    public private(set) var requestedCursor: Int?
+
+    /// Whether there's nothing to suggest.
+    public var isEmpty: Bool {
+        items.isEmpty
+    }
+
+    /// New suggestions, the first one highlighted.
+    mutating func reset(to items: [LineSuggestion]) {
+        self.items = items
+        highlighted = 0
+    }
+
+    /// Moves the highlight. Returns false when there's nothing to move
+    /// through, so the key does what it otherwise does.
+    mutating func move(by step: Int) -> Bool {
+        guard !items.isEmpty else { return false }
+        highlighted = (highlighted + step + items.count) % items.count
+        return true
+    }
+
+    /// The highlighted suggestion, or the one at `index`, if there is
+    /// one, asking the field to put the insertion point after it.
+    mutating func take(at index: Int?) -> LineSuggestion? {
+        let chosen = index ?? highlighted
+        guard items.indices.contains(chosen) else { return nil }
+        requestedCursor = items[chosen].cursor
+        cursorRequest += 1
+        return items[chosen]
     }
 }
 
@@ -242,7 +266,7 @@ extension CommandLineModel {
                 .prefix(4)
                 .map { LineChip(id: "again " + $0, title: $0, action: .replace($0)) }
         }
-        var chips = suggestions.enumerated().map { index, suggestion -> LineChip in
+        var chips = suggestions.items.enumerated().map { index, suggestion -> LineChip in
             var tint: ProjectTint?
             switch suggestion.kind {
             case let .project(id):
@@ -259,7 +283,7 @@ extension CommandLineModel {
                 action: .suggestion(index),
                 tint: tint,
                 isTag: suggestion.kind == .tag,
-                isHighlighted: index == highlightedSuggestion
+                isHighlighted: index == suggestions.highlighted
             )
         }
         let words = text.lowercased().split(separator: " ")
