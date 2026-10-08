@@ -180,6 +180,19 @@ import Testing
         #expect(result.entries.map(\.tags) == [["Design", "new"]])
     }
 
+    @Test func givesNewProjectsThePalettesNextColors() throws {
+        let ledger = Ledger(projects: [Project(id: uuid(10), name: "Website", color: Palette.colors[0], updated: now)])
+        let result = try plan("""
+        date,start,end,project
+        2026-09-23,09:00,10:00,Website
+        2026-09-23,10:00,11:00,Internal
+        2026-09-23,11:00,12:00,Research
+        """, into: ledger)
+        #expect(result.projects.map(\.name) == ["Internal", "Research"])
+        // Each one its own, after the colors the ledger's projects have.
+        #expect(result.projects.map(\.color) == [Palette.colors[1], Palette.colors[2]])
+    }
+
     @Test func reportsRowsItCantRead() throws {
         let result = try plan("""
         date,start,end,duration,note

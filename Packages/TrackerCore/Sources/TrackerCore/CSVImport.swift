@@ -86,13 +86,12 @@ public enum CSVImport {
     }
 
     /// The entries, clients and projects importing `data` adds to `ledger`.
-    /// Times without an offset are read in `timeZone`. New projects get
-    /// `color`.
+    /// Times without an offset are read in `timeZone`. New projects get the
+    /// palette's next colors.
     public static func plan(
         _ data: Data,
         into ledger: Ledger,
         timeZone: String,
-        color: String = "#4F7CAC",
         now: Timestamp
     ) throws -> Plan {
         let text = decode(data)
@@ -105,7 +104,7 @@ public enum CSVImport {
         guard columns.has(.start) || columns.has(.startDate) || columns.has(.date) else {
             throw Failure.noStartColumn
         }
-        var reader = Reader(ledger: ledger, columns: columns, timeZone: timeZone, color: color, now: now)
+        var reader = Reader(ledger: ledger, columns: columns, timeZone: timeZone, now: now)
         reader.dayFirst = lines.dropFirst().contains { record in
             [Column.start, .end, .startDate, .endDate, .date].contains { column in
                 dayComesFirst(columns.value(column, in: record.fields))
@@ -179,11 +178,11 @@ public enum CSVImport {
 
     /// Reads rows into a plan, matching and adding clients and projects.
     struct Reader {
-        let ledger: Ledger
         let columns: Columns
         let timeZone: String
-        let color: String
         let now: Timestamp
+        /// The ledger with the projects added so far, for their colors.
+        var colored: Ledger
         var dayFirst = false
         var plan = Plan()
         /// Client ids by lowercased name.
@@ -201,12 +200,11 @@ public enum CSVImport {
             var name: String
         }
 
-        init(ledger: Ledger, columns: Columns, timeZone: String, color: String, now: Timestamp) {
-            self.ledger = ledger
+        init(ledger: Ledger, columns: Columns, timeZone: String, now: Timestamp) {
             self.columns = columns
             self.timeZone = timeZone
-            self.color = color
             self.now = now
+            colored = ledger
             knownTags = ledger.allTags()
             for client in ledger.liveClients() where clients[client.name.lowercased()] == nil {
                 clients[client.name.lowercased()] = client.id
@@ -377,7 +375,8 @@ public enum CSVImport {
             if let known = projects[key] {
                 return known
             }
-            let project = Project(clientID: clientID, name: name, color: color, updated: now)
+            let project = Project(clientID: clientID, name: name, color: Palette.next(in: colored), updated: now)
+            colored.merge(project)
             plan.projects.append(project)
             projects[key] = project.id
             return project.id
