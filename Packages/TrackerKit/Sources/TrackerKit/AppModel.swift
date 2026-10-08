@@ -26,6 +26,7 @@ public final class AppModel {
     public private(set) var ledger = Ledger() {
         didSet {
             resolved = ledger.resolvedEntries()
+            dayTotals = DayTotals(resolved)
             projectTags = ledger.tagsByProject()
             revision += 1
         }
@@ -35,30 +36,15 @@ public final class AppModel {
     public private(set) var revision = 0
     /// The entries that aren't deleted, sorted by start, with the two-timers
     /// rule applied.
-    public private(set) var resolved: [ResolvedEntry] = [] {
-        didSet {
-            refreshOverlaps()
-            dayTotals = DayTotals(resolved)
-        }
-    }
+    public private(set) var resolved: [ResolvedEntry] = []
     /// Time per day and project, for calendars and charts that show many
     /// days.
     public private(set) var dayTotals = DayTotals()
     /// Each project's tags, as `Ledger.tagsByProject()` lists them, kept so
     /// long lists don't work them out again for every row.
     public private(set) var projectTags: [UUID?: [String]] = [:]
-    /// Overlaps among all entries, as of now. They're worked out again when
-    /// the entries change and, while a timer runs, as the clock moves; views
-    /// hear of it only when they actually change.
-    public private(set) var overlaps = OverlapAnalysis()
     /// The current time, updated whenever a running timer's minutes change.
-    public private(set) var now: Timestamp {
-        didSet {
-            if resolved.contains(where: \.isRunning) {
-                refreshOverlaps()
-            }
-        }
-    }
+    public private(set) var now: Timestamp
     public private(set) var state: State = .loading
     public private(set) var storage: StorageKind
     /// Files that couldn't be read or saved.
@@ -146,13 +132,6 @@ public final class AppModel {
     /// Milliseconds an entry has run, up to now for a running one.
     public func duration(of entry: ResolvedEntry) -> Int64 {
         entry.duration(now: now)
-    }
-
-    private func refreshOverlaps() {
-        let analysis = Overlaps.analyze(resolved, now: now)
-        if analysis != overlaps {
-            overlaps = analysis
-        }
     }
 
     // MARK: - Loading and saving

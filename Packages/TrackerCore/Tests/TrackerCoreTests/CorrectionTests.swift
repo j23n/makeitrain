@@ -170,7 +170,7 @@ import Testing
             F.entry(1, nil, "2026-10-01", "09:00", "10:00"),
             F.entry(2, nil, "2026-10-01", "09:00", "09:30"),
         ])
-        let overlap = Overlaps.analyze(ledger.resolvedEntries(), now: now).overlaps.first
+        let overlap = Overlaps.analyze(ledger.resolvedEntries(), now: now).first
         // Same start: the longer one starts when the shorter one ends.
         #expect(overlap?.fixes == [.trimLater(id: uuid(1), start: F.at("09:30", on: "2026-10-01"))])
         var fixed = ledger

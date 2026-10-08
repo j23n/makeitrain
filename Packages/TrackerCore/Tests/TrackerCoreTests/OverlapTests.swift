@@ -18,69 +18,73 @@ import Testing
         t("2026-09-23T\(time):00+02:00")
     }
 
-    func analyze(_ entries: [TimeEntry], now: String = "23:00") -> OverlapAnalysis {
+    func analyze(_ entries: [TimeEntry], now: String = "23:00") -> [Overlap] {
         Overlaps.analyze(Ledger(entries: entries).resolvedEntries(), now: at(now))
+    }
+
+    /// Every entry that overlaps another.
+    func flagged(_ overlaps: [Overlap]) -> Set<UUID> {
+        Set(overlaps.flatMap { [$0.earlier, $0.later] })
     }
 
     @Test func findsAnOverlapBehindAShorterEntry() {
         // B starts inside A. C starts after B ends, but still inside A.
         let result = analyze([entry(1, "09:00", "12:00"), entry(2, "10:00", "10:30"), entry(3, "11:00", "11:30")])
-        #expect(result.flagged == [uuid(1), uuid(2), uuid(3)])
-        #expect(result.overlaps.map(\.earlier) == [uuid(1), uuid(1)])
-        #expect(result.overlaps.map(\.later) == [uuid(2), uuid(3)])
-        #expect(result.overlaps.map(\.duration) == [1_800_000, 1_800_000])
-        #expect(result.groups == [[uuid(1), uuid(2), uuid(3)]])
+        #expect(flagged(result) == [uuid(1), uuid(2), uuid(3)])
+        #expect(result.map(\.earlier) == [uuid(1), uuid(1)])
+        #expect(result.map(\.later) == [uuid(2), uuid(3)])
+        #expect(result.map(\.duration) == [1_800_000, 1_800_000])
     }
 
     @Test func backToBackEntriesDontOverlap() {
         let result = analyze([entry(1, "09:00", "10:00"), entry(2, "10:00", "11:00"), entry(3, "11:00", "12:00")])
-        #expect(result.flagged.isEmpty)
-        #expect(result.groups.isEmpty)
+        #expect(result.isEmpty)
     }
 
-    @Test func separateOverlapsFormSeparateGroups() {
+    @Test func findsSeparateOverlaps() {
         let result = analyze([
             entry(1, "09:00", "10:00"), entry(2, "09:30", "10:30"),
             entry(3, "13:00", "14:00"), entry(4, "13:30", "13:45"),
             entry(5, "15:00", "16:00"),
         ])
-        #expect(result.groups == [[uuid(1), uuid(2)], [uuid(3), uuid(4)]])
-        #expect(!result.flagged.contains(uuid(5)))
+        #expect(result.map(\.earlier) == [uuid(1), uuid(3)])
+        #expect(result.map(\.later) == [uuid(2), uuid(4)])
+        #expect(!flagged(result).contains(uuid(5)))
     }
 
     @Test func aRunningTimerEndsNow() {
         let before = analyze([entry(1, "09:00", nil), entry(2, "10:00", "10:30")], now: "09:45")
-        #expect(before.flagged.isEmpty)
+        #expect(before.isEmpty)
         let after = analyze([entry(1, "09:00", nil), entry(2, "10:00", "10:30")], now: "11:00")
-        #expect(after.flagged == [uuid(1), uuid(2)])
+        #expect(flagged(after) == [uuid(1), uuid(2)])
     }
 
     @Test func entriesWithoutDurationAndDeletedEntriesDontOverlap() {
         var deleted = entry(3, "09:30", "10:30")
         deleted.deleted = at("12:00")
         let result = analyze([entry(1, "09:00", "10:00"), entry(2, "09:30", "09:30"), deleted])
-        #expect(result.flagged.isEmpty)
+        #expect(result.isEmpty)
     }
 
     @Test func offersTrimOrSplit() {
         let partial = analyze([entry(1, "09:00", "10:30"), entry(2, "10:00", "11:00")])
-        #expect(partial.overlaps.map(\.fix) == [.trimEarlier(id: uuid(1), end: at("10:00"))])
+        #expect(partial.map(\.fix) == [.trimEarlier(id: uuid(1), end: at("10:00"))])
 
         let contained = analyze([entry(1, "09:00", "12:00"), entry(2, "10:00", "10:30")])
-        #expect(contained.overlaps.map(\.fix) == [.split(outer: uuid(1), inner: uuid(2))])
+        #expect(contained.map(\.fix) == [.split(outer: uuid(1), inner: uuid(2))])
 
         let meetingDuringTimer = analyze([entry(1, "09:00", nil), entry(2, "10:00", "10:30")], now: "11:00")
-        #expect(meetingDuringTimer.overlaps.map(\.fix) == [.split(outer: uuid(1), inner: uuid(2))])
+        #expect(meetingDuringTimer.map(\.fix) == [.split(outer: uuid(1), inner: uuid(2))])
 
         let sameStart = analyze([entry(1, "09:00", "10:00"), entry(2, "09:00", "09:30")])
-        #expect(sameStart.overlaps.map(\.fix) == [nil])
+        #expect(sameStart.map(\.fix) == [nil])
     }
 
     @Test func trimmingEndsTheEarlierEntry() {
         var ledger = Ledger(entries: [entry(1, "09:00", "10:30"), entry(2, "10:00", "11:00")])
         ledger.apply(.trimEarlier(id: uuid(1), end: at("10:00")), now: at("12:00"))
         #expect(ledger.entries[uuid(1)]?.end == at("10:00"))
-        #expect(Overlaps.analyze(ledger.resolvedEntries(), now: at("12:00")).flagged.isEmpty)
+        #expect(Overlaps.analyze(ledger.resolvedEntries(), now: at("12:00")).isEmpty)
     }
 
     @Test func splittingCutsTheOuterEntryAroundTheInnerOne() {
@@ -98,7 +102,7 @@ import Testing
         #expect(after?.projectID == uuid(9))
         #expect(after?.tags == ["design"])
         #expect(after?.note == "Wireframes")
-        #expect(Overlaps.analyze(ledger.resolvedEntries(), now: at("13:00")).flagged.isEmpty)
+        #expect(Overlaps.analyze(ledger.resolvedEntries(), now: at("13:00")).isEmpty)
     }
 
     @Test func splittingARunningTimerKeepsTheSecondPartRunning() {

@@ -182,8 +182,8 @@ extension Overlaps {
         func near(_ ledger: Ledger) -> [ResolvedEntry] {
             ledger.resolvedEntries().filter { days.contains($0.entry.day) }
         }
-        let earlier = Set(analyze(near(before), now: now).overlaps.map { [$0.earlier, $0.later] })
-        return analyze(near(after), now: now).overlaps.filter { overlap in
+        let earlier = Set(analyze(near(before), now: now).map { [$0.earlier, $0.later] })
+        return analyze(near(after), now: now).filter { overlap in
             (touched.contains(overlap.earlier) || touched.contains(overlap.later)) && !earlier.contains([overlap.earlier, overlap.later])
         }
     }

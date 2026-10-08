@@ -93,7 +93,7 @@ public enum Corrections {
 
         // Overlaps, including with an entry from the day before.
         let byID = Dictionary(nearby.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        for overlap in Overlaps.analyze(nearby, now: now).overlaps {
+        for overlap in Overlaps.analyze(nearby, now: now) {
             guard let later = byID[overlap.later], days.contains(later.entry.day) else { continue }
             result.append(Correction(
                 kind: .overlap(overlap),

@@ -43,18 +43,6 @@ public enum OverlapFix: Hashable, Sendable {
     case split(outer: UUID, inner: UUID)
 }
 
-public struct OverlapAnalysis: Hashable, Sendable {
-    public var overlaps: [Overlap] = []
-    /// Every entry that overlaps another.
-    public var flagged: Set<UUID> = []
-    /// Runs of entries that overlap one another, each in start order, for
-    /// laying their blocks out side by side.
-    public var groups: [[UUID]] = []
-
-    /// No overlaps.
-    public init() {}
-}
-
 /// Finding overlapping entries. Overlaps are worked out when displaying and
 /// never stored.
 public enum Overlaps {
@@ -65,40 +53,29 @@ public enum Overlaps {
     /// catches an entry that overlaps an earlier, longer one when a shorter
     /// entry sits between them. A running entry counts as ending at `now`;
     /// entries with no duration can't overlap.
-    public static func analyze(_ entries: [ResolvedEntry], now: Timestamp) -> OverlapAnalysis {
+    public static func analyze(_ entries: [ResolvedEntry], now: Timestamp) -> [Overlap] {
         let spans = entries
             .map { Span(entry: $0, end: $0.end ?? now) }
             .filter { $0.end > $0.entry.start }
             .sorted { TimeEntry.fileOrder($0.entry.entry, $1.entry.entry) }
 
-        var result = OverlapAnalysis()
-        var group: [UUID] = []
+        var overlaps: [Overlap] = []
         var latest: Span?
         for span in spans {
             if let latest, span.entry.start < latest.end {
-                result.overlaps.append(Overlap(
+                overlaps.append(Overlap(
                     earlier: latest.entry.id,
                     later: span.entry.id,
                     duration: span.entry.start.distance(to: min(span.end, latest.end)),
                     fix: fix(earlier: latest, later: span),
                     fixes: fixes(earlier: latest, later: span)
                 ))
-                result.flagged.formUnion([latest.entry.id, span.entry.id])
-                group.append(span.entry.id)
-            } else {
-                if group.count > 1 {
-                    result.groups.append(group)
-                }
-                group = [span.entry.id]
             }
             if latest.map({ span.end > $0.end }) ?? true {
                 latest = span
             }
         }
-        if group.count > 1 {
-            result.groups.append(group)
-        }
-        return result
+        return overlaps
     }
 
     /// Time counted more than once when durations are added up: their sum
