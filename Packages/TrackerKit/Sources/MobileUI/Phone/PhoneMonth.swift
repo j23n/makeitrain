@@ -43,7 +43,7 @@ struct PhoneMonth: View {
         .safeAreaInset(edge: .bottom) {
             PhoneCommandBar(model: model, placeholder: state.typed, open: { router.openCommandLine(mode: .report) })
         }
-        .fileExporter(isPresented: $savingCSV, document: csv, contentType: .commaSeparatedText, defaultFilename: "\(state.title) \(state.range.lowerBound) to \(state.range.upperBound)") { _ in }
+        .fileExporter(isPresented: $savingCSV, document: csv, contentType: .commaSeparatedText, defaultFilename: state.csvFileName) { _ in }
     }
 
     /// The month the grid shows: the range's, or its last's for a range
@@ -110,31 +110,7 @@ struct PhoneMonth: View {
     private var choices: some View {
         HStack(spacing: 8) {
             Menu {
-                Button("Everything") {
-                    state.clients = []
-                    state.projects = []
-                    state.tags = []
-                }
-                Section("Clients") {
-                    ForEach(model.ledger.liveClients()) { client in
-                        Toggle(client.name, isOn: Binding(
-                            get: { state.clients.contains(client.id) },
-                            set: { on in
-                                if on { state.clients.insert(client.id) } else { state.clients.remove(client.id) }
-                            }
-                        ))
-                    }
-                }
-                Section("Projects") {
-                    ForEach(model.ledger.pickerProjects()) { project in
-                        Toggle(model.ledger.projectTitle(project.id), isOn: Binding(
-                            get: { state.projects.contains(project.id) },
-                            set: { on in
-                                if on { state.projects.insert(project.id) } else { state.projects.remove(project.id) }
-                            }
-                        ))
-                    }
-                }
+                ReportFilterItems(state: state)
             } label: {
                 chip(state.title)
             }
@@ -286,14 +262,8 @@ struct PhoneMonth: View {
 
     // MARK: Breakdown
 
-    private var rows: [ReportGroup] {
-        report.groups.flatMap { group -> [ReportGroup] in
-            state.grouping == .client || group.children.isEmpty ? [group] : group.children
-        }
-    }
-
     private var breakdown: some View {
-        let rows = self.rows
+        let rows = report.groups
         let shown = showsAll ? rows : Array(rows.prefix(8))
         return VStack(alignment: .leading, spacing: 8) {
             Text("By \(state.grouping.rawValue)")
@@ -306,7 +276,7 @@ struct PhoneMonth: View {
             }
             ForEach(shown) { group in
                 HStack(spacing: 10) {
-                    groupTitle(group)
+                    ReportGroupTitle(group, in: state, spacing: 7)
                     Spacer(minLength: 8)
                     Text(Format.duration(group.milliseconds))
                         .monospacedDigit()
@@ -325,34 +295,6 @@ struct PhoneMonth: View {
                 .font(.system(size: 14))
             }
         }
-    }
-
-    @ViewBuilder
-    private func groupTitle(_ group: ReportGroup) -> some View {
-        if case let .tag(key) = group.kind, let url = issueURL(key) {
-            Link(destination: url) {
-                Text("\(group.title) ↗")
-                    .foregroundStyle(Theme.tag)
-                    .lineLimit(1)
-            }
-        } else {
-            HStack(spacing: 7) {
-                if let color = group.color {
-                    TintDot(ProjectTint(hex: color), size: 8)
-                }
-                Text(group.title)
-                    .lineLimit(1)
-            }
-        }
-    }
-
-    /// The issue a tag refers to, when the entries with it are all in one
-    /// project.
-    private func issueURL(_ tag: String) -> URL? {
-        let projects = Set(report.entries.filter { entry in entry.entry.tags.contains { Tags.same($0, tag) } }.map(\.entry.projectID))
-        guard projects.count == 1, let projectID = projects.first else { return nil }
-        let spelled = report.entries.lazy.flatMap(\.entry.tags).first { Tags.same($0, tag) } ?? tag
-        return model.ledger.issueURL(forTag: spelled, projectID: projectID)
     }
 }
 

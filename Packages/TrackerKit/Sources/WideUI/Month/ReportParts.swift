@@ -89,31 +89,7 @@ struct QueryBar: View {
 
     private var filterMenu: some View {
         Menu {
-            Button("Everything") {
-                state.clients = []
-                state.projects = []
-                state.tags = []
-            }
-            Section("Clients") {
-                ForEach(model.ledger.liveClients()) { client in
-                    Toggle(client.name, isOn: Binding(
-                        get: { state.clients.contains(client.id) },
-                        set: { on in
-                            if on { state.clients.insert(client.id) } else { state.clients.remove(client.id) }
-                        }
-                    ))
-                }
-            }
-            Section("Projects") {
-                ForEach(model.ledger.pickerProjects()) { project in
-                    Toggle(model.ledger.projectTitle(project.id), isOn: Binding(
-                        get: { state.projects.contains(project.id) },
-                        set: { on in
-                            if on { state.projects.insert(project.id) } else { state.projects.remove(project.id) }
-                        }
-                    ))
-                }
-            }
+            ReportFilterItems(state: state)
         } label: {
             choice(state.title)
         }
@@ -341,14 +317,8 @@ struct StatementPanel: View {
         .background(Theme.card)
     }
 
-    private var rows: [ReportGroup] {
-        report.groups.flatMap { group -> [ReportGroup] in
-            state.grouping == .client || group.children.isEmpty ? [group] : group.children
-        }
-    }
-
     private var breakdown: some View {
-        let rows = self.rows
+        let rows = report.groups
         let shown = showsAll ? rows : Array(rows.prefix(6))
         let highest = rows.map(\.milliseconds).max() ?? 1
         return VStack(alignment: .leading, spacing: 9) {
@@ -366,7 +336,7 @@ struct StatementPanel: View {
                 ForEach(shown) { group in
                     VStack(spacing: 4) {
                         HStack(spacing: 10) {
-                            groupTitle(group)
+                            ReportGroupTitle(group, in: state)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             Text(Format.duration(group.milliseconds))
                                 .frame(width: 78, alignment: .trailing)
@@ -389,34 +359,6 @@ struct StatementPanel: View {
                 .font(.system(size: 12.5))
             }
         }
-    }
-
-    @ViewBuilder
-    private func groupTitle(_ group: ReportGroup) -> some View {
-        if case let .tag(key) = group.kind, let url = issueURL(key) {
-            Link(destination: url) {
-                Text("\(group.title) ↗")
-                    .foregroundStyle(Theme.tag)
-                    .lineLimit(1)
-            }
-        } else {
-            HStack(spacing: 6) {
-                if let color = group.color {
-                    TintDot(ProjectTint(hex: color))
-                }
-                Text(group.title)
-                    .lineLimit(1)
-            }
-        }
-    }
-
-    /// The issue a tag refers to, when the report's entries with it are all
-    /// in one project.
-    private func issueURL(_ tag: String) -> URL? {
-        let projects = Set(report.entries.filter { entry in entry.entry.tags.contains { Tags.same($0, tag) } }.map(\.entry.projectID))
-        guard projects.count == 1, let projectID = projects.first else { return nil }
-        let spelled = report.entries.lazy.flatMap(\.entry.tags).first { Tags.same($0, tag) } ?? tag
-        return model.ledger.issueURL(forTag: spelled, projectID: projectID)
     }
 
     /// What to check before sending the report.
@@ -503,7 +445,7 @@ struct StatementPanel: View {
             .buttonStyle(ChoiceButtonStyle(suggested: true))
             .keyboardShortcut("e")
             .disabled(report.entries.isEmpty)
-            .fileExporter(isPresented: $savingCSV, document: csv, contentType: .commaSeparatedText, defaultFilename: "\(state.title) \(state.range.lowerBound) to \(state.range.upperBound)") { _ in }
+            .fileExporter(isPresented: $savingCSV, document: csv, contentType: .commaSeparatedText, defaultFilename: state.csvFileName) { _ in }
             Button {
                 pdf = PDFDocumentFile(data: StatementPDF.data(for: report, ledger: model.ledger, title: state.title, now: model.now))
                 savingPDF = true
