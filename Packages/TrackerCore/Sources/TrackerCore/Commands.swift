@@ -257,21 +257,9 @@ struct CommandReader {
     init(text: String, context: CommandContext) {
         self.text = text
         self.context = context
-        var words: [CommandWord] = []
-        var index = text.startIndex
-        while index < text.endIndex {
-            while index < text.endIndex, text[index].isWhitespace {
-                index = text.index(after: index)
-            }
-            guard index < text.endIndex else { break }
-            let start = index
-            while index < text.endIndex, !text[index].isWhitespace {
-                index = text.index(after: index)
-            }
-            let word = String(text[start..<index])
-            words.append(CommandWord(text: word, lower: word.lowercased(), range: start..<index))
+        words = text.split(whereSeparator: \.isWhitespace).map { word in
+            CommandWord(text: String(word), lower: word.lowercased(), range: word.startIndex..<word.endIndex)
         }
-        self.words = words
         reading = CommandReading(text: text)
     }
 

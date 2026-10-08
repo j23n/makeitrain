@@ -20,6 +20,13 @@ import Testing
         #expect(reading.alternate == .start(draft(F.bookings, ["#227"], "Export to PDF"), at: F.at("09:00"), end: F.at("10:40")))
     }
 
+    @Test func readsWordsBetweenAnySpaces() {
+        let text = "  book \t#227   Export "
+        let reading = F.read(text)
+        #expect(reading.tokens.map { String(text[$0.range]) } == ["book", "#227", "Export"])
+        #expect(reading.draft == draft(F.bookings, ["#227"], "Export"))
+    }
+
     @Test func switchesFromTheRunningTimer() {
         let reading = F.read("harbor release call", F.ledger([F.runningBookings]))
         #expect(reading.primary == .start(draft(F.harbor, [], "release call"), at: F.at("10:40"), end: nil))

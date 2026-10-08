@@ -282,16 +282,9 @@ public enum LineSuggestions {
                 offset += width
                 index = next
             }
-            var start = index
-            while start > text.startIndex, !text[text.index(before: start)].isWhitespace {
-                start = text.index(before: start)
-            }
-            var end = index
-            while end < text.endIndex, !text[end].isWhitespace {
-                end = text.index(after: end)
-            }
+            let start = text[..<index].lastIndex(where: \.isWhitespace).map(text.index(after:)) ?? text.startIndex
             self.start = start
-            self.end = end
+            self.end = text[index...].firstIndex(where: \.isWhitespace) ?? text.endIndex
             typed = String(text[start..<index])
             before = text[..<start].split(whereSeparator: \.isWhitespace).map { $0.lowercased() }
         }
