@@ -72,7 +72,8 @@ extension AppModel {
         ledger.line(for: entry, today: today)
     }
 
-    /// A line typed over an entry, read as if the entry weren't there, so
+    /// A line typed over an entry, read in the zone the entry was recorded
+    /// in, as its line is written, and as if the entry weren't there, so
     /// it isn't the running timer its own start has to come after: the
     /// reading, what it makes of the entry part by part, or else why it
     /// can't change it. A line without times keeps the entry's.
@@ -80,6 +81,7 @@ extension AppModel {
         let current = resolved.first { $0.id == id }
         var context = commandContext
         context.resolved = resolved.filter { $0.id != id }
+        context.timeZone = current?.entry.timeZone ?? context.timeZone
         let reading = CommandReading(line, in: context)
         let zone = context.timeZone
         if let current {
@@ -108,9 +110,14 @@ extension AppModel {
     }
 
     /// What could replace the word at `cursor`, a UTF-16 offset, in a line
-    /// typed in the command line or, with `entryID`, over that entry.
+    /// typed in the command line or, with `entryID`, over that entry, with
+    /// times in the zone the entry was recorded in.
     public func suggestions(for line: String, cursor: Int, editing entryID: UUID? = nil) -> [LineSuggestion] {
-        LineSuggestions.suggestions(for: line, cursor: cursor, in: commandContext, editing: entryID)
+        var context = commandContext
+        if let entryID, let entry = resolved.first(where: { $0.id == entryID }) {
+            context.timeZone = entry.entry.timeZone
+        }
+        return LineSuggestions.suggestions(for: line, cursor: cursor, in: context, editing: entryID)
     }
 
     /// Changes an entry to what a line typed over it says. Returns false

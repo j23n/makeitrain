@@ -137,4 +137,35 @@ import TrackerCore
         #expect(!line.refused)
         #expect(line.problem == nil)
     }
+
+    @Test func readsAnEntrysLineInTheZoneItWasRecordedIn() async throws {
+        let harness = Harness()
+        defer { harness.cleanUp() }
+        let model = harness.model()
+        await model.start()
+        // 10:00 to 12:00 in New York, which was 16:00 to 18:00 in Berlin,
+        // where the device is.
+        let start = DateTimeFormat.parse("2026-09-22T10:00:00-04:00")!
+        let visit = TimeEntry(start: start, end: start.adding(seconds: 7200), timeZone: "America/New_York", note: "Client visit", updated: start)
+        let lunch = TimeEntry(start: start.adding(seconds: 9000), end: start.adding(seconds: 12600), timeZone: "America/New_York", note: "Lunch", updated: start)
+        model.addEntry(visit, undoManager: nil)
+        model.addEntry(lunch, undoManager: nil)
+        let line = EntryLineModel(model: model)
+
+        line.show(visit.id)
+        #expect(line.text == "22 sep 10:00-12:00 Client visit")
+        #expect(line.parts?.start == visit.start)
+        #expect(line.parts?.end == visit.end)
+
+        // The times offered are the day's in New York too.
+        line.text = "22 sep 10:00-1"
+        #expect(line.suggestions.map(\.title) == ["10:00-12:30", "10:00-13:30"])
+
+        line.text = "22 sep 10:00-12:00 Client call"
+        #expect(line.apply(undoManager: nil))
+        let edited = model.resolved.first { $0.id == visit.id }
+        #expect(edited?.entry.note == "Client call")
+        #expect(edited?.start == visit.start)
+        #expect(edited?.end == visit.end)
+    }
 }
