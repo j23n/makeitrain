@@ -176,6 +176,25 @@ public final class CommandLineModel {
         return true
     }
 
+    /// What Tab does: takes the highlighted suggestion, or else the
+    /// completion. Returns whether it did, so the key otherwise does what
+    /// it does.
+    public func tab() -> Bool {
+        acceptSuggestion() || complete()
+    }
+
+    /// What Up does: moves the highlight through the suggestions, or else
+    /// brings back the line before.
+    public func up() -> Bool {
+        moveSuggestion(by: -1) || previousLine()
+    }
+
+    /// What Down does: moves the highlight the other way, or else goes
+    /// forward through the earlier lines, or lists today's entries.
+    public func down() -> Bool {
+        moveSuggestion(by: 1) || nextLine()
+    }
+
     public func clear() {
         historyIndex = nil
         text = ""

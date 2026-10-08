@@ -28,19 +28,11 @@ struct CommandBar: View {
                     .foregroundStyle(Theme.accent)
                     .accessibilityHidden(true)
                 CommandField(
-                    text: $line.text,
+                    line: line,
                     placeholder: placeholder,
-                    reading: line.reading,
-                    ledger: line.model.ledger,
                     focusesWithWindow: true,
-                    cursorRequest: line.cursorRequest,
-                    cursor: line.requestedCursor,
                     onSubmit: submit,
-                    onTab: { line.acceptSuggestion() || line.complete() },
-                    onUp: { line.moveSuggestion(by: -1) || line.previousLine() },
-                    onDown: { line.moveSuggestion(by: 1) || line.nextLine() },
-                    onCancel: cancel,
-                    onCursorChange: { line.cursor = $0 }
+                    onCancel: cancel
                 )
                 .frame(height: 24)
                 .accessibilityLabel(Text(placeholder))

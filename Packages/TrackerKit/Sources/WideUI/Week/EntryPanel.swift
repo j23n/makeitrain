@@ -60,18 +60,10 @@ struct EntryPanel: View {
 
     private var field: some View {
         CommandField(
-            text: Binding(get: { line.text }, set: { line.text = $0 }),
-            placeholder: "",
-            reading: line.reading,
-            ledger: model.ledger,
+            entryLine: line,
             fontSize: 13,
             focusRequest: focusRequest,
-            cursorRequest: line.cursorRequest,
-            cursor: line.requestedCursor,
-            onSubmit: { _ in apply() },
-            onTab: { line.acceptSuggestion() },
-            onUp: { line.moveSuggestion(by: -1) },
-            onDown: { line.moveSuggestion(by: 1) },
+            onSubmit: { apply() },
             onCancel: {
                 if line.isUnchanged {
                     close()
@@ -79,7 +71,6 @@ struct EntryPanel: View {
                     line.revert()
                 }
             },
-            onCursorChange: { line.cursor = $0 },
             onFocusChange: { editing = $0 }
         )
         .frame(height: 20)

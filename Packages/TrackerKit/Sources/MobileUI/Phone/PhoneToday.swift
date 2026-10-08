@@ -169,20 +169,11 @@ struct PhoneEntrySheet: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
                         CommandField(
-                            text: Binding(get: { line.text }, set: { line.text = $0 }),
-                            placeholder: "",
-                            reading: line.reading,
-                            ledger: model.ledger,
+                            entryLine: line,
                             fontSize: 15,
                             focusesWithWindow: true,
-                            cursorRequest: line.cursorRequest,
-                            cursor: line.requestedCursor,
-                            onSubmit: { _ in apply() },
-                            onTab: { line.acceptSuggestion() },
-                            onUp: { line.moveSuggestion(by: -1) },
-                            onDown: { line.moveSuggestion(by: 1) },
-                            onCancel: { dismiss() },
-                            onCursorChange: { line.cursor = $0 }
+                            onSubmit: { apply() },
+                            onCancel: { dismiss() }
                         )
                         .frame(height: 44)
                         Text(Format.duration(model.duration(of: entry)))

@@ -45,6 +45,40 @@ import TrackerCore
         #expect(line.suggestions.map(\.title) == ["Website"])
     }
 
+    @Test func tabUpAndDownGoThroughTheSuggestionsFirst() async throws {
+        let harness = Harness()
+        defer { harness.cleanUp() }
+        let model = harness.model()
+        await model.start()
+        model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
+        model.addProject(named: "Webinar", client: nil, color: Palette.colors[1], undoManager: nil)
+        model.preferences.remember("web review")
+        let line = CommandLineModel(model: model)
+
+        line.text = "we"
+        let titles = line.suggestions.map(\.title)
+        try #require(titles.count == 2)
+        #expect(line.down())
+        #expect(line.highlightedSuggestion == 1)
+        #expect(line.up())
+        #expect(line.up())
+        #expect(line.highlightedSuggestion == 1)
+        #expect(line.tab())
+        #expect(line.text == titles[1] + " ")
+        // No suggestion is left, and no earlier entry finishes the line.
+        #expect(!line.tab())
+
+        // Without suggestions, Up and Down go through the earlier lines,
+        // and Down on an empty line lists today's entries.
+        line.text = ""
+        #expect(line.up())
+        #expect(line.text == "web review")
+        #expect(line.down())
+        #expect(line.text == "")
+        #expect(line.down())
+        #expect(line.showsToday)
+    }
+
     @Test func offersLinesRunLatelyThenWordsToAdd() async throws {
         let harness = Harness()
         defer { harness.cleanUp() }
@@ -91,6 +125,33 @@ import TrackerCore
         #expect(line.apply(undoManager: nil))
         #expect(model.resolved.first?.entry.projectID == website)
         #expect(model.resolved.first?.end == workshop.start.adding(seconds: 5400))
+    }
+
+    @Test func anEntrysLineTakesSuggestionsWithTabUpAndDown() async throws {
+        let harness = Harness()
+        defer { harness.cleanUp() }
+        let model = harness.model()
+        await model.start()
+        model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
+        model.addProject(named: "Webinar", client: nil, color: Palette.colors[1], undoManager: nil)
+        let workshop = entry(note: "Workshop", at: "2026-09-22T09:00:00+02:00")
+        model.addEntry(workshop, undoManager: nil)
+        let line = EntryLineModel(model: model)
+        line.show(workshop.id)
+
+        line.text = "22 sep 9:00-10:00 we"
+        let titles = line.suggestions.map(\.title)
+        try #require(titles.count == 2)
+        #expect(line.down())
+        #expect(line.highlightedSuggestion == 1)
+        #expect(line.up())
+        #expect(line.highlightedSuggestion == 0)
+        #expect(line.tab())
+        #expect(line.text == "22 sep 9:00-10:00 \(titles[0]) ")
+        // Without suggestions the keys are left to the field.
+        #expect(!line.tab())
+        #expect(!line.up())
+        #expect(!line.down())
     }
 
     @Test func aLineWithoutTimesKeepsTheEntrys() async throws {

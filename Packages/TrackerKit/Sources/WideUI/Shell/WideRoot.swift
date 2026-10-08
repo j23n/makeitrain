@@ -234,20 +234,12 @@ struct TopBar<Trailing: View>: View {
                 Rectangle().fill(Theme.strongLine).frame(width: 1, height: 16)
             }
             CommandField(
-                text: Binding(get: { line.text }, set: { line.text = $0 }),
+                line: line,
                 placeholder: model.running == nil ? "› start a timer or log time" : "› switch, stop or log time",
-                reading: line.reading,
-                ledger: model.ledger,
                 fontSize: 12.5,
                 focusRequest: focusRequest,
-                cursorRequest: line.cursorRequest,
-                cursor: line.requestedCursor,
                 onSubmit: submit,
-                onTab: { line.acceptSuggestion() || line.complete() },
-                onUp: { line.moveSuggestion(by: -1) || line.previousLine() },
-                onDown: { line.moveSuggestion(by: 1) || line.nextLine() },
                 onCancel: cancel,
-                onCursorChange: { line.cursor = $0 },
                 onFocusChange: { focused in commandFocused = focused }
             )
             .frame(height: 20)

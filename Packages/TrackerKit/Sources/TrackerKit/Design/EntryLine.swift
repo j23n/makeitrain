@@ -112,6 +112,22 @@ public final class EntryLineModel {
         return true
     }
 
+    /// What Tab does: takes the highlighted suggestion. Returns whether
+    /// there was one, so the key otherwise does what it does.
+    public func tab() -> Bool {
+        acceptSuggestion()
+    }
+
+    /// What Up does: moves the highlight through the suggestions.
+    public func up() -> Bool {
+        moveSuggestion(by: -1)
+    }
+
+    /// What Down does: moves the highlight the other way.
+    public func down() -> Bool {
+        moveSuggestion(by: 1)
+    }
+
     private func refresh() {
         if let entryID, !text.isEmpty {
             let read = model.readEntryLine(text, for: entryID)

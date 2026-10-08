@@ -86,7 +86,7 @@ struct PhoneCommandBar: View {
 struct PhoneCommandSheet: View {
     let model: AppModel
     let router: PhoneRouter
-    let line: CommandLineModel
+    @Bindable var line: CommandLineModel
     let close: () -> Void
     @State private var reportText = ""
     @Environment(\.undoManager) private var undoManager
@@ -137,18 +137,15 @@ struct PhoneCommandSheet: View {
             .padding(.horizontal, 16)
             .padding(.top, 12)
         }
-        field(
-            text: Binding(get: { line.text }, set: { line.text = $0 }),
+        field(text: $line.text, CommandField(
+            line: line,
             placeholder: model.running == nil ? "start a timer or log time" : "switch, stop or log time",
-            reading: line.reading,
-            submit: { alternate in submit(alternate: alternate) },
-            onTab: { line.acceptSuggestion() || line.complete() },
-            onUp: { line.moveSuggestion(by: -1) || line.previousLine() },
-            onDown: { line.moveSuggestion(by: 1) || line.nextLine() },
-            cursorRequest: line.cursorRequest,
-            cursor: line.requestedCursor,
-            onCursorChange: { line.cursor = $0 }
-        )
+            fontSize: 17,
+            focusesWithWindow: true,
+            focusRequest: router.focusRequest,
+            onSubmit: { alternate in submit(alternate: alternate) },
+            onCancel: close
+        ))
         if case .find? = line.reading.primary {
             foundEntries
         } else {
@@ -164,41 +161,31 @@ struct PhoneCommandSheet: View {
         return running.entry.note.isEmpty ? project : "\(project) · \(running.entry.note)"
     }
 
-    private func field(
-        text: Binding<String>,
-        placeholder: String,
-        reading: CommandReading,
-        submit: @escaping (_ alternate: Bool) -> Void,
-        onTab: @escaping () -> Bool = { false },
-        onUp: @escaping () -> Bool = { false },
-        onDown: @escaping () -> Bool = { false },
-        cursorRequest: Int = 0,
-        cursor: Int? = nil,
-        onCursorChange: @escaping (Int) -> Void = { _ in }
-    ) -> some View {
+    /// A field for the typed report.
+    private func field(text: Binding<String>, placeholder: String, reading: CommandReading, submit: @escaping (_ alternate: Bool) -> Void) -> some View {
+        field(text: text, CommandField(
+            text: text,
+            placeholder: placeholder,
+            reading: reading,
+            ledger: model.ledger,
+            fontSize: 17,
+            focusesWithWindow: true,
+            focusRequest: router.focusRequest,
+            onSubmit: submit,
+            onCancel: close
+        ))
+    }
+
+    /// A field with the prompt before it and, once something's typed, a
+    /// button that clears it.
+    private func field(text: Binding<String>, _ input: CommandField) -> some View {
         HStack(spacing: 10) {
             Text("›")
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(Theme.accent)
                 .accessibilityHidden(true)
-            CommandField(
-                text: text,
-                placeholder: placeholder,
-                reading: reading,
-                ledger: model.ledger,
-                fontSize: 17,
-                focusesWithWindow: true,
-                focusRequest: router.focusRequest,
-                cursorRequest: cursorRequest,
-                cursor: cursor,
-                onSubmit: submit,
-                onTab: onTab,
-                onUp: onUp,
-                onDown: onDown,
-                onCancel: close,
-                onCursorChange: onCursorChange
-            )
-            .frame(height: 56)
+            input
+                .frame(height: 56)
             if !text.wrappedValue.isEmpty {
                 Button {
                     text.wrappedValue = ""

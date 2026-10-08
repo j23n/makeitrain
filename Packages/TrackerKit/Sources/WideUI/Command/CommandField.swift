@@ -72,6 +72,71 @@ public struct CommandField {
         self.onFocusChange = onFocusChange
     }
 
+    /// The field of a command line: its keys do what the line's Tab, Up
+    /// and Down do, and the insertion point follows the line's.
+    @MainActor
+    public init(
+        line: CommandLineModel,
+        placeholder: String,
+        fontSize: CGFloat = 15.5,
+        focusesWithWindow: Bool = false,
+        focusRequest: Int = 0,
+        onSubmit: @escaping (_ alternate: Bool) -> Void,
+        onCancel: @escaping () -> Void = {},
+        onFocusChange: @escaping (Bool) -> Void = { _ in }
+    ) {
+        self.init(
+            text: Bindable(line).text,
+            placeholder: placeholder,
+            reading: line.reading,
+            ledger: line.model.ledger,
+            fontSize: fontSize,
+            focusesWithWindow: focusesWithWindow,
+            focusRequest: focusRequest,
+            cursorRequest: line.cursorRequest,
+            cursor: line.requestedCursor,
+            onSubmit: onSubmit,
+            onTab: { line.tab() },
+            onUp: { line.up() },
+            onDown: { line.down() },
+            onCancel: onCancel,
+            onCursorChange: { line.cursor = $0 },
+            onFocusChange: onFocusChange
+        )
+    }
+
+    /// The field of a line typed over an entry, likewise. Return, with
+    /// Option or without, applies the line.
+    @MainActor
+    public init(
+        entryLine line: EntryLineModel,
+        fontSize: CGFloat = 15.5,
+        focusesWithWindow: Bool = false,
+        focusRequest: Int = 0,
+        onSubmit: @escaping () -> Void,
+        onCancel: @escaping () -> Void = {},
+        onFocusChange: @escaping (Bool) -> Void = { _ in }
+    ) {
+        self.init(
+            text: Bindable(line).text,
+            placeholder: "",
+            reading: line.reading,
+            ledger: line.model.ledger,
+            fontSize: fontSize,
+            focusesWithWindow: focusesWithWindow,
+            focusRequest: focusRequest,
+            cursorRequest: line.cursorRequest,
+            cursor: line.requestedCursor,
+            onSubmit: { _ in onSubmit() },
+            onTab: { line.tab() },
+            onUp: { line.up() },
+            onDown: { line.down() },
+            onCancel: onCancel,
+            onCursorChange: { line.cursor = $0 },
+            onFocusChange: onFocusChange
+        )
+    }
+
     var baseAttributes: [NSAttributedString.Key: Any] {
         [
             .font: PlatformFont.monospacedSystemFont(ofSize: fontSize, weight: .regular),
