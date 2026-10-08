@@ -79,10 +79,6 @@ public struct Report: Hashable, Sendable {
     /// How many days in the range have time logged.
     public var daysWorked: Int
 
-    public init(_ request: ReportRequest, ledger: Ledger, now: Timestamp) {
-        self.init(request, ledger: ledger, resolved: ledger.resolvedEntries(), now: now)
-    }
-
     /// Builds the report from entries already resolved, as the app model
     /// keeps them.
     public init(_ request: ReportRequest, ledger: Ledger, resolved: [ResolvedEntry], now: Timestamp) {
