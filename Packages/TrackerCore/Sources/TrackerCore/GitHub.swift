@@ -17,7 +17,7 @@ public enum GitHub {
         public var owner: String
         public var name: String
 
-        public init(host: String = "github.com", owner: String, name: String) {
+        public init(host: String, owner: String, name: String) {
             self.host = host
             self.owner = owner
             self.name = name
@@ -108,11 +108,15 @@ public enum GitHub {
         }
     }
 
-    /// The web address of the issue or pull request `tag` refers to, given a
-    /// project's repositories, or nil when the tag isn't a reference or
-    /// names a repository the project doesn't have.
-    public static func url(forTag tag: String, repositories: [String]) -> URL? {
-        target(ofTag: tag, repositories: repositories).flatMap { URL(string: "\($0.repository.address)/issues/\($0.number)") }
+    /// The issue or pull request `tag` refers to, given a project's
+    /// repositories: its repository, its number and its web address. Nil
+    /// when the tag isn't a reference or names a repository the project
+    /// doesn't have.
+    public static func issue(forTag tag: String, repositories: [String]) -> (repository: Repository, number: Int, url: URL)? {
+        guard let target = target(ofTag: tag, repositories: repositories),
+              let url = URL(string: "\(target.repository.address)/issues/\(target.number)")
+        else { return nil }
+        return (target.repository, target.number, url)
     }
 
     /// The repository and number `tag` refers to, given a project's
@@ -124,10 +128,10 @@ public enum GitHub {
         if let written = reference.repository {
             let parts = written.split(separator: "/").map(String.init)
             if parts.count == 2 {
-                repository = known.first { same($0.owner, parts[0]) && same($0.name, parts[1]) }
+                repository = known.first { Tags.same($0.owner, parts[0]) && Tags.same($0.name, parts[1]) }
                     ?? Repository(host: known.first?.host ?? "github.com", owner: parts[0], name: parts[1])
             } else {
-                repository = known.first { same($0.name, written) }
+                repository = known.first { Tags.same($0.name, written) }
             }
         } else {
             repository = known.first
@@ -141,13 +145,9 @@ public enum GitHub {
     /// "acme/web#123", which refers to it whatever the project has.
     static func prefix(for repository: Repository, among repositories: [String]) -> String {
         let known = repositories.compactMap { Repository($0) }
-        let listed = known.contains { same($0.address, repository.address) }
-        let namesakes = known.filter { same($0.name, repository.name) }.count
+        let listed = known.contains { Tags.same($0.address, repository.address) }
+        let namesakes = known.filter { Tags.same($0.name, repository.name) }.count
         return listed && namesakes == 1 ? repository.name : "\(repository.owner)/\(repository.name)"
-    }
-
-    private static func same(_ a: String, _ b: String) -> Bool {
-        a.lowercased() == b.lowercased()
     }
 }
 
@@ -183,9 +183,16 @@ extension Ledger {
         return changes
     }
 
+    /// The issue or pull request `tag` refers to, in the repositories of the
+    /// entry's project: its repository, its number and its web address. Nil
+    /// if there's none.
+    public func issue(forTag tag: String, projectID: UUID?) -> (repository: GitHub.Repository, number: Int, url: URL)? {
+        GitHub.issue(forTag: tag, repositories: projectID.flatMap { projects[$0]?.repositories } ?? [])
+    }
+
     /// The web address of the issue or pull request `tag` refers to, in the
     /// repositories of the entry's project, or nil.
     public func issueURL(forTag tag: String, projectID: UUID?) -> URL? {
-        GitHub.url(forTag: tag, repositories: projectID.flatMap { projects[$0]?.repositories } ?? [])
+        issue(forTag: tag, projectID: projectID)?.url
     }
 }

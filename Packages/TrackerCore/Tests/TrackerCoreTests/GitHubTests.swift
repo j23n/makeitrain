@@ -54,7 +54,7 @@ import Testing
     @Test func linksTagsToIssuesInTheProjectsRepositories() {
         let repositories = ["https://github.com/acme/web", "https://github.com/acme/api"]
         func url(_ tag: String, _ repositories: [String]) -> String? {
-            GitHub.url(forTag: tag, repositories: repositories)?.absoluteString
+            GitHub.issue(forTag: tag, repositories: repositories)?.url.absoluteString
         }
         // The first repository unless the tag names another.
         #expect(url("#12", repositories) == "https://github.com/acme/web/issues/12")
@@ -174,5 +174,13 @@ import Testing
         #expect(ledger.issueURL(forTag: "design", projectID: uuid(10)) == nil)
         #expect(ledger.issueURL(forTag: "#12", projectID: uuid(11)) == nil)
         #expect(ledger.issueURL(forTag: "#12", projectID: nil) == nil)
+
+        // With its repository and number.
+        let issue = ledger.issue(forTag: "Other/Lib/#5", projectID: uuid(10))
+        #expect(issue?.repository == GitHub.Repository(host: "github.com", owner: "Other", name: "Lib"))
+        #expect(issue?.repository.title == "Other/Lib")
+        #expect(issue?.number == 5)
+        #expect(issue?.url.absoluteString == "https://github.com/Other/Lib/issues/5")
+        #expect(ledger.issue(forTag: "#12", projectID: uuid(10))?.repository.title == "acme/web")
     }
 }
