@@ -85,9 +85,6 @@ struct MonthScreen: View {
             state.show(ReportPeriod.month.range(containing: day, firstWeekday: model.firstWeekday), period: .month)
             cursor = day
         }
-        .onChange(of: model.revision) {
-            state.refresh()
-        }
         .onAppear {
             focused = true
         }
@@ -178,11 +175,12 @@ struct MonthHeatGrid: View {
     }
 
     private func cell(_ day: LocalDate) -> some View {
-        let total = state.dayTotals[day] ?? 0
+        let totals = state.dayTotals
+        let total = totals.total(on: day)
         let inMonth = day.month == month.month && day.year == month.year
         let weekend = day.weekday == 1 || day.weekday == 7
         let selected = state.range.contains(day)
-        let projects = (state.dayProjects[day] ?? [:]).sorted { ($0.value, $0.key?.uuidString ?? "") > ($1.value, $1.key?.uuidString ?? "") }
+        let projects = totals.projects(on: day).sorted { ($0.value, $0.key?.uuidString ?? "") > ($1.value, $1.key?.uuidString ?? "") }
         return VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 6) {
                 Text("\(day.day)")
@@ -295,9 +293,6 @@ struct YearScreen: View {
         .onChange(of: year) { _, year in
             state.show(Self.range(year), period: .custom)
         }
-        .onChange(of: model.revision) {
-            state.refresh()
-        }
     }
 }
 
@@ -310,7 +305,8 @@ struct MiniMonth: View {
 
     var body: some View {
         let weeks = MonthGrid.weeks(of: month, firstWeekday: model.firstWeekday)
-        let total = state.months.first { $0.month == month.month }?.total ?? 0
+        let totals = state.dayTotals
+        let total = totals.total(in: ReportPeriod.month.range(containing: month, firstWeekday: model.firstWeekday))
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
                 Text(Format.month(month))
@@ -325,7 +321,7 @@ struct MiniMonth: View {
                 ForEach(weeks, id: \.self) { week in
                     HStack(spacing: 3) {
                         ForEach(week, id: \.self) { day in
-                            let time = state.dayTotals[day] ?? 0
+                            let time = totals.total(on: day)
                             RoundedRectangle(cornerRadius: 3)
                                 .fill(day.month == month.month ? shade(time) : Color.clear)
                                 .overlay {

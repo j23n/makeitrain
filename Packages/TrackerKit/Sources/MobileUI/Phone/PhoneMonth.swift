@@ -364,7 +364,7 @@ struct PhoneMonthGrid: View {
     }
 
     private func cell(_ day: LocalDate) -> some View {
-        let total = state.dayTotals[day] ?? 0
+        let total = state.dayTotals.total(on: day)
         let inMonth = day.month == month.month && day.year == month.year
         let weekend = day.weekday == 1 || day.weekday == 7
         let selected = state.range.contains(day) && state.range != monthRange

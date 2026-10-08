@@ -4,7 +4,8 @@ import TrackerCore
 
 /// A report as the month and year screens show it: which clients, projects
 /// and tags, which days, and how it's grouped, with what that adds up to.
-/// It's worked out again only when one of those or the data changes.
+/// What it adds up to is worked out when a screen first reads it, and again
+/// only after one of those or the data changed.
 @MainActor
 @Observable
 public final class ReportState {
@@ -12,64 +13,50 @@ public final class ReportState {
     public private(set) var range: ClosedRange<LocalDate>
     /// How the range steps and compares: a day, week, month, or custom.
     public private(set) var period: ReportPeriod
-    public var grouping: ReportRequest.Grouping {
-        didSet { if grouping != oldValue { recompute() } }
-    }
+    public var grouping: ReportRequest.Grouping = .project
     /// Clients to include, or all when empty.
-    public var clients: Set<UUID> = [] {
-        didSet { if clients != oldValue { recompute() } }
-    }
+    public var clients: Set<UUID> = []
     /// Projects to include, or all when empty.
-    public var projects: Set<UUID> = [] {
-        didSet { if projects != oldValue { recompute() } }
-    }
+    public var projects: Set<UUID> = []
     /// Tags to include, or all when empty.
-    public var tags: Set<String> = [] {
-        didSet { if tags != oldValue { recompute() } }
+    public var tags: Set<String> = []
+
+    /// The report and its comparison as last worked out, and what for.
+    @ObservationIgnored private var figuresCache: (key: FiguresKey, report: Report, comparison: ReportComparison)? = nil
+    /// The days' totals and overlaps as last worked out, and what for.
+    @ObservationIgnored private var dailyCache: (key: DailyKey, totals: DayTotals, overlapDays: Set<LocalDate>)? = nil
+
+    /// What the report and its comparison depend on.
+    private struct FiguresKey: Equatable {
+        var request: ReportRequest
+        var period: ReportPeriod
+        var revision: Int
+        var today: LocalDate
     }
 
-    public private(set) var report: Report
-    public private(set) var comparison: ReportComparison
-    /// The filtered time on each day of the range's year, the running
-    /// timer left out as in reports.
-    public private(set) var dayTotals: [LocalDate: Int64] = [:]
-    /// Days with time counted twice.
-    public private(set) var overlapDays: Set<LocalDate> = []
-    /// The filtered time per project on each day of the range's year.
-    public private(set) var dayProjects: [LocalDate: [UUID?: Int64]] = [:]
+    /// What the days' totals and overlaps depend on: the filters over the
+    /// days they cover, and the data.
+    private struct DailyKey: Equatable {
+        var filter: EntryFilter
+        var revision: Int
+    }
 
-    @ObservationIgnored private var loadedRevision = -1
-
-    public init(model: AppModel, range: ClosedRange<LocalDate>, period: ReportPeriod, grouping: ReportRequest.Grouping = .project) {
+    public init(model: AppModel, range: ClosedRange<LocalDate>, period: ReportPeriod) {
         self.model = model
         self.range = range
         self.period = period
-        self.grouping = grouping
-        let request = ReportRequest(range: range, grouping: grouping)
-        let first = Report(request, ledger: model.ledger, resolved: model.resolved)
-        report = first
-        comparison = ReportComparison(
-            first,
-            period: period,
-            today: model.today,
-            ledger: model.ledger,
-            resolved: model.resolved
-        )
-        recompute()
     }
 
     /// The filters and days as a report request.
-    public var request: ReportRequest {
+    private var request: ReportRequest {
         ReportRequest(range: range, grouping: grouping, clients: clients, projects: projects, tags: tags)
     }
 
     /// Shows other days.
     public func show(_ range: ClosedRange<LocalDate>, period: ReportPeriod) {
         guard range != self.range || period != self.period else { return }
-        let yearChanged = range.lowerBound.year != self.range.lowerBound.year
         self.range = range
         self.period = period
-        recompute(totals: yearChanged)
     }
 
     /// The same length of time before or after.
@@ -91,78 +78,73 @@ public final class ReportState {
         clients = query.clients
         projects = query.projects
         tags = query.tags
-        recompute()
     }
 
-    /// Works everything out again if the data changed.
-    public func refresh() {
-        guard loadedRevision != model.revision else { return }
-        recompute()
+    /// What the days and filters add up to.
+    public var report: Report {
+        figures.report
     }
 
-    /// Works out the report, and with `totals` the year's daily totals too.
-    public func recompute(totals: Bool = true) {
-        loadedRevision = model.revision
-        report = Report(request, ledger: model.ledger, resolved: model.resolved)
-        comparison = ReportComparison(
-            report,
-            period: period,
-            today: model.today,
-            ledger: model.ledger,
-            resolved: model.resolved
-        )
-        guard totals else { return }
+    /// The report's total next to the period before it.
+    public var comparison: ReportComparison {
+        figures.comparison
+    }
+
+    /// The filtered time on each day of the range's year, the running
+    /// timer left out as in reports.
+    public var dayTotals: DayTotals {
+        daily.totals
+    }
+
+    /// Days with time counted twice.
+    public var overlapDays: Set<LocalDate> {
+        daily.overlapDays
+    }
+
+    private var figures: (report: Report, comparison: ReportComparison) {
+        let key = FiguresKey(request: request, period: period, revision: model.revision, today: model.today)
+        if let figuresCache, figuresCache.key == key {
+            return (figuresCache.report, figuresCache.comparison)
+        }
+        let report = Report(key.request, ledger: model.ledger, resolved: model.resolved)
+        let comparison = ReportComparison(report, period: key.period, today: key.today, ledger: model.ledger, resolved: model.resolved)
+        figuresCache = (key, report, comparison)
+        return (report, comparison)
+    }
+
+    private var daily: (totals: DayTotals, overlapDays: Set<LocalDate>) {
         // The year around the range, and a week either side for the month
         // grid's first and last rows.
         let year = range.lowerBound.year
         let first = LocalDate(year: year, month: 1, day: 1).adding(days: -7)
         let last = max(LocalDate(year: year, month: 12, day: 31), range.upperBound).adding(days: 7)
-        var filter = request.filter
-        filter.range = first...last
-        let matches = filter.matcher(in: model.ledger)
-        var days: [LocalDate: Int64] = [:]
-        var projectsByDay: [LocalDate: [UUID?: Int64]] = [:]
+        let filter = EntryFilter(range: first...last, clients: clients, projects: projects, tags: tags)
+        let key = DailyKey(filter: filter, revision: model.revision)
+        if let dailyCache, dailyCache.key == key {
+            return (dailyCache.totals, dailyCache.overlapDays)
+        }
+        let entries = model.resolved.filter(filter.matcher(in: model.ledger))
         var spans: [LocalDate: [TimeSpan]] = [:]
-        for entry in model.resolved where !entry.isRunning && matches(entry) {
-            let day = entry.entry.day
-            let duration = entry.duration(now: model.now)
-            days[day, default: 0] += duration
-            projectsByDay[day, default: [:]][entry.entry.projectID, default: 0] += duration
+        for entry in entries {
             if let end = entry.end {
-                spans[day, default: []].append(TimeSpan(start: entry.start, end: end))
+                spans[entry.entry.day, default: []].append(TimeSpan(start: entry.start, end: end))
             }
         }
-        dayTotals = days
-        dayProjects = projectsByDay
-        overlapDays = Set(spans.compactMap { day, spans in Overlaps.doubleCounted(spans) > 0 ? day : nil })
+        let totals = DayTotals(entries)
+        let overlapDays = Set(spans.compactMap { day, spans in Overlaps.doubleCounted(spans) > 0 ? day : nil })
+        dailyCache = (key, totals, overlapDays)
+        return (totals, overlapDays)
     }
 
     /// The weeks of the range's year, each with its first day and the
     /// time on its days.
     public var weeks: [(start: LocalDate, total: Int64)] {
         let year = range.lowerBound.year
-        var start = LocalDate(year: year, month: 1, day: 1).startOfWeek(firstWeekday: model.firstWeekday)
-        var result: [(start: LocalDate, total: Int64)] = []
-        while start.year <= year {
-            var total: Int64 = 0
-            for offset in 0..<7 {
-                total += dayTotals[start.adding(days: offset)] ?? 0
-            }
-            result.append((start, total))
-            start = start.adding(days: 7)
-        }
-        return result
-    }
-
-    /// The months of the range's year, with the time in each.
-    public var months: [(month: Int, total: Int64)] {
-        let year = range.lowerBound.year
-        return (1...12).map { month in
-            let total = dayTotals.reduce(Int64(0)) { sum, item in
-                item.key.year == year && item.key.month == month ? sum + item.value : sum
-            }
-            return (month, total)
-        }
+        let totals = dayTotals
+        let first = LocalDate(year: year, month: 1, day: 1).startOfWeek(firstWeekday: model.firstWeekday)
+        return sequence(first: first) { $0.adding(days: 7) }
+            .prefix(while: { $0.year <= year })
+            .map { (start: $0, total: totals.total(in: $0...$0.adding(days: 6))) }
     }
 
     /// What the report covers, as a title: the client, or the project, or
@@ -187,15 +169,7 @@ public final class ReportState {
 
     /// How many weekdays the range has, for "21 of 22 weekdays".
     public var weekdays: Int {
-        var count = 0
-        var day = range.lowerBound
-        while day <= range.upperBound {
-            if day.weekday != 1, day.weekday != 7 {
-                count += 1
-            }
-            day = day.adding(days: 1)
-        }
-        return count
+        range.days.filter { $0.weekday != 1 && $0.weekday != 7 }.count
     }
 
     /// The days in the range with time counted twice.
@@ -213,9 +187,8 @@ public final class ReportState {
         words += tags.map { $0.hasPrefix("#") ? $0 : "#" + $0 }
         let first = range.lowerBound
         let last = range.upperBound
-        let monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
         if period == .month {
-            words.append("\(monthNames[first.month - 1]) \(first.year)")
+            words.append("\(TimeWords.monthNames[first.month - 1]) \(first.year)")
         } else if first == last {
             words.append(first.description)
         } else {
