@@ -24,7 +24,7 @@ extension Ledger {
                 restored.note = old.note
                 restored.deleted = old.deleted
                 changes.formUnion(replace(current, with: restored, now: now))
-            } else if let added = change.after, let current = entries[added.id], !current.isDeleted {
+            } else if let current = entries[change.after.id], !current.isDeleted {
                 var deleted = current
                 deleted.deleted = now
                 deleted.note = ""
@@ -39,8 +39,8 @@ extension Ledger {
                     client.archived = old.archived
                     client.deleted = old.deleted
                 })
-            } else if let added = change.after, clients[added.id]?.isDeleted == false {
-                changes.formUnion(updateClient(added.id, now: now) { $0.deleted = now })
+            } else if clients[change.after.id]?.isDeleted == false {
+                changes.formUnion(updateClient(change.after.id, now: now) { $0.deleted = now })
             }
         }
         for change in diff.projects {
@@ -53,8 +53,8 @@ extension Ledger {
                     project.repositories = old.repositories
                     project.deleted = old.deleted
                 })
-            } else if let added = change.after, projects[added.id]?.isDeleted == false {
-                changes.formUnion(updateProject(added.id, now: now) { $0.deleted = now })
+            } else if projects[change.after.id]?.isDeleted == false {
+                changes.formUnion(updateProject(change.after.id, now: now) { $0.deleted = now })
             }
         }
         return changes

@@ -195,26 +195,25 @@ struct ChangeTable: View {
     var body: some View {
         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 8, verticalSpacing: 7) {
             ForEach(Array(diff.entries.enumerated()), id: \.offset) { _, change in
-                if let after = change.after {
-                    GridRow {
-                        Text(change.isNew ? "+" : "~")
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Theme.amberText)
-                        Text(after.note.isEmpty ? model.ledger.projectTitle(after.projectID) : after.note)
-                            .font(.system(size: 12.5))
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        if let before = change.before {
-                            Text(span(before))
-                                .strikethrough(true, color: Theme.amber)
-                                .foregroundStyle(Theme.text3)
-                        } else {
-                            Text("—").foregroundStyle(Theme.text3)
-                        }
-                        Text(span(after))
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Theme.amberText)
+                let after = change.after
+                GridRow {
+                    Text(change.isNew ? "+" : "~")
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Theme.amberText)
+                    Text(after.note.isEmpty ? model.ledger.projectTitle(after.projectID) : after.note)
+                        .font(.system(size: 12.5))
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if let before = change.before {
+                        Text(span(before))
+                            .strikethrough(true, color: Theme.amber)
+                            .foregroundStyle(Theme.text3)
+                    } else {
+                        Text("—").foregroundStyle(Theme.text3)
                     }
+                    Text(span(after))
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Theme.amberText)
                 }
             }
         }

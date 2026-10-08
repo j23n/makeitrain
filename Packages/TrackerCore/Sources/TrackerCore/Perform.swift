@@ -102,7 +102,7 @@ public struct LedgerDiff: Hashable, Sendable {
     /// A record before and after. `before` is nil for a record that's new.
     public struct Change<Record: Hashable & Sendable>: Hashable, Sendable {
         public var before: Record?
-        public var after: Record?
+        public var after: Record
 
         public var isNew: Bool {
             before == nil
@@ -127,18 +127,15 @@ extension Ledger {
         for (id, entry) in entries where earlier.entries[id] != entry {
             diff.entries.append(.init(before: earlier.entries[id], after: entry))
         }
-        diff.entries.sort { a, b in
-            let first = a.after ?? a.before!, second = b.after ?? b.before!
-            return TimeEntry.fileOrder(first, second)
-        }
+        diff.entries.sort { TimeEntry.fileOrder($0.after, $1.after) }
         for (id, project) in projects where earlier.projects[id] != project {
             diff.projects.append(.init(before: earlier.projects[id], after: project))
         }
-        diff.projects.sort { ($0.after?.name ?? "") < ($1.after?.name ?? "") }
+        diff.projects.sort { $0.after.name < $1.after.name }
         for (id, client) in clients where earlier.clients[id] != client {
             diff.clients.append(.init(before: earlier.clients[id], after: client))
         }
-        diff.clients.sort { ($0.after?.name ?? "") < ($1.after?.name ?? "") }
+        diff.clients.sort { $0.after.name < $1.after.name }
         return diff
     }
 }
@@ -165,7 +162,7 @@ public struct CommandPreview: Hashable, Sendable {
     /// The overlaps in `after` that involve entries `diff` changed or added
     /// and weren't in `before`.
     private static func introduced(by diff: LedgerDiff, before: Ledger, after: Ledger, now: Timestamp) -> [Overlap] {
-        let touched = Set(diff.entries.compactMap { $0.after?.id })
+        let touched = Set(diff.entries.map(\.after.id))
         guard !touched.isEmpty else { return [] }
         let earlier = Set(Overlaps.analyze(before.resolvedEntries(), now: now).map { [$0.earlier, $0.later] })
         return Overlaps.analyze(after.resolvedEntries(), now: now).filter { overlap in

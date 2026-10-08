@@ -262,7 +262,8 @@ struct PhoneCorrectionPanel: View {
     private var changes: some View {
         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 6) {
             ForEach(Array(preview.diff.entries.enumerated()), id: \.offset) { _, change in
-                if let after = change.after, !after.isDeleted {
+                let after = change.after
+                if !after.isDeleted {
                     GridRow {
                         HStack(spacing: 7) {
                             Text(after.note.isEmpty ? model.ledger.projectTitle(after.projectID) : after.note)

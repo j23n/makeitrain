@@ -317,7 +317,7 @@ public struct CommandPreviewView: View {
                     subject(command)
                 }
                 .lineLimit(1)
-                CommandChanges(model: model, command: command, preview: preview)
+                CommandChanges(model: model, preview: preview)
                     .padding(.leading, showsKey ? 31 : 0)
             }
             .padding(.horizontal, 14)
@@ -440,12 +440,10 @@ struct TargetLabel: View {
 /// No gap, no overlap." or the times that change, struck through.
 public struct CommandChanges: View {
     let model: AppModel
-    let command: Command
     let preview: CommandPreview
 
-    public init(model: AppModel, command: Command, preview: CommandPreview) {
+    public init(model: AppModel, preview: CommandPreview) {
         self.model = model
-        self.command = command
         self.preview = preview
     }
 
@@ -465,7 +463,7 @@ public struct CommandChanges: View {
         var result: [Text] = []
         let ledger = preview.after
         for change in preview.diff.entries {
-            guard let after = change.after else { continue }
+            let after = change.after
             let zone = after.timeZone
             let projectName = after.projectID.flatMap { ledger.projects[$0]?.name }
             let name = Text(projectName ?? (after.note.isEmpty ? "Unassigned" : after.note))
@@ -491,7 +489,7 @@ public struct CommandChanges: View {
                 continue
             }
             if before.end == nil, let end = after.end, before.start == after.start {
-                if case .start(_, let start, .none) = command, abs(start.distance(to: now)) < 60000 {
+                if case .start(_, let start, .none) = preview.command, abs(start.distance(to: now)) < 60000 {
                     result.append(name + Text(" ends at ") + time(end) + Text(", after \(Format.duration(after.start.distance(to: end)))."))
                 } else {
                     result.append(name + Text(" ") + time(after.start) + Text("–")
@@ -518,19 +516,19 @@ public struct CommandChanges: View {
             result.append(line)
         }
         for change in preview.diff.projects {
-            guard let after = change.after else { continue }
+            let after = change.after
             if change.isNew {
                 let client = after.clientID.flatMap { ledger.clients[$0]?.name }
                 result.append(Text("Adds \(after.name)") + Text(client.map { " to \($0)" } ?? "") + Text(", in \(Palette.name(of: after.color))."))
             }
         }
-        if case .start(_, _, .none) = command, model.running != nil, preview.newOverlaps.isEmpty {
+        if case .start(_, _, .none) = preview.command, model.running != nil, preview.newOverlaps.isEmpty {
             result.append(Text("No gap, no overlap."))
         }
         for overlap in preview.newOverlaps {
             let other = [overlap.earlier, overlap.later]
                 .compactMap { id in ledger.entries[id] }
-                .first { entry in !preview.diff.entries.contains { $0.after?.id == entry.id } }
+                .first { entry in !preview.diff.entries.contains { $0.after.id == entry.id } }
             if let other {
                 let title = other.note.isEmpty ? ledger.projectTitle(other.projectID) : other.note
                 result.append(Text("Overlaps \(title), \(Format.time(other.start, zone: other.timeZone))–\(other.end.map { Format.time($0, zone: other.timeZone) } ?? "now"), by \(Format.duration(overlap.duration)).")

@@ -22,9 +22,9 @@ import Testing
         #expect(preview.diff.entries.count == 2)
         #expect(preview.diff.entries[0].before?.id == uuid(106))
         #expect(preview.diff.entries[0].before?.end == nil)
-        #expect(preview.diff.entries[0].after?.end == F.at("11:05"))
+        #expect(preview.diff.entries[0].after.end == F.at("11:05"))
         #expect(preview.diff.entries[1].isNew)
-        #expect(preview.diff.entries[1].after?.start == F.at("11:05"))
+        #expect(preview.diff.entries[1].after.start == F.at("11:05"))
         #expect(preview.newOverlaps.isEmpty)
         // Previewing changes nothing.
         #expect(context.ledger.entries[uuid(106)]?.end == nil)

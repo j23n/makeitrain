@@ -172,8 +172,8 @@ public final class WeekModel {
     /// with that suggestion's number.
     public func suggestedChange(of entryID: UUID) -> (number: Int, before: TimeEntry, after: TimeEntry)? {
         for preview in previews {
-            if let change = preview.diff.entries.first(where: { $0.before?.id == entryID }), let before = change.before, let after = change.after {
-                return (preview.number, before, after)
+            if let change = preview.diff.entries.first(where: { $0.before?.id == entryID }), let before = change.before {
+                return (preview.number, before, change.after)
             }
         }
         return nil
@@ -186,9 +186,7 @@ public final class WeekModel {
         for preview in previews {
             let isEvent: Bool = if case .notLogged = preview.correction.kind { true } else { false }
             for change in preview.diff.entries where change.before == nil {
-                if let after = change.after {
-                    result.append(SuggestedAddition(number: preview.number, entry: after, isEvent: isEvent))
-                }
+                result.append(SuggestedAddition(number: preview.number, entry: change.after, isEvent: isEvent))
             }
         }
         return result
