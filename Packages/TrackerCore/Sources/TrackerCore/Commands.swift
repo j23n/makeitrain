@@ -204,6 +204,13 @@ public struct CommandContext: Sendable {
         resolved.last { $0.isRunning }
     }
 
+    /// When the last entry that ended today ended, if that's before now:
+    /// the start of something logged as done without a time.
+    public var lastEndToday: Timestamp? {
+        let midnight = Timestamp(date: today, secondOfDay: 0, zone: timeZone)
+        return resolved.compactMap(\.end).filter { $0 >= midnight && $0 < now }.max()
+    }
+
     /// Projects whose name, or whose client's, has a word starting with
     /// each word of `phrase`, with their client's name and how well they
     /// match: the best matches first, then the ones used last. Every
@@ -783,27 +790,12 @@ struct CommandReader {
             } else {
                 reading.primary = .start(draft, at: now, end: nil)
             }
-            if running == nil, let since = lastEndToday() {
+            if running == nil, let since = context.lastEndToday {
                 reading.alternate = .start(draft, at: since, end: now)
             } else {
                 reading.alternateProblem = .needsStart
             }
         }
-    }
-
-    /// When the last entry that ended today ended, if that's before now: the
-    /// start of something "logged as done" without a time.
-    func lastEndToday() -> Timestamp? {
-        let midnight = Timestamp(date: context.today, secondOfDay: 0, zone: context.timeZone)
-        var latest: Timestamp?
-        for entry in context.resolved.reversed() {
-            // Entries are sorted by start, and none is longer than a few days.
-            if entry.start < midnight.adding(seconds: -3 * 86400) { break }
-            if let end = entry.end, end >= midnight, end < context.now, latest.map({ end > $0 }) ?? true {
-                latest = end
-            }
-        }
-        return latest
     }
 
     /// A tag as typed, spelled as the project has it already where it's the
@@ -839,10 +831,7 @@ struct CommandReader {
         guard !draft.isEmpty else { return nil }
         let typedNote = draft.note.lowercased()
         let typedTags = Set(draft.tags.map { $0.lowercased() })
-        var scanned = 0
         for entry in context.resolved.reversed() {
-            scanned += 1
-            if scanned > 2000 { break }
             if draft.projectID != nil, entry.entry.projectID != draft.projectID { continue }
             if draft.projectID == nil, entry.entry.projectID == nil || typedNote.isEmpty { continue }
             let tags = Set(entry.entry.tags.map { $0.lowercased() })

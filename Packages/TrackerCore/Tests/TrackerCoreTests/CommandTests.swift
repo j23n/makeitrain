@@ -27,6 +27,16 @@ import Testing
         #expect(reading.draft == draft(F.bookings, ["#227"], "Export"))
     }
 
+    @Test func logsAsDoneFromWhenTheLastEntryTodayEnded() {
+        #expect(F.context(F.ledger()).lastEndToday == F.at("09:00"))
+        // Not an end still to come.
+        #expect(F.context(F.ledger(), now: "08:30").lastEndToday == nil)
+        // A timer left running since Thursday and stopped this morning.
+        let forgotten = F.entry(107, F.harbor, "2026-10-01", "17:00", "09:30", note: "Release", endDay: "2026-10-05")
+        let reading = F.read("book review", F.ledger([forgotten]))
+        #expect(reading.alternate == .start(draft(F.bookings, [], "review"), at: F.at("09:30"), end: F.at("10:40")))
+    }
+
     @Test func switchesFromTheRunningTimer() {
         let reading = F.read("harbor release call", F.ledger([F.runningBookings]))
         #expect(reading.primary == .start(draft(F.harbor, [], "release call"), at: F.at("10:40"), end: nil))
@@ -167,6 +177,9 @@ import Testing
         // Tags get a "#", so the line reads them back as tags.
         #expect(F.read("book stand").completion?.text == "book #Daily Standup")
         #expect(F.read("book #Daily Standup").draft == draft(F.bookings, ["Daily"], "Standup"))
+        // However many entries came since.
+        let since = (0..<2000).map { F.entry(1000 + $0, F.inHouse, "2026-10-03", "09:00", "09:01", note: "Sync") }
+        #expect(F.read("harbor", F.ledger(since)).completion?.text == "harbor Check-in")
     }
 
     // MARK: - Clients and projects
