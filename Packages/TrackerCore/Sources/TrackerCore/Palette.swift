@@ -2,10 +2,7 @@ import Foundation
 
 /// The colors offered for projects, as hex strings, and their names.
 public enum Palette {
-    public static let colors = [
-        "#4F7CAC", "#C0504D", "#9BBB59", "#8064A2",
-        "#F79646", "#4BACC6", "#D4A017", "#7F7F7F",
-    ]
+    public static let colors = names.map(\.hex)
 
     /// The first color no live project uses yet, or the least used.
     public static func next(in ledger: Ledger) -> String {
