@@ -208,7 +208,7 @@ public enum LineSuggestions {
         let present = Set((reading.draft?.tags ?? []).map { $0.lowercased() })
         var found: [LineSuggestion] = []
         for tag in candidates {
-            let shown = tag.contains("#") ? tag : "#" + tag
+            let shown = Tags.typed(tag)
             let bare = tag.hasPrefix("#") ? String(tag.dropFirst()) : tag
             guard bare.lowercased().hasPrefix(query) else { continue }
             guard shown.lowercased() != typed.lowercased(), !present.contains(tag.lowercased()) else { continue }

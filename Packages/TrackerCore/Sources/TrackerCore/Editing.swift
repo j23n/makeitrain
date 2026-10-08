@@ -55,6 +55,13 @@ public enum Tags {
     public static func order(_ a: String, _ b: String) -> Bool {
         a.compare(b, options: [.caseInsensitive, .numeric]) == .orderedAscending
     }
+
+    /// A tag as a line writes it, so the command line reads it back as a
+    /// tag: with a "#" in front, unless it starts with one already or
+    /// refers to an issue, as "api#12" does.
+    public static func typed(_ tag: String) -> String {
+        tag.hasPrefix("#") || GitHub.Reference(tag: tag) != nil ? tag : "#" + tag
+    }
 }
 
 // Every edit stamps what it changed, using `Timestamp.stamp(after:now:)`, and

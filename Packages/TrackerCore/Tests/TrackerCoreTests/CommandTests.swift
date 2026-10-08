@@ -157,6 +157,9 @@ import Testing
         #expect(F.read("harbor che").completion?.text == "harbor Check-in")
         #expect(F.read("harbor release").completion == nil)
         #expect(F.read("book #227").completion?.text == "book #227 Export to PDF")
+        // Tags get a "#", so the line reads them back as tags.
+        #expect(F.read("book stand").completion?.text == "book #Daily Standup")
+        #expect(F.read("book #Daily Standup").draft == draft(F.bookings, ["Daily"], "Standup"))
     }
 
     // MARK: - Clients and projects

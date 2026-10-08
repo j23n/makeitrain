@@ -219,4 +219,11 @@ import Testing
         #expect(Tags.same("Design", "dESIGN"))
         #expect(["#12", "design", "#9", "Call"].sorted(by: Tags.order) == ["#9", "#12", "Call", "design"])
     }
+
+    @Test func writesTagsAsALineReadsThem() {
+        #expect(Tags.typed("design") == "#design")
+        #expect(Tags.typed("#daily") == "#daily")
+        #expect(Tags.typed("api#12") == "api#12")
+        #expect(Tags.typed("C#") == "#C#")
+    }
 }

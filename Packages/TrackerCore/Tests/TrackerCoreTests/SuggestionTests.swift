@@ -50,6 +50,13 @@ import Testing
         #expect(suggest("harbor #d").isEmpty)
     }
 
+    @Test func writesTagsSoTheLineReadsThemBack() throws {
+        let context = F.context(F.ledger([F.entry(108, F.inHouse, "2026-10-01", "09:00", "10:00", tags: ["C#"], note: "Tooling")]))
+        let tag = try #require(LineSuggestions.suggestions(for: "internal #c", cursor: 11, in: context).first)
+        #expect(tag.title == "#C#")
+        #expect(CommandReading(tag.text, in: context).draft?.tags == ["C#"])
+    }
+
     @Test func offersTheDaysStartsAndEndsWhereATimeGoes() throws {
         let end = try #require(suggest("book from 9").first)
         #expect(end.kind == .time)

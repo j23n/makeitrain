@@ -850,7 +850,7 @@ struct CommandReader {
             } else if let projectID = entry.entry.projectID, let project = context.ledger.projects[projectID] {
                 parts.append(project.name.lowercased())
             }
-            parts += entry.entry.tags
+            parts += entry.entry.tags.map(Tags.typed)
             if !entry.entry.note.isEmpty {
                 parts.append(entry.entry.note)
             }
