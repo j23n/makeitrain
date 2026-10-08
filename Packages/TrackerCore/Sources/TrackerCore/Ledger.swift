@@ -11,45 +11,30 @@ public struct Ledger: Hashable, Sendable {
     public internal(set) var entries: [UUID: TimeEntry]
 
     public init(clients: [Client] = [], projects: [Project] = [], entries: [TimeEntry] = []) {
-        self.clients = [:]
-        self.projects = [:]
-        self.entries = [:]
-        for client in clients { merge(client) }
-        for project in projects { merge(project) }
-        for entry in entries { merge(entry) }
+        self.clients = Dictionary(clients.map { ($0.id, $0) }, uniquingKeysWith: { $0.merged(with: $1) })
+        self.projects = Dictionary(projects.map { ($0.id, $0) }, uniquingKeysWith: { $0.merged(with: $1) })
+        self.entries = Dictionary(entries.map { ($0.id, $0) }, uniquingKeysWith: { $0.merged(with: $1) })
     }
 
-    /// Merges in a copy of a client. Returns whether the ledger changed.
-    @discardableResult
-    public mutating func merge(_ client: Client) -> Bool {
-        let merged = clients[client.id].map { $0.merged(with: client) } ?? client
-        guard merged != clients[client.id] else { return false }
-        clients[client.id] = merged
-        return true
+    /// Merges in a copy of a client.
+    public mutating func merge(_ client: Client) {
+        clients[client.id] = clients[client.id].map { $0.merged(with: client) } ?? client
     }
 
-    /// Merges in a copy of a project. Returns whether the ledger changed.
-    @discardableResult
-    public mutating func merge(_ project: Project) -> Bool {
-        let merged = projects[project.id].map { $0.merged(with: project) } ?? project
-        guard merged != projects[project.id] else { return false }
-        projects[project.id] = merged
-        return true
+    /// Merges in a copy of a project.
+    public mutating func merge(_ project: Project) {
+        projects[project.id] = projects[project.id].map { $0.merged(with: project) } ?? project
     }
 
-    /// Merges in a copy of an entry. Returns whether the ledger changed.
-    @discardableResult
-    public mutating func merge(_ entry: TimeEntry) -> Bool {
-        let merged = entries[entry.id].map { $0.merged(with: entry) } ?? entry
-        guard merged != entries[entry.id] else { return false }
-        entries[entry.id] = merged
-        return true
+    /// Merges in a copy of an entry.
+    public mutating func merge(_ entry: TimeEntry) {
+        entries[entry.id] = entries[entry.id].map { $0.merged(with: entry) } ?? entry
     }
 
     /// Merges in every record of another ledger.
     public mutating func merge(_ other: Ledger) {
-        for client in other.clients.values { merge(client) }
-        for project in other.projects.values { merge(project) }
-        for entry in other.entries.values { merge(entry) }
+        clients.merge(other.clients) { $0.merged(with: $1) }
+        projects.merge(other.projects) { $0.merged(with: $1) }
+        entries.merge(other.entries) { $0.merged(with: $1) }
     }
 }
