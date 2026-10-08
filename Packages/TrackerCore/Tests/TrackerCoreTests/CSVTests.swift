@@ -150,5 +150,22 @@ import Testing
         // Each row is off by at most half a ten-thousandth of an hour (0.18 s).
         #expect(rows.count == 40)
         #expect(abs(tenThousandths * 360 - report.total) <= 40 * 180)
+        // The total of the column is what the rows add up to.
+        #expect(CSVExport.totalHours(report.entries) == "\(tenThousandths / 10000).\(padded(Int(tenThousandths % 10000), 4))")
+    }
+
+    @Test func addsUpTheHoursColumnRowByRow() {
+        var ledger = ledger
+        let start = t("2026-09-23T09:00:00+02:00")
+        for number in 1...3 {
+            // 20 seconds, which a row writes as 0.0056 hours.
+            let from = start.adding(seconds: Int64(number) * 60)
+            ledger.merge(TimeEntry(id: uuid(number), start: from, end: from.adding(seconds: 20), timeZone: "Europe/Berlin", updated: now))
+        }
+        // A running timer isn't a row.
+        ledger.merge(TimeEntry(id: uuid(4), start: t("2026-09-25T17:00:00+02:00"), timeZone: "Europe/Berlin", updated: now))
+
+        #expect(CSVExport.totalHours(ledger.resolvedEntries()) == "0.0168")
+        #expect(CSVExport.totalHours([]) == "0.0000")
     }
 }

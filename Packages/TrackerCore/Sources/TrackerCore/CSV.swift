@@ -58,10 +58,28 @@ public enum CSVExport {
         return first == last ? "Time Entries \(first)" : "Time Entries \(first) to \(last)"
     }
 
+    /// What the `hours` column of the entries' CSV adds up to, row by row
+    /// as written, such as "12.5000". A running timer is left out.
+    public static func totalHours(_ entries: [ResolvedEntry]) -> String {
+        decimal(entries.reduce(0) { sum, resolved in
+            guard let end = resolved.end else { return sum }
+            return sum + tenThousandths(resolved.duration(now: end))
+        })
+    }
+
     /// Decimal hours with four decimals, rounded half up, such as "2.4167".
     static func hours(_ milliseconds: Int64) -> String {
-        let tenThousandths = (max(0, milliseconds) * 10000 + 1_800_000) / 3_600_000
-        return "\(tenThousandths / 10000).\(padded(Int(tenThousandths % 10000), 4))"
+        decimal(tenThousandths(milliseconds))
+    }
+
+    /// Milliseconds in ten-thousandths of an hour, rounded half up.
+    private static func tenThousandths(_ milliseconds: Int64) -> Int64 {
+        (max(0, milliseconds) * 10000 + 1_800_000) / 3_600_000
+    }
+
+    /// Ten-thousandths of an hour as decimal hours, such as "2.4167".
+    private static func decimal(_ tenThousandths: Int64) -> String {
+        "\(tenThousandths / 10000).\(padded(Int(tenThousandths % 10000), 4))"
     }
 
     /// A field, quoted when it contains a comma, quote or line break.
