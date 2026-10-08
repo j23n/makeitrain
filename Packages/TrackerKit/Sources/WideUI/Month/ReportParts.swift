@@ -152,7 +152,6 @@ struct QueryBar: View {
 /// The year as a bar per week, the weeks in the range in the accent color.
 /// Clicking a week shows it; dragging across weeks shows them all.
 struct YearRibbon: View {
-    let model: AppModel
     let state: ReportState
     @State private var dragging: ClosedRange<Int>?
 

@@ -33,7 +33,7 @@ struct MonthScreen: View {
             HStack(spacing: 0) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        YearRibbon(model: model, state: state)
+                        YearRibbon(state: state)
                         rangeLine
                         MonthHeatGrid(model: model, state: state, month: shownMonth, cursor: $cursor) { day in
                             navigator.go(.day(day))
@@ -271,7 +271,7 @@ struct YearScreen: View {
             HStack(spacing: 0) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        YearRibbon(model: model, state: state)
+                        YearRibbon(state: state)
                         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: 4), spacing: 14) {
                             ForEach(1...12, id: \.self) { month in
                                 MiniMonth(model: model, state: state, month: LocalDate(year: state.range.lowerBound.year, month: month, day: 1)) {
