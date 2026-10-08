@@ -1,6 +1,59 @@
 import SwiftUI
+import TrackerCore
 
 // Small views shared by the Mac and iOS screens.
+
+extension AppModel {
+    /// Whether there's something to say about storage: it isn't ready,
+    /// files are still downloading or can't be read, or something failed.
+    public var hasStorageNotices: Bool {
+        state != .ready || missingFiles > 0 || !issues.isEmpty || lastError != nil
+    }
+}
+
+/// What's wrong with storage right now, if anything, a label for each
+/// thing, as the menu bar's popover and Settings show them.
+public struct StorageNotices: View {
+    let model: AppModel
+
+    public init(model: AppModel) {
+        self.model = model
+    }
+
+    public var body: some View {
+        switch model.state {
+        case .loading:
+            Label("Loading…", systemImage: "hourglass")
+        case .waitingForICloud:
+            Label("Looking for data in iCloud…", systemImage: "icloud")
+        case .iCloudUnavailable:
+            Label("iCloud isn't available. Data is read-only.", systemImage: "icloud.slash")
+            Button("Use Local Storage") {
+                Task { try? await model.switchStorage(to: .local) }
+            }
+        case .ready:
+            EmptyView()
+        }
+        if model.missingFiles > 0 {
+            Label("Downloading \(model.missingFiles) files from iCloud…", systemImage: "icloud.and.arrow.down")
+        }
+        if !model.issues.isEmpty {
+            Label(
+                model.issues.count == 1 ? "A data file can't be read." : "\(model.issues.count) data files can't be read.",
+                systemImage: "exclamationmark.triangle"
+            )
+            #if os(macOS)
+                .help(model.issues.map(\.path).joined(separator: "\n"))
+            #endif
+        }
+        if let error = model.lastError {
+            Label(error, systemImage: "exclamationmark.triangle")
+            #if os(macOS)
+                .lineLimit(3)
+            #endif
+        }
+    }
+}
 
 /// Lays its views out in rows, starting a new row when one is full.
 public struct FlowLayout: Layout {
