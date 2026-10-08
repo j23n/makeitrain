@@ -279,12 +279,12 @@ struct StatementPanel: View {
         let change = comparison.total - comparison.previousTotal
         return Grid(horizontalSpacing: 1, verticalSpacing: 1) {
             GridRow {
-                figure("Total", Format.duration(report.total), "\(report.entries.count) \(report.entries.count == 1 ? "entry" : "entries")")
-                figure("Average day", Format.duration(report.averagePerDayWorked), "on days worked")
+                FigureTile("Total", Format.duration(report.total), "\(report.entries.count) \(report.entries.count == 1 ? "entry" : "entries")")
+                FigureTile("Average day", Format.duration(report.averagePerDayWorked), "on days worked")
             }
             GridRow {
-                figure("Days worked", "\(report.daysWorked)", "of \(state.weekdays) weekdays")
-                figure(
+                FigureTile("Days worked", "\(report.daysWorked)", "of \(state.weekdays) weekdays")
+                FigureTile(
                     "vs. previous \(state.period == .month ? "month" : state.period == .week ? "week" : "days")",
                     (change >= 0 ? "+" : "−") + Format.duration(abs(change)),
                     comparison.percent.map { "\($0 >= 0 ? "+" : "")\($0)% from \(Format.duration(comparison.previousTotal))" } ?? "nothing before"
@@ -294,26 +294,6 @@ struct StatementPanel: View {
         .background(Theme.line)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.line))
-    }
-
-    private func figure(_ label: String, _ value: String, _ detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.text2)
-            Text(value)
-                .font(.system(size: 24, weight: .medium))
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-            Text(detail)
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.text2)
-                .lineLimit(1)
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.card)
     }
 
     private var breakdown: some View {
@@ -461,5 +441,48 @@ struct StatementPanel: View {
             .disabled(report.entries.isEmpty)
             .fileExporter(isPresented: $savingPDF, document: pdf, contentType: .pdf, defaultFilename: StatementPDF.fileName(for: report, title: state.title)) { _ in }
         }
+    }
+}
+
+/// A figure in a grid of them, as on a statement or a project's page:
+/// what it is, its value, and a line about it.
+struct FigureTile<Detail: View>: View {
+    let label: String
+    let value: String
+    let detail: Detail
+
+    init(_ label: String, _ value: String, @ViewBuilder detail: () -> Detail) {
+        self.label = label
+        self.value = value
+        self.detail = detail()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.text2)
+            Text(value)
+                .font(.system(size: 24, weight: .medium))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            detail
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.text2)
+                .lineLimit(1)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.card)
+    }
+}
+
+extension FigureTile where Detail == Text {
+    /// A figure with a line of text about it.
+    init(_ label: String, _ value: String, _ detail: String) {
+        self.label = label
+        self.value = value
+        self.detail = Text(detail)
     }
 }
