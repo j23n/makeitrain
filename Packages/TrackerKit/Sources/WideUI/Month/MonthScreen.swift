@@ -122,10 +122,7 @@ struct MonthScreen: View {
             }
             if !state.overlapDaysInRange.isEmpty {
                 HStack(spacing: 5) {
-                    Hatching()
-                        .frame(width: 10, height: 10)
-                        .overlay(RoundedRectangle(cornerRadius: 2).strokeBorder(Theme.amber))
-                        .clipShape(RoundedRectangle(cornerRadius: 2))
+                    OverlapSwatch(size: 10)
                     Text("overlap")
                 }
             }
@@ -195,10 +192,7 @@ struct MonthHeatGrid: View {
                     .foregroundStyle(day == model.today ? Theme.accent : (weekend ? Theme.text2 : Theme.text))
                 Spacer(minLength: 2)
                 if state.overlapDays.contains(day) {
-                    Hatching()
-                        .frame(width: 10, height: 10)
-                        .overlay(RoundedRectangle(cornerRadius: 2).strokeBorder(Theme.amber))
-                        .clipShape(RoundedRectangle(cornerRadius: 2))
+                    OverlapSwatch(size: 10)
                         .accessibilityLabel(Text("Overlap"))
                 }
                 Text(total > 0 ? Format.duration(total) : "—")

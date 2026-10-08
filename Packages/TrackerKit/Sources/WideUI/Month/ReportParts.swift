@@ -436,10 +436,7 @@ struct StatementPanel: View {
                 .font(.system(size: 13, weight: .semibold))
             if report.doubleCounted > 0 {
                 HStack(alignment: .top, spacing: 10) {
-                    Hatching()
-                        .frame(width: 14, height: 14)
-                        .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(Theme.amber))
-                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                    OverlapSwatch(size: 14)
                         .padding(.top, 2)
                     VStack(alignment: .leading, spacing: 4) {
                         (Text(Format.duration(report.doubleCounted)).fontWeight(.semibold).foregroundColor(Theme.amberText)

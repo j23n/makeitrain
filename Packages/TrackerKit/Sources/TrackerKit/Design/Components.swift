@@ -244,11 +244,7 @@ public struct SegmentPicker<Value: Hashable>: View {
 
 /// Diagonal stripes, drawn over time that's counted twice.
 public struct Hatching: View {
-    let color: Color
-
-    public init(color: Color = Theme.hatch) {
-        self.color = color
-    }
+    public init() {}
 
     public var body: some View {
         Canvas { context, size in
@@ -260,7 +256,7 @@ public struct Hatching: View {
                 path.addLine(to: CGPoint(x: x + size.height, y: 0))
                 x += spacing
             }
-            context.stroke(path, with: .color(color), lineWidth: 1.5)
+            context.stroke(path, with: .color(Theme.hatch), lineWidth: 1.5)
         }
         .clipped()
         .accessibilityHidden(true)

@@ -262,10 +262,7 @@ struct PhoneMonth: View {
     private var overlapWarning: some View {
         let days = state.overlapDaysInRange
         return HStack(spacing: 10) {
-            Hatching()
-                .frame(width: 12, height: 12)
-                .overlay(RoundedRectangle(cornerRadius: 3).strokeBorder(Theme.amber))
-                .clipShape(RoundedRectangle(cornerRadius: 3))
+            OverlapSwatch(size: 12)
             (Text(Format.duration(report.doubleCounted)).fontWeight(.semibold).foregroundColor(Theme.amberText)
                 + Text(" counted twice on \(days.map { Format.monthDay($0) }.formatted(.list(type: .and)))"))
                 .font(.system(size: 13))
@@ -439,10 +436,7 @@ struct PhoneMonthGrid: View {
                 .padding(.top, 4)
                 .padding(.leading, 6)
             if state.overlapDays.contains(day) {
-                Hatching()
-                    .frame(width: 8, height: 8)
-                    .overlay(RoundedRectangle(cornerRadius: 2).strokeBorder(Theme.amber))
-                    .clipShape(RoundedRectangle(cornerRadius: 2))
+                OverlapSwatch(size: 8)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .padding(.top, 5)
                     .padding(.trailing, 5)
