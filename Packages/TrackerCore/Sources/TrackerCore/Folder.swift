@@ -65,25 +65,17 @@ public struct FileIssue: Hashable, Sendable {
     }
 }
 
-/// What loading the data folder found.
-public struct LoadResult: Sendable {
-    /// Every record in every readable file, merged.
+/// What loading or saving the data folder found.
+public struct FolderResult: Sendable {
+    /// After loading, every record in every readable file, merged. After
+    /// saving, the ledger that was saved, merged with everything found on
+    /// disk on the way.
     public var ledger: Ledger
     /// Files that couldn't be read. They're left untouched.
     public var issues: [FileIssue]
-    /// Files to save soon: numbered copies to fold in, and entries filed in
-    /// the wrong month.
-    public var pending: Changes
-}
-
-/// What saving found.
-public struct SaveResult: Sendable {
-    /// The ledger that was saved, merged with everything found on disk on
-    /// the way.
-    public var ledger: Ledger
-    /// Files that couldn't be saved because they can't be read.
-    public var issues: [FileIssue]
-    /// What's still unsaved because of those files.
+    /// Files to save later. After loading, numbered copies to fold in and
+    /// entries filed in the wrong month; after saving, what's still unsaved
+    /// because files can't be read.
     public var pending: Changes
 }
 
@@ -119,8 +111,8 @@ public struct Folder: Sendable {
 
     /// Reads every data file, including iCloud's numbered copies, and merges
     /// them by id.
-    public func load() throws -> LoadResult {
-        var result = LoadResult(ledger: Ledger(), issues: [], pending: Changes())
+    public func load() throws -> FolderResult {
+        var result = FolderResult(ledger: Ledger(), issues: [], pending: Changes())
 
         for name in try access.fileNames(in: root).sorted() {
             guard let fileName = DataFileName(name), fileName.base == "projects" else { continue }
@@ -174,8 +166,8 @@ public struct Folder: Sendable {
     /// When an entry moves to another month, its new month is written first
     /// and the old one cleaned up afterwards. A crash in between leaves a
     /// duplicate, which merging handles, rather than a lost entry.
-    public func save(_ ledger: Ledger, changes: Changes) throws -> SaveResult {
-        var result = SaveResult(ledger: ledger, issues: [], pending: Changes())
+    public func save(_ ledger: Ledger, changes: Changes) throws -> FolderResult {
+        var result = FolderResult(ledger: ledger, issues: [], pending: Changes())
         if changes.projects {
             try saveProjects(into: &result)
         }
@@ -214,7 +206,7 @@ public struct Folder: Sendable {
         _ month: MonthKey,
         names: [String],
         saved: Set<MonthKey>,
-        into result: inout SaveResult
+        into result: inout FolderResult
     ) throws -> Set<MonthKey>? {
         let file = monthFile(month)
         let copies = names
@@ -271,7 +263,7 @@ public struct Folder: Sendable {
     }
 
     /// Read-merge-writes `projects.json` and folds in its numbered copies.
-    private func saveProjects(into result: inout SaveResult) throws {
+    private func saveProjects(into result: inout FolderResult) throws {
         let copies = try access.fileNames(in: root)
             .filter { DataFileName($0).map { $0.base == "projects" && $0.copy != nil } ?? false }
             .sorted()
@@ -374,11 +366,11 @@ public actor FileStore {
         self.folder = folder
     }
 
-    public func load() throws -> LoadResult {
+    public func load() throws -> FolderResult {
         try folder.load()
     }
 
-    public func save(_ ledger: Ledger, changes: Changes) throws -> SaveResult {
+    public func save(_ ledger: Ledger, changes: Changes) throws -> FolderResult {
         try folder.save(ledger, changes: changes)
     }
 }
