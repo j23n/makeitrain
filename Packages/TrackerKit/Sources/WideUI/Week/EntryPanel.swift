@@ -227,7 +227,7 @@ struct EntryLineReading: View {
                     if parts.draft.tags.isEmpty {
                         dash
                     } else {
-                        Text(parts.draft.tags.map { $0.contains("#") ? $0 : "#" + $0 }.joined(separator: " "))
+                        Text(parts.draft.tags.map(Tags.typed).joined(separator: " "))
                             .foregroundStyle(Theme.tag)
                     }
                 }

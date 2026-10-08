@@ -69,32 +69,7 @@ extension AppModel {
     /// An entry written as a line the command line reads back, such as
     /// "2 oct 13:30-16:30 Website #12 Fix login", for editing it as text.
     public func line(for entry: ResolvedEntry) -> String {
-        let zone = entry.entry.timeZone
-        let start = entry.start.local(in: zone)
-        let day = start.date
-        let dayText: String
-        if today.daysSince1970 - day.daysSince1970 < 300 {
-            dayText = "\(day.day) \(Self.monthNames[day.month - 1])"
-        } else {
-            dayText = day.description
-        }
-        let clock = { (time: LocalDateTime) in "\(time.hour):\(time.minute < 10 ? "0" : "")\(time.minute)" }
-        var parts = [dayText]
-        if let end = entry.end {
-            parts.append("\(clock(start))-\(clock(end.local(in: zone)))")
-        } else {
-            parts.append("from \(clock(start))")
-        }
-        if let projectID = entry.entry.projectID, let project = ledger.projects[projectID] {
-            parts.append(project.name)
-        }
-        parts += entry.entry.tags.map { tag in
-            tag.hasPrefix("#") || tag.contains("#") ? tag : "#" + tag.replacingOccurrences(of: " ", with: "-")
-        }
-        if !entry.entry.note.isEmpty {
-            parts.append(entry.entry.note)
-        }
-        return parts.joined(separator: " ")
+        ledger.line(for: entry, today: today)
     }
 
     /// What a line typed over an entry would make of it: its project, tags,
@@ -172,8 +147,6 @@ extension AppModel {
         }
         return true
     }
-
-    static let monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
 }
 
 /// The words for commands and their problems.
