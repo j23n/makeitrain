@@ -151,23 +151,10 @@ struct CommandSidebar: View {
 
     private var keys: some View {
         HStack(spacing: 12) {
-            HStack(spacing: 5) {
-                KeyCap("⏎")
-                Text("run")
-            }
-            HStack(spacing: 5) {
-                KeyCap("⇥")
-                Text("add")
-            }
-            HStack(spacing: 5) {
-                KeyCap("↑")
-                KeyCap("↓")
-                Text("earlier")
-            }
-            HStack(spacing: 5) {
-                KeyCap("esc")
-                Text("clear")
-            }
+            KeyCapHint("⏎", text: "run")
+            KeyCapHint("⇥", text: "add")
+            KeyCapHint("↑", "↓", text: "earlier")
+            KeyCapHint("esc", text: "clear")
         }
         .font(.system(size: 12))
         .foregroundStyle(Theme.text2)
@@ -177,6 +164,26 @@ struct CommandSidebar: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .overlay(alignment: .top) {
             Rectangle().fill(Theme.line).frame(height: 1)
+        }
+    }
+}
+
+/// Keys and what they do, such as "⏎ run", as key caps under a sidebar.
+struct KeyCapHint: View {
+    let keys: [String]
+    let text: String
+
+    init(_ keys: String..., text: String) {
+        self.keys = keys
+        self.text = text
+    }
+
+    var body: some View {
+        HStack(spacing: 5) {
+            ForEach(keys, id: \.self) { key in
+                KeyCap(key)
+            }
+            Text(text)
         }
     }
 }
