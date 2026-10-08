@@ -63,6 +63,16 @@ import Testing
         #expect(reading.problem == .runningAlready)
     }
 
+    @Test func matchesEntriesWithTheSameProjectTagsAndNote() {
+        let review = draft(F.bookings, ["design", "#12"], "Review")
+        #expect(review.matches(F.entry(1, F.bookings, "2026-10-02", "09:00", "10:00", tags: ["#12", "Design"], note: "Review")))
+        #expect(!review.matches(F.entry(2, F.bookings, "2026-10-02", "09:00", "10:00", tags: ["design"], note: "Review")))
+        #expect(!review.matches(F.entry(3, F.harbor, "2026-10-02", "09:00", "10:00", tags: ["design", "#12"], note: "Review")))
+        #expect(!review.matches(F.entry(4, F.bookings, "2026-10-02", "09:00", "10:00", tags: ["design", "#12"], note: "Planning")))
+        #expect(EntryDraft().matches(F.entry(5, nil, "2026-10-02", "09:00", "10:00")))
+        #expect(EntryDraft(F.entry(6, F.bookings, "2026-10-02", "09:00", "10:00", tags: ["#12"], note: "Review")) == draft(F.bookings, ["#12"], "Review"))
+    }
+
     @Test func aTimeAloneMovesTheRunningTimersStart() {
         let ledger = F.ledger([F.runningBookings])
         #expect(F.read("from 9:00", ledger).primary == .moveStart(to: F.at("09:00")))
@@ -204,7 +214,7 @@ import Testing
             // Read as an entry's own line is, without the entry.
             var context = F.context(ledger)
             context.resolved.removeAll { $0.id == entry.id }
-            let draft = EntryDraft(projectID: entry.entry.projectID, tags: entry.entry.tags, note: entry.entry.note)
+            let draft = EntryDraft(entry.entry)
             let command = entry.end.map { Command.log(draft, start: entry.start, end: $0) } ?? Command.start(draft, at: entry.start, end: nil)
             #expect(CommandReading(lines[entry.id] ?? "", in: context).primary == command, "\(lines[entry.id] ?? "")")
         }

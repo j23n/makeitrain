@@ -18,6 +18,11 @@ public struct EntryDraft: Hashable, Sendable {
         self.note = note
     }
 
+    /// An entry's project, tags and note, as for continuing it.
+    public init(_ entry: TimeEntry) {
+        self.init(projectID: entry.projectID, tags: entry.tags, note: entry.note)
+    }
+
     /// No project, tags or note.
     public var isEmpty: Bool {
         projectID == nil && tags.isEmpty && note.isEmpty
@@ -26,7 +31,8 @@ public struct EntryDraft: Hashable, Sendable {
     /// Whether an entry has this project, these tags in any order and case,
     /// and this note.
     public func matches(_ entry: TimeEntry) -> Bool {
-        Combination(projectID: projectID, tags: tags).matches(entry) && entry.note == note
+        entry.projectID == projectID && entry.note == note
+            && Set(entry.tags.map { $0.lowercased() }) == Set(tags.map { $0.lowercased() })
     }
 }
 

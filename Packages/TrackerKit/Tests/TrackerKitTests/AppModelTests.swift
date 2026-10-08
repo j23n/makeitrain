@@ -124,7 +124,7 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
         let model = harness.model()
         await model.start()
 
-        model.startTimer(note: "Wireframes", undoManager: nil)
+        model.startTimer(EntryDraft(note: "Wireframes"), undoManager: nil)
         #expect(model.running?.entry.note == "Wireframes")
         #expect(model.hasUnsavedChanges)
         await model.flush()
@@ -143,11 +143,11 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
         undo.groupsByEvent = false
 
         undo.beginUndoGrouping()
-        model.startTimer(note: "First", undoManager: undo)
+        model.startTimer(EntryDraft(note: "First"), undoManager: undo)
         undo.endUndoGrouping()
         harness.clock.advance(seconds: 600)
         undo.beginUndoGrouping()
-        model.startTimer(note: "Second", undoManager: undo)
+        model.startTimer(EntryDraft(note: "Second"), undoManager: undo)
         undo.endUndoGrouping()
         #expect(undo.undoActionName == "Start Timer")
 
@@ -255,7 +255,7 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
         await model.start()
         #expect(model.state == .waitingForICloud)
 
-        model.startTimer(note: "New", undoManager: nil)
+        model.startTimer(EntryDraft(note: "New"), undoManager: nil)
         await model.flush()
         #expect(model.hasUnsavedChanges)
 
@@ -314,7 +314,7 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
         await model.start()
         cloud.finishGathering()
         await eventually { model.state == .ready }
-        model.startTimer(note: "Before sign-out", undoManager: nil)
+        model.startTimer(EntryDraft(note: "Before sign-out"), undoManager: nil)
         await model.flush()
 
         cloud.signOut()

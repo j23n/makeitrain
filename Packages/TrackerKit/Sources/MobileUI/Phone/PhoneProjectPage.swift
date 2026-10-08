@@ -172,7 +172,7 @@ struct PhoneProjectPage: View {
             .overlay(RoundedRectangle(cornerRadius: 15).strokeBorder(Theme.line))
         } else if !project.archived {
             Button {
-                model.startTimer(Combination(projectID: projectID, tags: []), undoManager: undoManager)
+                model.startTimer(EntryDraft(projectID: projectID), undoManager: undoManager)
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "play.fill")

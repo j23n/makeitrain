@@ -8,10 +8,10 @@ extension AppModel {
     // MARK: - Timer
 
     /// Starts a timer, stopping the running one at the same instant.
-    public func startTimer(_ combination: Combination = Combination(projectID: nil, tags: []), note: String = "", undoManager: UndoManager?) {
+    public func startTimer(_ draft: EntryDraft = EntryDraft(), undoManager: UndoManager?) {
         let zone = environment.timeZone()
         edit("Start Timer", undoManager: undoManager) { ledger, now in
-            ledger.startTimer(projectID: combination.projectID, tags: combination.tags, note: note, timeZone: zone, at: now, now: now)
+            ledger.startTimer(projectID: draft.projectID, tags: draft.tags, note: draft.note, timeZone: zone, at: now, now: now)
         }
     }
 

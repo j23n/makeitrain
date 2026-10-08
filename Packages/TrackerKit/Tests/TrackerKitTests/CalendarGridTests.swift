@@ -126,7 +126,7 @@ import TrackerCore
         defer { harness.cleanUp() }
         let model = harness.model()
         await model.start()
-        model.startTimer(note: "Running", undoManager: nil)
+        model.startTimer(EntryDraft(note: "Running"), undoManager: nil)
         let today = model.today
         let block = DayLayout.blocks(on: today, entries: model.resolved, now: model.now)[0]
 

@@ -75,12 +75,4 @@ import Testing
         #expect(byProject[uuid(13)] == nil)
         #expect(byProject.count == 3)
     }
-
-    @Test func matchesEntriesWithTheSameProjectAndTags() {
-        let combination = Combination(projectID: uuid(10), tags: ["design", "#12"])
-        #expect(combination.matches(F.entry(1, uuid(10), "2026-09-22", "09:00", "10:00", tags: ["#12", "Design"])))
-        #expect(!combination.matches(F.entry(2, uuid(10), "2026-09-22", "09:00", "10:00", tags: ["design"])))
-        #expect(!combination.matches(F.entry(3, uuid(11), "2026-09-22", "09:00", "10:00", tags: ["design", "#12"])))
-        #expect(Combination(projectID: nil, tags: []).matches(F.entry(4, nil, "2026-09-22", "09:00", "10:00")))
-    }
 }

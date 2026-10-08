@@ -143,7 +143,7 @@ struct ProjectScreen: View {
                 .disabled(model.isReadOnly)
             } else if !project.archived {
                 Button("Start") {
-                    model.startTimer(Combination(projectID: projectID, tags: []), undoManager: undoManager)
+                    model.startTimer(EntryDraft(projectID: projectID), undoManager: undoManager)
                 }
                 .buttonStyle(ChoiceButtonStyle(compact: true))
                 .disabled(model.isReadOnly)

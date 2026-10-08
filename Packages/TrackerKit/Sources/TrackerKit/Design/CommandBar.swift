@@ -351,7 +351,7 @@ public struct CommandPreviewView: View {
             DraftLabel(ledger: model.ledger, draft: draft)
         case .stop, .moveStart:
             if let running = model.running {
-                DraftLabel(ledger: model.ledger, draft: EntryDraft(projectID: running.entry.projectID, tags: running.entry.tags, note: running.entry.note))
+                DraftLabel(ledger: model.ledger, draft: EntryDraft(running.entry))
             }
         case let .addProject(name, client, _, _):
             HStack(spacing: 6) {

@@ -52,7 +52,7 @@ public enum TimerActions {
         guard let running = model.running else {
             return "No timer is running."
         }
-        let what = describe(EntryDraft(projectID: running.entry.projectID, tags: running.entry.tags, note: running.entry.note), in: model.ledger)
+        let what = describe(EntryDraft(running.entry), in: model.ledger)
         model.stopTimer(undoManager: nil)
         let stopped = model.resolved.first { $0.id == running.id } ?? running
         await model.flush()

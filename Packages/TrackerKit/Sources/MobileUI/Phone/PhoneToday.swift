@@ -218,7 +218,7 @@ struct PhoneEntrySheet: View {
                 }
             } else {
                 row("Continue it now", systemImage: "play.fill") {
-                    model.startTimer(Combination(projectID: entry.entry.projectID, tags: entry.entry.tags), note: entry.entry.note, undoManager: undoManager)
+                    model.startTimer(EntryDraft(entry.entry), undoManager: undoManager)
                     dismiss()
                 }
                 row("Duplicate", systemImage: "plus.square.on.square") {
