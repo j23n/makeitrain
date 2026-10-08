@@ -173,7 +173,7 @@ struct PhoneEntrySheet: View {
                         CommandField(
                             text: Binding(get: { line.text }, set: { line.text = $0 }),
                             placeholder: "",
-                            reading: model.read(line.text),
+                            reading: line.reading,
                             ledger: model.ledger,
                             fontSize: 15,
                             focusesWithWindow: true,

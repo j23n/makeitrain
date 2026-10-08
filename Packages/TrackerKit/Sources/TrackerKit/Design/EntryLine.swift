@@ -27,6 +27,8 @@ public final class EntryLineModel {
             }
         }
     }
+    /// What the line means, for highlighting it.
+    public private(set) var reading = CommandReading(text: "")
     /// What the line reads as, or nil when it isn't an entry.
     public private(set) var parts: EntryLineParts?
     /// Why the line isn't an entry, when it isn't.
@@ -112,9 +114,12 @@ public final class EntryLineModel {
 
     private func refresh() {
         if let entryID, !text.isEmpty {
-            parts = model.entryLineParts(text, for: entryID)
-            problem = parts == nil ? model.entryProblem(text, for: entryID) : nil
+            let read = model.readEntryLine(text, for: entryID)
+            reading = read.reading
+            parts = read.parts
+            problem = read.problem
         } else {
+            reading = CommandReading(text: text)
             parts = nil
             problem = nil
         }

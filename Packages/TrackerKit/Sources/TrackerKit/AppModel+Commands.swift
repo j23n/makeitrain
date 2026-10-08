@@ -72,41 +72,39 @@ extension AppModel {
         ledger.line(for: entry, today: today)
     }
 
-    /// What a line typed over an entry would make of it: its project, tags,
-    /// note and times, or nil when the line doesn't describe an entry. A
-    /// line without times keeps the entry's.
-    public func entryChange(_ line: String, for id: UUID) -> (draft: EntryDraft, start: Timestamp, end: Timestamp?)? {
-        guard let current = resolved.first(where: { $0.id == id }) else { return nil }
-        let reading = entryReading(line, for: id)
-        switch reading.primary {
-        case let .log(draft, start, end)?:
-            return (draft, start, end)
-        case let .start(draft, start, _)?:
-            guard reading.tokens.contains(where: { $0.kind == .time }) else {
-                return (draft, current.start, current.end)
-            }
-            if let end = current.end, end <= start {
-                return nil
-            }
-            return (draft, start, current.end)
-        default:
-            return nil
-        }
-    }
-
     /// A line typed over an entry, read as if the entry weren't there, so
-    /// it isn't the running timer its own start has to come after.
-    private func entryReading(_ line: String, for id: UUID) -> CommandReading {
+    /// it isn't the running timer its own start has to come after: the
+    /// reading, what it makes of the entry part by part, or else why it
+    /// can't change it. A line without times keeps the entry's.
+    func readEntryLine(_ line: String, for id: UUID) -> (reading: CommandReading, parts: EntryLineParts?, problem: String?) {
+        let current = resolved.first { $0.id == id }
         var context = commandContext
         context.resolved = resolved.filter { $0.id != id }
-        return CommandReading(line, in: context)
-    }
-
-    /// What a line typed over an entry reads as, part by part, or nil when
-    /// it doesn't describe an entry.
-    public func entryLineParts(_ line: String, for id: UUID) -> EntryLineParts? {
-        guard let change = entryChange(line, for: id) else { return nil }
-        return EntryLineParts(start: change.start, end: change.end, zone: environment.timeZone(), draft: change.draft)
+        let reading = CommandReading(line, in: context)
+        let zone = context.timeZone
+        if let current {
+            switch reading.primary {
+            case let .log(draft, start, end)?:
+                return (reading, EntryLineParts(start: start, end: end, zone: zone, draft: draft), nil)
+            case let .start(draft, start, _)?:
+                guard reading.tokens.contains(where: { $0.kind == .time }) else {
+                    return (reading, EntryLineParts(start: current.start, end: current.end, zone: zone, draft: draft), nil)
+                }
+                if current.end.map({ $0 > start }) ?? true {
+                    return (reading, EntryLineParts(start: start, end: current.end, zone: zone, draft: draft), nil)
+                }
+            default:
+                break
+            }
+        }
+        if let problem = reading.problem {
+            return (reading, nil, CommandText.message(problem, zone: zone))
+        }
+        if case .start? = reading.primary {
+            // A start after the end the entry keeps.
+            return (reading, nil, CommandText.message(.endsBeforeStart, zone: zone))
+        }
+        return (reading, nil, "Can't read this as an entry. Start with its times, then its project, tags and note.")
     }
 
     /// What could replace the word at `cursor`, a UTF-16 offset, in a line
@@ -115,25 +113,11 @@ extension AppModel {
         LineSuggestions.suggestions(for: line, cursor: cursor, in: commandContext, editing: entryID)
     }
 
-    /// Why a line typed over an entry can't change it, or nil when it can.
-    public func entryProblem(_ line: String, for id: UUID) -> String? {
-        guard entryChange(line, for: id) == nil else { return nil }
-        let reading = entryReading(line, for: id)
-        if let problem = reading.problem {
-            return CommandText.message(problem, zone: environment.timeZone())
-        }
-        if case .start? = reading.primary {
-            // A start after the end the entry keeps.
-            return CommandText.message(.endsBeforeStart, zone: environment.timeZone())
-        }
-        return "Can't read this as an entry. Start with its times, then its project, tags and note."
-    }
-
     /// Changes an entry to what a line typed over it says. Returns false
     /// when the line doesn't describe an entry.
     @discardableResult
     public func apply(line: String, to id: UUID, undoManager: UndoManager?) -> Bool {
-        guard let change = entryChange(line, for: id) else { return false }
+        guard let change = readEntryLine(line, for: id).parts else { return false }
         edit("Edit Entry", undoManager: undoManager) { ledger, now in
             ledger.updateEntry(id, now: now) { entry in
                 entry.projectID = change.draft.projectID
