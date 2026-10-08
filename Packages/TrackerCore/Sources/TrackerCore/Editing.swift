@@ -182,19 +182,8 @@ extension Ledger {
             guard let outer = entries[outerID], let inner = entries[innerID], let innerEnd = inner.end,
                   outer.start < inner.start, outer.end.map({ $0 > innerEnd }) ?? true
             else { break }
-            let after = TimeEntry(
-                id: newID,
-                projectID: outer.projectID,
-                start: innerEnd,
-                end: outer.end,
-                timeZone: outer.timeZone,
-                tags: outer.tags,
-                note: outer.note,
-                updated: now
-            )
             changes.formUnion(edit(outerID, now: now) { $0.end = inner.start })
-            entries[newID] = after
-            changes.months.insert(after.month)
+            changes.formUnion(addCopy(of: outer, id: newID, start: innerEnd, end: outer.end, now: now))
         }
         return changes
     }
@@ -230,19 +219,8 @@ extension Ledger {
         guard let entry = entries[id], !entry.isDeleted, at > entry.start, at < (entry.end ?? now) else {
             return changes
         }
-        let after = TimeEntry(
-            id: newID,
-            projectID: entry.projectID,
-            start: at,
-            end: entry.end,
-            timeZone: entry.timeZone,
-            tags: entry.tags,
-            note: entry.note,
-            updated: now
-        )
         changes.formUnion(edit(id, now: now) { $0.end = at })
-        entries[newID] = after
-        changes.months.insert(after.month)
+        changes.formUnion(addCopy(of: entry, id: newID, start: at, end: entry.end, now: now))
         return changes
     }
 
@@ -261,18 +239,13 @@ extension Ledger {
         let shift = first.distance(to: last)
         for original in originals {
             guard let id = copies[original.id], entries[id] == nil, let end = original.end else { continue }
-            let copy = TimeEntry(
+            changes.formUnion(addCopy(
+                of: original,
                 id: id,
-                projectID: original.projectID,
                 start: original.start.adding(milliseconds: shift),
                 end: end.adding(milliseconds: shift),
-                timeZone: original.timeZone,
-                tags: original.tags,
-                note: original.note,
-                updated: now
-            )
-            entries[id] = copy
-            changes.months.insert(copy.month)
+                now: now
+            ))
         }
         return changes
     }
@@ -318,6 +291,23 @@ extension Ledger {
         guard new != old else { return Changes() }
         entries[id] = new
         return Changes(months: [old.month, new.month])
+    }
+
+    /// Adds a copy of an entry with the id `id`, from `start` to `end`. It
+    /// keeps the entry's project, tags, note and time zone.
+    private mutating func addCopy(of entry: TimeEntry, id: UUID, start: Timestamp, end: Timestamp?, now: Timestamp) -> Changes {
+        let copy = TimeEntry(
+            id: id,
+            projectID: entry.projectID,
+            start: start,
+            end: end,
+            timeZone: entry.timeZone,
+            tags: entry.tags,
+            note: entry.note,
+            updated: now
+        )
+        entries[id] = copy
+        return Changes(months: [copy.month])
     }
 }
 
