@@ -155,8 +155,6 @@ struct MonthHeatGrid: View {
     let open: (LocalDate) -> Void
     @State private var dragStart: LocalDate?
 
-    private static let full: Int64 = 10 * 3_600_000 + 30 * 60_000
-
     var body: some View {
         let weeks = MonthGrid.weeks(of: month, firstWeekday: model.firstWeekday)
         VStack(spacing: 6) {
@@ -205,7 +203,7 @@ struct MonthHeatGrid: View {
                 ForEach(projects, id: \.key) { item in
                     Rectangle()
                         .fill(model.ledger.tint(ofProject: item.key).bar)
-                        .frame(height: max(1, CGFloat(min(item.value, Self.full)) / CGFloat(Self.full) * 64))
+                        .frame(height: max(1, CGFloat(min(item.value, ChartScale.fullDay)) / CGFloat(ChartScale.fullDay) * 64))
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 4))

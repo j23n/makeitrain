@@ -182,7 +182,7 @@ struct YearRibbon: View {
 
     var body: some View {
         let weeks = state.weeks
-        let highest = max(weeks.map(\.total).max() ?? 0, 40 * 3_600_000)
+        let highest = max(weeks.map(\.total).max() ?? 0, ChartScale.fullWeek)
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
                 Text("\(String(state.range.lowerBound.year))")
@@ -376,15 +376,7 @@ struct StatementPanel: View {
                         }
                         .font(.system(size: 12))
                         .monospacedDigit()
-                        GeometryReader { geometry in
-                            ZStack(alignment: .leading) {
-                                Capsule().fill(Theme.fill)
-                                Capsule()
-                                    .fill(group.color.map { ProjectTint(hex: $0).bar } ?? Theme.accent.opacity(0.7))
-                                    .frame(width: geometry.size.width * CGFloat(group.milliseconds) / CGFloat(max(highest, 1)))
-                            }
-                        }
-                        .frame(height: 4)
+                        ShareBar(group.milliseconds, of: highest, color: group.color.map { ProjectTint(hex: $0).bar } ?? Theme.accent.opacity(0.7), height: 4)
                     }
                     .padding(.bottom, 4)
                 }

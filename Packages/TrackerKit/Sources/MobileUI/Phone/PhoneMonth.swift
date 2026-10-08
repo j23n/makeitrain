@@ -426,7 +426,7 @@ struct PhoneMonthGrid: View {
         let inMonth = day.month == month.month && day.year == month.year
         let weekend = day.weekday == 1 || day.weekday == 7
         let selected = state.range.contains(day) && state.range != monthRange
-        let bar = total > 0 ? max(2, CGFloat(min(total, 37_800_000)) / 37_800_000 * 26) : 0
+        let bar = total > 0 ? max(2, CGFloat(min(total, ChartScale.fullDay)) / CGFloat(ChartScale.fullDay) * 26) : 0
         return ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: 8)
                 .fill(inMonth ? (weekend ? Theme.weekendCell : Theme.cell) : Theme.outsideCell)
