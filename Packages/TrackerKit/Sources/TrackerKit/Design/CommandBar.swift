@@ -78,7 +78,7 @@ public final class CommandLineModel {
     }
 
     /// Works out what could replace the word at the insertion point.
-    public func refreshSuggestions() {
+    private func refreshSuggestions() {
         if text.isEmpty || text == recalledLine {
             suggestions = []
         } else {
@@ -385,16 +385,11 @@ public struct CommandPreviewView: View {
 }
 
 /// A project, its tags and a note, on one line.
-public struct DraftLabel: View {
+struct DraftLabel: View {
     let ledger: Ledger
     let draft: EntryDraft
 
-    public init(ledger: Ledger, draft: EntryDraft) {
-        self.ledger = ledger
-        self.draft = draft
-    }
-
-    public var body: some View {
+    var body: some View {
         HStack(spacing: 8) {
             ProjectName(ledger: ledger, projectID: draft.projectID)
                 .fixedSize()
@@ -432,16 +427,11 @@ struct TargetLabel: View {
 
 /// What a command changes, in words: "Website ends at 10:40, after 1:10.
 /// No gap, no overlap." or the times that change, struck through.
-public struct CommandChanges: View {
+struct CommandChanges: View {
     let model: AppModel
     let preview: CommandPreview
 
-    public init(model: AppModel, preview: CommandPreview) {
-        self.model = model
-        self.preview = preview
-    }
-
-    public var body: some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                 line
