@@ -4,17 +4,8 @@ import Foundation
 /// with the line it makes: a project, a client, a tag, a time, a color or
 /// a command's first words.
 public struct LineSuggestion: Hashable, Sendable {
-    public enum Kind: Hashable, Sendable {
-        case project(UUID)
-        case client(UUID)
-        case tag
-        case time
-        /// A palette color, as hex.
-        case color(String)
-        case keyword
-    }
-
-    public var kind: Kind
+    /// What the word is, as the line reads it once it's in place.
+    public var kind: CommandToken.Kind
     /// What a list shows, such as "Website" or "#design".
     public var title: String
     /// More about it, such as the client's name, or "end of Review".
@@ -291,7 +282,7 @@ public enum LineSuggestions {
 
         /// The line with `insert` in place of the word, followed by a
         /// space, and the insertion point after that space.
-        func suggestion(_ kind: LineSuggestion.Kind, _ title: String, _ detail: String, insert: String) -> LineSuggestion {
+        func suggestion(_ kind: CommandToken.Kind, _ title: String, _ detail: String, insert: String) -> LineSuggestion {
             let head = String(text[..<start]) + insert
             var rest = String(text[end...])
             if insert.hasSuffix(" ") {

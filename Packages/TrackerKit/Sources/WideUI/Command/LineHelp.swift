@@ -64,7 +64,7 @@ public struct SuggestionStrip: View {
         .contentShape(Rectangle())
     }
 
-    private func color(of kind: LineSuggestion.Kind) -> Color {
+    private func color(of kind: CommandToken.Kind) -> Color {
         switch kind {
         case .tag: Theme.tag
         case .time: Theme.amberText
