@@ -203,6 +203,29 @@ public struct CommandContext: Sendable {
     public var running: ResolvedEntry? {
         resolved.last { $0.isRunning }
     }
+
+    /// Projects whose name, or whose client's, has a word starting with
+    /// each word of `phrase`, with their client's name and how well they
+    /// match: the best matches first, then the ones used last. Every
+    /// project matches an empty phrase.
+    func projects(matching phrase: String, includingArchived: Bool) -> [(project: Project, client: String, rank: Int)] {
+        let terms = ProjectSearch.terms(phrase)
+        let candidates = includingArchived
+            ? ledger.projects.values.filter { !$0.isDeleted }.sorted(by: Project.fileOrder)
+            : ledger.pickerProjects()
+        var matches: [(project: Project, client: String, rank: Int, last: Int64, index: Int)] = []
+        for (index, project) in candidates.enumerated() {
+            let client = ledger.client(forProject: project.id)?.name ?? ""
+            guard let rank = ProjectSearch.rank(terms, project: project.name, client: client), rank <= 1 else { continue }
+            matches.append((project, client, rank, lastUsed[project.id]?.milliseconds ?? .min, index))
+        }
+        matches.sort { a, b in
+            if a.rank != b.rank { return a.rank < b.rank }
+            if a.last != b.last { return a.last > b.last }
+            return a.index < b.index
+        }
+        return matches.map { (project: $0.project, client: $0.client, rank: $0.rank) }
+    }
 }
 
 extension CommandReading {
@@ -465,32 +488,18 @@ struct CommandReader {
 
     // MARK: - Projects and clients
 
-    /// The project that best matches `phrase`: each word has to start a word
-    /// of its name or its client's. Among equally good matches, the one
-    /// used last wins.
-    func project(matching phrase: String, includingArchived: Bool) -> UUID? {
-        let terms = ProjectSearch.terms(phrase)
-        guard !terms.isEmpty else { return nil }
-        let candidates = includingArchived
-            ? context.ledger.projects.values.filter { !$0.isDeleted }.sorted(by: Project.fileOrder)
-            : context.ledger.pickerProjects()
-        var best: (rank: Int, last: Int64, index: Int, id: UUID)?
-        for (index, candidate) in candidates.enumerated() {
-            let clientName = context.ledger.client(forProject: candidate.id)?.name ?? ""
-            guard let rank = ProjectSearch.rank(terms, project: candidate.name, client: clientName), rank <= 1 else { continue }
-            let last = context.lastUsed[candidate.id]?.milliseconds ?? Int64.min
-            if let current = best {
-                if rank > current.rank { continue }
-                if rank == current.rank, last < current.last { continue }
-                if rank == current.rank, last == current.last, index > current.index { continue }
-            }
-            best = (rank, last, index, candidate.id)
-        }
-        return best?.id
+    /// The project that best matches `phrase`, and how well: each word has
+    /// to start a word of its name or its client's. Among equally good
+    /// matches, the one used last wins.
+    func project(matching phrase: String, includingArchived: Bool) -> (id: UUID, rank: Int)? {
+        guard !ProjectSearch.terms(phrase).isEmpty,
+              let best = context.projects(matching: phrase, includingArchived: includingArchived).first
+        else { return nil }
+        return (best.project.id, best.rank)
     }
 
-    /// The client that best matches `phrase`.
-    func client(matching phrase: String) -> UUID? {
+    /// The client that best matches `phrase`, and how well.
+    func client(matching phrase: String) -> (id: UUID, rank: Int)? {
         let terms = ProjectSearch.terms(phrase)
         guard !terms.isEmpty else { return nil }
         let clients = context.ledger.liveClients()
@@ -500,7 +509,7 @@ struct CommandReader {
             if let current = best, (current.rank, current.archived ? 1 : 0) <= (rank, candidate.archived ? 1 : 0) { continue }
             best = (rank, candidate.archived, candidate.id)
         }
-        return best?.id
+        return best.map { ($0.id, $0.rank) }
     }
 
     /// The project or client `phrase` names: one whose name it is, or else
@@ -515,19 +524,13 @@ struct CommandReader {
         if let named = clients.first(where: { ProjectSearch.fold($0.name) == folded }) {
             return .client(named.id)
         }
-        let terms = ProjectSearch.terms(phrase)
-        let projectMatch = project(matching: phrase, includingArchived: true)
-        let clientMatch = client(matching: phrase)
-        switch (projectMatch, clientMatch) {
-        case let (projectID?, clientID?):
-            let clientName = context.ledger.client(forProject: projectID)?.name ?? ""
-            let projectRank = context.ledger.projects[projectID].flatMap { ProjectSearch.rank(terms, project: $0.name, client: clientName) } ?? 2
-            let clientRank = context.ledger.clients[clientID].flatMap { ProjectSearch.rank(terms, project: $0.name, client: "") } ?? 2
-            return clientRank < projectRank ? .client(clientID) : .project(projectID)
-        case let (projectID?, nil):
-            return .project(projectID)
-        case let (nil, clientID?):
-            return .client(clientID)
+        switch (project(matching: phrase, includingArchived: true), client(matching: phrase)) {
+        case let (projectMatch?, clientMatch?):
+            return clientMatch.rank < projectMatch.rank ? .client(clientMatch.id) : .project(projectMatch.id)
+        case let (projectMatch?, nil):
+            return .project(projectMatch.id)
+        case let (nil, clientMatch?):
+            return .client(clientMatch.id)
         case (nil, nil):
             return nil
         }
@@ -675,7 +678,7 @@ struct CommandReader {
                 let candidate = phrase(first..<first + count)
                 if count == 1, Self.notProjects.contains(words[first].lower) || words[first].lower.count < 2 { continue }
                 if let match = project(matching: candidate, includingArchived: false) {
-                    projectID = match
+                    projectID = match.id
                     projectWords = first..<first + count
                     break
                 }
@@ -929,9 +932,9 @@ struct CommandReader {
         if forIndex < words.count {
             token(.keyword, forIndex..<forIndex + 1)
             let clientPhrase = phrase(forIndex + 1..<words.count)
-            if let clientID = client(matching: clientPhrase) {
-                choice = .existing(clientID)
-                token(.client(clientID), forIndex + 1..<words.count)
+            if let match = client(matching: clientPhrase) {
+                choice = .existing(match.id)
+                token(.client(match.id), forIndex + 1..<words.count)
             } else if !clientPhrase.isEmpty {
                 choice = .new(clientPhrase)
                 token(.name, forIndex + 1..<words.count)
@@ -989,7 +992,7 @@ struct CommandReader {
         let color = Palette.color(named: colorWord.text)
         let nameEnd = color == nil && words.count == 2 ? 2 : words.count - 1
         let name = phrase(1..<nameEnd)
-        let projectID = name.isEmpty ? nil : project(matching: name, includingArchived: true)
+        let projectID = name.isEmpty ? nil : project(matching: name, includingArchived: true)?.id
         if let projectID {
             token(.project(projectID), 1..<nameEnd)
         } else {
@@ -1027,10 +1030,10 @@ struct CommandReader {
         var source = sourceName.isEmpty ? nil : target(matching: sourceName)
         var destination = targetName.isEmpty ? nil : target(matching: targetName)
         // A client and a project: try reading both as clients.
-        if case .client? = source, case .project? = destination, let clientID = client(matching: targetName) {
-            destination = .client(clientID)
-        } else if case .project? = source, case .client? = destination, let clientID = client(matching: sourceName) {
-            source = .client(clientID)
+        if case .client? = source, case .project? = destination, let match = client(matching: targetName) {
+            destination = .client(match.id)
+        } else if case .project? = source, case .client? = destination, let match = client(matching: sourceName) {
+            source = .client(match.id)
         }
         if !sourceName.isEmpty {
             token(source.map { kind(of: $0) } ?? .unknown, 1..<into)

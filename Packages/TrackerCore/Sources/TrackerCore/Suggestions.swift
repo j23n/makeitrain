@@ -151,23 +151,12 @@ public enum LineSuggestions {
     /// Live projects whose name, or whose client's, has a word starting
     /// with what's typed: the best matches first, then the ones used last.
     static func projects(_ typed: String, word: Word, in context: CommandContext) -> [LineSuggestion] {
-        let terms = ProjectSearch.terms(typed)
-        guard !terms.isEmpty else { return [] }
-        var matches: [(project: Project, client: String, rank: Int, last: Int64, index: Int)] = []
-        for (index, project) in context.ledger.pickerProjects().enumerated() {
-            let client = context.ledger.client(forProject: project.id)?.name ?? ""
-            guard let rank = ProjectSearch.rank(terms, project: project.name, client: client), rank <= 1 else { continue }
-            guard project.name.lowercased() != typed.lowercased() else { continue }
-            matches.append((project, client, rank, context.lastUsed[project.id]?.milliseconds ?? .min, index))
-        }
-        matches.sort { a, b in
-            if a.rank != b.rank { return a.rank < b.rank }
-            if a.last != b.last { return a.last > b.last }
-            return a.index < b.index
-        }
-        return matches.map { match in
-            word.suggestion(.project(match.project.id), match.project.name, match.client, insert: match.project.name)
-        }
+        guard !ProjectSearch.terms(typed).isEmpty else { return [] }
+        return context.projects(matching: typed, includingArchived: false)
+            .filter { $0.project.name.lowercased() != typed.lowercased() }
+            .map { match in
+                word.suggestion(.project(match.project.id), match.project.name, match.client, insert: match.project.name)
+            }
     }
 
     /// Live clients whose name has a word starting with what's typed.
@@ -194,12 +183,9 @@ public enum LineSuggestions {
     /// The projects used last, for a command's target before anything's
     /// typed.
     static func recentProjects(word: Word, in context: CommandContext) -> [LineSuggestion] {
-        context.ledger.pickerProjects()
-            .sorted { (context.lastUsed[$0.id]?.milliseconds ?? .min) > (context.lastUsed[$1.id]?.milliseconds ?? .min) }
-            .map { project in
-                let client = context.ledger.client(forProject: project.id)?.name ?? ""
-                return word.suggestion(.project(project.id), project.name, client, insert: project.name)
-            }
+        context.projects(matching: "", includingArchived: false).map { match in
+            word.suggestion(.project(match.project.id), match.project.name, match.client, insert: match.project.name)
+        }
     }
 
     /// The tags of the line's project that start with what's typed after

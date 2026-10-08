@@ -68,6 +68,8 @@ import Testing
 
     @Test func offersWhatACommandActsOn() {
         #expect(suggest("archive ha").first?.text == "archive Harbor ")
+        // Before anything's typed, the projects used last.
+        #expect(suggest("archive ").map(\.title) == ["Internal", "Bookings", "Harbor"])
         #expect(suggest("merge book into ").contains { $0.kind == .project(F.harbor) })
         #expect(suggest("color book t").map(\.title) == ["teal"])
         #expect(suggest("new project Phoenix for ze").map(\.title) == ["Zenith"])
