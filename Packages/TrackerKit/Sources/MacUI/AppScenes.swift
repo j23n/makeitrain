@@ -3,15 +3,13 @@ import AppKit
 import SwiftUI
 import TrackerKit
 
-/// The Mac app's scenes: the menu bar popover, the main window and Settings.
+/// The Mac app's scenes: the menu bar popover, the main window and Settings,
+/// all showing the app's one model.
 public struct AppScenes: Scene {
-    let model: AppModel
-
-    public init(model: AppModel) {
-        self.model = model
-    }
+    public init() {}
 
     public var body: some Scene {
+        let model = AppModel.shared
         MenuBarExtra {
             MenuBarPopover(model: model)
         } label: {

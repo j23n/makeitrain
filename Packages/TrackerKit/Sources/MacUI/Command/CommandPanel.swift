@@ -14,16 +14,16 @@ final class CommandPanel: NSObject, NSWindowDelegate {
     private var line: CommandLineModel?
 
     /// Shows the panel, or hides it if it's showing.
-    func toggle(model: AppModel) {
+    func toggle() {
         if let panel, panel.isVisible {
             hide()
             return
         }
-        show(model: model)
+        show()
     }
 
-    func show(model: AppModel) {
-        let panel = self.panel ?? makePanel(model: model)
+    func show() {
+        let panel = self.panel ?? makePanel()
         self.panel = panel
         if let screen = NSScreen.main {
             let frame = screen.visibleFrame
@@ -46,8 +46,8 @@ final class CommandPanel: NSObject, NSWindowDelegate {
         }
     }
 
-    private func makePanel(model: AppModel) -> NSPanel {
-        let line = CommandLineModel(model: model)
+    private func makePanel() -> NSPanel {
+        let line = CommandLineModel(model: AppModel.shared)
         self.line = line
         let panel = KeyPanel(
             contentRect: NSRect(x: 0, y: 0, width: 560, height: 200),

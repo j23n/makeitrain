@@ -11,12 +11,13 @@ import MobileUI
 @main
 struct TimeTrackerApp: App {
     #if os(macOS)
+    /// Starts the model at launch and saves before quitting.
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     #endif
 
     var body: some Scene {
         #if os(macOS)
-        AppScenes(model: delegate.model)
+        AppScenes()
         #else
         MobileScenes()
         #endif

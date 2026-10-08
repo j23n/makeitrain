@@ -2,10 +2,10 @@
 import AppKit
 import TrackerKit
 
-/// Owns the app model, starts it at launch, and saves before quitting.
+/// Starts the app model at launch, and saves before quitting.
 @MainActor
 public final class AppDelegate: NSObject, NSApplicationDelegate {
-    public var model: AppModel { AppModel.shared }
+    private var model: AppModel { AppModel.shared }
     private var wakeObserver: NSObjectProtocol?
 
     public func applicationDidFinishLaunching(_ notification: Notification) {

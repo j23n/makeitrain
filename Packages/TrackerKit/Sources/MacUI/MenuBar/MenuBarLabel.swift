@@ -23,7 +23,7 @@ struct MenuBarLabel: View {
             }
             .onChange(of: model.preferences.shortcut, initial: true) { _, shortcut in
                 HotKey.shared.register(shortcut) {
-                    CommandPanel.shared.toggle(model: model)
+                    CommandPanel.shared.toggle()
                 }
             }
     }
@@ -45,7 +45,6 @@ struct MenuBarLabel: View {
     /// Calendars aren't read for this, to keep the menu bar light.
     private var needsCorrecting: Bool {
         guard model.preferences.menuBarMarksCorrections else { return false }
-        _ = model.revision
         let week = ReportPeriod.week.range(containing: model.today, firstWeekday: model.firstWeekday)
         return !Corrections.find(on: week, ledger: model.ledger, resolved: model.resolved, timeZone: model.environment.timeZone(), now: model.now)
             .filter { !model.preferences.isSkipped($0.id) }
