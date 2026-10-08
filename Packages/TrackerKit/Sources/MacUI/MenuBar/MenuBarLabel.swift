@@ -6,8 +6,9 @@ import TrackerKit
 
 /// The menu bar item: an icon, or a dot and the running time, with the
 /// project's name if that's chosen, and a mark when something needs
-/// correcting this week. It also applies the chosen appearance, since it's
-/// there as long as the app runs.
+/// correcting this week. It also applies the chosen appearance, and the
+/// shortcut that opens the command line over any app, since it's there as
+/// long as the app runs.
 struct MenuBarLabel: View {
     let model: AppModel
 
@@ -18,6 +19,11 @@ struct MenuBarLabel: View {
                 case .system: nil
                 case .light: NSAppearance(named: .aqua)
                 case .dark: NSAppearance(named: .darkAqua)
+                }
+            }
+            .onChange(of: model.preferences.shortcut, initial: true) { _, shortcut in
+                HotKey.shared.register(shortcut) {
+                    CommandPanel.shared.toggle(model: model)
                 }
             }
     }

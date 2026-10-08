@@ -129,7 +129,6 @@ struct GeneralSettings: View {
                                 KeyCap(shortcut.title)
                                 Button("Remove") {
                                     preferences.shortcut = nil
-                                    registerShortcut()
                                 }
                                 .buttonStyle(ChoiceButtonStyle(compact: true))
                             } else {
@@ -196,7 +195,6 @@ struct GeneralSettings: View {
             }
             guard let shortcut = HotKey.shortcut(from: event) else { return nil }
             preferences.shortcut = shortcut
-            registerShortcut()
             stopRecording()
             return nil
         }
@@ -208,10 +206,6 @@ struct GeneralSettings: View {
             NSEvent.removeMonitor(monitor)
             self.monitor = nil
         }
-    }
-
-    private func registerShortcut() {
-        (NSApp.delegate as? AppDelegate)?.registerShortcut()
     }
 }
 
