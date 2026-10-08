@@ -211,6 +211,11 @@ import Testing
         #expect(F.read("rename book to Bookings Pro").primary == .rename(.project(F.bookings), to: "Bookings Pro"))
         #expect(F.read("rename zenith to Zenith GmbH").primary == .rename(.client(F.zenith), to: "Zenith GmbH"))
         #expect(F.read("rename book to").problem == .needsName)
+        // Names are taken among the client's projects, and among clients.
+        #expect(F.read("rename internal to admin").problem == .nameTaken("admin"))
+        #expect(F.read("rename zenith to Northbridge").problem == .nameTaken("Northbridge"))
+        #expect(F.read("rename book to BOOKINGS").primary == .rename(.project(F.bookings), to: "BOOKINGS"))
+        #expect(F.read("new project Harbor for Acme").primary == .addProject(name: "Harbor", client: .new("Acme"), color: "#8064A2", startsTimer: false))
     }
 
     @Test func finds() {

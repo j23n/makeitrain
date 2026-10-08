@@ -531,6 +531,22 @@ struct CommandReader {
         }
     }
 
+    /// Whether a client that isn't deleted, other than `except`, has this
+    /// name, ignoring case and accents.
+    func clientNameTaken(_ name: String, except: UUID? = nil) -> Bool {
+        let folded = ProjectSearch.fold(name)
+        return context.ledger.clients.values.contains { $0.id != except && !$0.isDeleted && ProjectSearch.fold($0.name) == folded }
+    }
+
+    /// Whether a project of `client` that isn't deleted, other than
+    /// `except`, has this name, ignoring case and accents.
+    func projectNameTaken(_ name: String, client: UUID?, except: UUID? = nil) -> Bool {
+        let folded = ProjectSearch.fold(name)
+        return context.ledger.projects.values.contains { project in
+            project.id != except && !project.isDeleted && project.clientID == client && ProjectSearch.fold(project.name) == folded
+        }
+    }
+
     /// The words from `first` up to but not including `end`, as typed.
     func phrase(_ indices: Range<Int>) -> String {
         guard !indices.isEmpty else { return "" }
@@ -906,7 +922,7 @@ struct CommandReader {
             token(.name, 2..<words.count)
             if name.isEmpty {
                 reading.problem = .needsName
-            } else if context.ledger.liveClients().contains(where: { ProjectSearch.fold($0.name) == ProjectSearch.fold(name) }) {
+            } else if clientNameTaken(name) {
                 reading.problem = .nameTaken(name)
             } else {
                 reading.primary = .addClient(name: name)
@@ -932,18 +948,10 @@ struct CommandReader {
             reading.problem = .needsName
             return
         }
-        var clientID: UUID?
-        var isNewClient = false
-        switch choice {
-        case let .existing(id)?:
-            clientID = id
-        case .new?:
-            isNewClient = true
-        case nil:
-            break
-        }
-        let taken = !isNewClient && context.ledger.projects.values.contains { project in
-            !project.isDeleted && project.clientID == clientID && ProjectSearch.fold(project.name) == ProjectSearch.fold(name)
+        let taken = switch choice {
+        case .new?: false
+        case let .existing(id)?: projectNameTaken(name, client: id)
+        case nil: projectNameTaken(name, client: nil)
         }
         if taken {
             reading.problem = .nameTaken(name)
@@ -1081,16 +1089,9 @@ struct CommandReader {
             reading.problem = .needsName
             return
         }
-        let folded = ProjectSearch.fold(newName)
-        let taken: Bool
-        switch found {
-        case let .project(id):
-            let clientID = context.ledger.projects[id]?.clientID
-            taken = context.ledger.projects.values.contains { project in
-                project.id != id && !project.isDeleted && project.clientID == clientID && ProjectSearch.fold(project.name) == folded
-            }
-        case let .client(id):
-            taken = context.ledger.liveClients().contains { $0.id != id && ProjectSearch.fold($0.name) == folded }
+        let taken = switch found {
+        case let .project(id): projectNameTaken(newName, client: context.ledger.projects[id]?.clientID, except: id)
+        case let .client(id): clientNameTaken(newName, except: id)
         }
         if taken {
             reading.problem = .nameTaken(newName)
