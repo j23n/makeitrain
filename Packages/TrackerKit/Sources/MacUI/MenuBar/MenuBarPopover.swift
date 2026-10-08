@@ -25,7 +25,6 @@ struct MenuBarPopover: View {
         }
         .frame(width: 410)
         .background(Theme.popover)
-        .disabled(model.isReadOnly)
     }
 
     /// Opening the main window and Settings, and quitting.
