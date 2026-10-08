@@ -144,9 +144,6 @@ public struct CommandReading: Hashable, Sendable {
     /// Why Option-Return can't.
     public var alternateProblem: CommandProblem?
     public var completion: CommandCompletion?
-    /// The entry a note was taken from, when the line gave tags but no
-    /// note and an earlier entry with those tags had one.
-    public var noteFrom: UUID?
 
     public init(text: String) {
         self.text = text
@@ -302,23 +299,13 @@ struct CommandReader {
 
     // MARK: - Times
 
-    /// Where a time piece starts.
-    enum Start: Hashable {
-        case clock(TimeWords.Clock)
-        case now
-        case ago(Int64)
-    }
-
-    /// Where a time piece ends.
-    enum End: Hashable {
-        case clock(TimeWords.Clock)
-        case now
-    }
-
-    /// A time piece of a line, such as "from 11:05" or "9:00-9:30".
-    enum TimePiece: Hashable {
-        case start(Start)
-        case end(End)
+    /// A time piece of a line, such as "from 11:05", "-15m" or "9:00-9:30".
+    enum TimePiece {
+        case start(TimeWords.Clock)
+        /// A start this many milliseconds ago, 0 for "from now".
+        case startAgo(Int64)
+        case end(TimeWords.Clock)
+        case endNow
         case range(TimeWords.Clock, TimeWords.Clock)
         case duration(Int64)
     }
@@ -394,24 +381,24 @@ struct CommandReader {
                 return (TimePiece.range(span.0, span.1), count + 1)
             }
             if word(index + 1) == "now" {
-                return (TimePiece.start(.now), 2)
+                return (TimePiece.startAgo(0), 2)
             }
             if let next = word(index + 1), let ago = TimeWords.ago(next) {
-                return (TimePiece.start(.ago(ago)), 2)
+                return (TimePiece.startAgo(ago), 2)
             }
             if case let (length, count)? = duration(at: index + 1), word(index + 1 + count) == "ago" {
-                return (TimePiece.start(.ago(length)), count + 2)
+                return (TimePiece.startAgo(length), count + 2)
             }
             if case let (time, count)? = clock(at: index + 1) {
-                return (TimePiece.start(.clock(time)), count + 1)
+                return (TimePiece.start(time), count + 1)
             }
             return nil
         case "until", "till", "til", "to":
             if word(index + 1) == "now" {
-                return (TimePiece.end(.now), 2)
+                return (TimePiece.endNow, 2)
             }
             if case let (time, count)? = clock(at: index + 1), text != "to" || !time.bare {
-                return (TimePiece.end(.clock(time)), count + 1)
+                return (TimePiece.end(time), count + 1)
             }
             return nil
         case "for":
@@ -424,16 +411,16 @@ struct CommandReader {
                 return (TimePiece.range(span.0, span.1), count)
             }
             if let ago = TimeWords.ago(text) {
-                return (TimePiece.start(.ago(ago)), 1)
+                return (TimePiece.startAgo(ago), 1)
             }
             if case let (length, count)? = duration(at: index) {
                 if word(index + count) == "ago" {
-                    return (TimePiece.start(.ago(length)), count + 1)
+                    return (TimePiece.startAgo(length), count + 1)
                 }
                 return (TimePiece.duration(length), count)
             }
             if case let (time, count)? = clock(at: index), !time.bare {
-                return (TimePiece.start(.clock(time)), count)
+                return (TimePiece.start(time), count)
             }
             return nil
         }
@@ -458,26 +445,26 @@ struct CommandReader {
         return nil
     }
 
-    /// The instant a time of day stands for on a day in the context's zone.
-    /// "24:00" is the next day's midnight.
-    func instant(_ clock: TimeWords.Clock, on day: LocalDate) -> Timestamp {
-        if clock.second >= 86400 {
-            return Timestamp(date: day.adding(days: 1), secondOfDay: clock.second - 86400, zone: context.timeZone)
+    /// The instant a time of day, in seconds after midnight, stands for on
+    /// a day in the context's zone. "24:00" is the next day's midnight.
+    func instant(_ second: Int, on day: LocalDate) -> Timestamp {
+        if second >= 86400 {
+            return Timestamp(date: day.adding(days: 1), secondOfDay: second - 86400, zone: context.timeZone)
         }
-        return Timestamp(date: day, secondOfDay: clock.second, zone: context.timeZone)
+        return Timestamp(date: day, secondOfDay: second, zone: context.timeZone)
     }
 
     /// The instant a time of day typed without a day stands for: today's,
     /// or yesterday's if today's hasn't come yet and yesterday's was in the
     /// last 12 hours, as when typing "from 23:30" just after midnight.
-    func recent(_ clock: TimeWords.Clock, on day: LocalDate?) -> Timestamp {
+    func recent(_ second: Int, on day: LocalDate?) -> Timestamp {
         if let day {
-            return instant(clock, on: day)
+            return instant(second, on: day)
         }
         let today = context.today
-        let candidate = instant(clock, on: today)
+        let candidate = instant(second, on: today)
         guard candidate > context.now else { return candidate }
-        let earlier = instant(clock, on: today.adding(days: -1))
+        let earlier = instant(second, on: today.adding(days: -1))
         return earlier.distance(to: context.now) <= 12 * 3_600_000 ? earlier : candidate
     }
 
@@ -572,7 +559,6 @@ struct CommandReader {
     // MARK: - Entries
 
     mutating func readEntry() {
-        reading = CommandReading(text: text)
         let context = self.context
         var timeWords = Set<Int>()
         var pieces: [(piece: TimePiece, words: Range<Int>)] = []
@@ -595,7 +581,7 @@ struct CommandReader {
         // "today" is part of the note.
         let saysClock = pieces.contains { piece in
             switch piece.piece {
-            case .start(.clock), .end(.clock), .range: true
+            case .start, .end, .range: true
             default: false
             }
         }
@@ -613,35 +599,33 @@ struct CommandReader {
         for (piece, _) in pieces {
             switch piece {
             case let .range(first, second):
-                let from = recent(first, on: chosenDay)
+                let from = recent(first.second, on: chosenDay)
                 let fromDay = from.local(in: context.timeZone).date
                 let to = TimeWords.rangeEnd(start: first, end: second)
                 start = from
-                end = instant(TimeWords.Clock(second: to.second, bare: false, meridiem: false), on: to.nextDay ? fromDay.adding(days: 1) : fromDay)
-            case let .start(.clock(time)):
-                start = recent(time, on: chosenDay)
-            case .start(.now):
-                start = context.now
-            case let .start(.ago(milliseconds)):
+                end = instant(to.second, on: to.nextDay ? fromDay.adding(days: 1) : fromDay)
+            case let .start(time):
+                start = recent(time.second, on: chosenDay)
+            case let .startAgo(milliseconds):
                 start = context.now.adding(milliseconds: -milliseconds)
-            case .end, .duration:
+            case .end, .endNow, .duration:
                 break
             }
         }
         for (piece, _) in pieces {
             switch piece {
-            case let .end(.clock(time)):
+            case let .end(time):
                 if let start {
                     let startDay = start.local(in: context.timeZone).date
-                    var candidate = instant(time, on: startDay)
+                    var candidate = instant(time.second, on: startDay)
                     if candidate <= start {
-                        candidate = instant(time, on: startDay.adding(days: 1))
+                        candidate = instant(time.second, on: startDay.adding(days: 1))
                     }
                     end = candidate
                 } else {
-                    end = recent(time, on: chosenDay)
+                    end = recent(time.second, on: chosenDay)
                 }
-            case .end(.now):
+            case .endNow:
                 end = context.now
             case let .duration(milliseconds):
                 length = milliseconds
@@ -706,6 +690,7 @@ struct CommandReader {
 
         // Tags without a note take the note of the last entry with them,
         // as "#227" brings back what issue 227 was about.
+        var borrowedNote = false
         if note.isEmpty, !tags.isEmpty {
             let wanted = Set(tags.map { $0.lowercased() })
             if let earlier = context.resolved.last(where: { entry in
@@ -713,7 +698,7 @@ struct CommandReader {
                     && wanted.isSubset(of: Set(entry.entry.tags.map { $0.lowercased() }))
             }) {
                 note = earlier.entry.note
-                reading.noteFrom = earlier.id
+                borrowedNote = true
             }
         }
 
@@ -741,7 +726,7 @@ struct CommandReader {
         reading.tokens.sort { $0.range.lowerBound < $1.range.lowerBound }
 
         reading.completion = completion(
-            draft: EntryDraft(projectID: projectID, tags: tags, note: reading.noteFrom == nil ? note : ""),
+            draft: EntryDraft(projectID: projectID, tags: tags, note: borrowedNote ? "" : note),
             projectWords: projectWords,
             timeWords: pieces.map(\.words) + (saysClock ? days.map(\.words) : [])
         )
@@ -879,12 +864,11 @@ struct CommandReader {
                 time = now.adding(milliseconds: -length)
                 used = index + count + 1
             } else if case let (typed, count)? = clock(at: index) {
-                time = recent(typed, on: nil)
+                time = recent(typed.second, on: nil)
                 used = index + count
             }
         }
         guard let time, used == words.count else { return false }
-        reading = CommandReading(text: text)
         token(.keyword, 0..<1)
         token(.time, 1..<used)
         guard let running = context.running else {

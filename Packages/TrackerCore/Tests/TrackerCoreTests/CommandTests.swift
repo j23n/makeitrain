@@ -47,7 +47,6 @@ import Testing
     @Test func switchesAtAnEarlierTimeWithTheNoteOfTheTag() {
         let reading = F.read("book #227 from 11:05", F.ledger(F.switchedToHarbor), now: "12:20")
         #expect(reading.primary == .start(draft(F.bookings, ["#227"], "Export to PDF"), at: F.at("11:05"), end: nil))
-        #expect(reading.noteFrom == uuid(103))
         #expect(reading.alternate == .start(draft(F.bookings, ["#227"], "Export to PDF"), at: F.at("11:05"), end: F.at("12:20")))
         #expect(reading.tokens.map(\.kind) == [.project(F.bookings), .tag, .time])
     }
@@ -96,9 +95,11 @@ import Testing
         #expect(range("book 30 sep 9-10") == [F.at("09:00", on: "2026-09-30"), F.at("10:00", on: "2026-09-30")])
         #expect(range("book 2026-09-30 9-10") == [F.at("09:00", on: "2026-09-30"), F.at("10:00", on: "2026-09-30")])
         #expect(range("book from 9:00 for 1h30") == [F.at("09:00"), F.at("10:30")])
+        #expect(range("book review from 17:00 until now") == [F.at("17:00"), F.at("18:00")])
 
         #expect(F.read("book -15m", now: "18:00").primary == .start(draft(F.bookings), at: F.at("17:45"), end: nil))
         #expect(F.read("book 15 min ago", now: "18:00").primary == .start(draft(F.bookings), at: F.at("17:45"), end: nil))
+        #expect(F.read("book from now", now: "18:00").primary == .start(draft(F.bookings), at: F.at("18:00"), end: nil))
         // Plain numbers on either side of "to" are words of the note.
         #expect(F.read("book sprint 9 to 5", now: "18:00").primary == .start(draft(F.bookings, [], "sprint 9 to 5"), at: F.at("18:00"), end: nil))
     }
