@@ -5,9 +5,9 @@ import TrackerKit
 import UIKit
 import UniformTypeIdentifiers
 
-/// The iPhone's settings: how the app looks, starting timers from outside
-/// it, where the data is and what's in it, importing and exporting, and
-/// which calendar on this iPhone belongs to which project.
+/// The iPhone's and iPad's settings: how the app looks, starting timers
+/// from outside it, where the data is and what's in it, importing and
+/// exporting, and which calendar on this device belongs to which project.
 struct PhoneSettings: View {
     @Bindable var model: AppModel
     @Environment(\.dismiss) private var dismiss
@@ -55,12 +55,12 @@ struct PhoneSettings: View {
 
                 Section {
                     HStack(spacing: 12) {
-                        Image(systemName: model.storage == .iCloud ? "icloud" : "iphone")
+                        Image(systemName: model.storage == .iCloud ? "icloud" : deviceName.lowercased())
                             .font(.system(size: 20))
                             .foregroundStyle(Theme.accent)
                             .frame(width: 28)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(model.storage == .iCloud ? "iCloud Drive › Time Tracker" : "On this iPhone")
+                            Text(model.storage == .iCloud ? "iCloud Drive › Time Tracker" : "On this \(deviceName)")
                             Text(status)
                                 .font(.footnote)
                                 .foregroundStyle(Theme.text3)
@@ -162,11 +162,11 @@ struct PhoneSettings: View {
                 Text("Denied. Allow it in Settings › Privacy & Security.")
                     .foregroundStyle(Theme.text2)
             case .restricted:
-                Text("Calendar access is restricted on this iPhone.")
+                Text("Calendar access is restricted on this \(deviceName).")
                     .foregroundStyle(Theme.text2)
             case .granted:
                 if model.calendars.isEmpty {
-                    Text("No calendars on this iPhone.")
+                    Text("No calendars on this \(deviceName).")
                         .foregroundStyle(Theme.text2)
                 }
                 ForEach(model.calendars) { calendar in
@@ -188,7 +188,7 @@ struct PhoneSettings: View {
                 }
             }
         } header: {
-            Text("Calendars on this iPhone")
+            Text("Calendars on this \(deviceName)")
         }
     }
 
@@ -228,7 +228,7 @@ struct PhoneSettings: View {
     private var storageExplanation: String {
         switch model.storage {
         case .iCloud:
-            "Turning it off copies your data to this iPhone. The copy in iCloud stays."
+            "Turning it off copies your data to this \(deviceName). The copy in iCloud stays."
         case .local:
             model.isICloudAvailable
                 ? "Turning it on merges your data with what's in iCloud Drive."

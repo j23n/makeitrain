@@ -102,17 +102,6 @@ extension UIResponder {
 }
 #endif
 
-/// What this device is called in sentences, such as "Calendar on this
-/// Mac".
-@MainActor
-var deviceName: String {
-    #if os(macOS)
-    return "Mac"
-    #else
-    return UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
-    #endif
-}
-
 /// Where the system lets this app read calendars.
 @MainActor
 var calendarPrivacySettings: URL? {
