@@ -57,18 +57,6 @@ public struct ReportGroup: Identifiable, Hashable, Sendable {
     public var id: Kind { kind }
 }
 
-/// A day in a report's chart: time per project.
-public struct ReportDay: Identifiable, Hashable, Sendable {
-    public var date: LocalDate
-    public var projects: [UUID?: Int64]
-
-    public var id: LocalDate { date }
-
-    public var milliseconds: Int64 {
-        projects.values.reduce(0, +)
-    }
-}
-
 /// Totals for a range of days.
 ///
 /// Every entry counts in full, so the total equals the sum of end minus start
@@ -88,8 +76,8 @@ public struct Report: Hashable, Sendable {
     /// of the totals.
     public var running: ResolvedEntry?
     public var groups: [ReportGroup]
-    /// Every day in the range, for the chart.
-    public var days: [ReportDay]
+    /// How many days in the range have time logged.
+    public var daysWorked: Int
 
     public init(_ request: ReportRequest, ledger: Ledger, now: Timestamp) {
         self.init(request, ledger: ledger, resolved: ledger.resolvedEntries(), now: now)
@@ -107,18 +95,7 @@ public struct Report: Hashable, Sendable {
             entry.end.map { TimeSpan(start: entry.start, end: $0) }
         })
         groups = Report.groups(entries, request.grouping, ledger, now)
-
-        var byDay: [LocalDate: [UUID?: Int64]] = [:]
-        for entry in entries {
-            byDay[entry.entry.day, default: [:]][entry.entry.projectID, default: 0] += entry.duration(now: now)
-        }
-        var days: [ReportDay] = []
-        var day = request.range.lowerBound
-        while day <= request.range.upperBound {
-            days.append(ReportDay(date: day, projects: byDay[day] ?? [:]))
-            day = day.adding(days: 1)
-        }
-        self.days = days
+        daysWorked = Set(entries.filter { $0.duration(now: now) > 0 }.map(\.entry.day)).count
     }
 
     private static func groups(_ entries: [ResolvedEntry], _ grouping: ReportRequest.Grouping, _ ledger: Ledger, _ now: Timestamp) -> [ReportGroup] {

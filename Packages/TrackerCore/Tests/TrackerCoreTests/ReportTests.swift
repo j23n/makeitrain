@@ -122,8 +122,7 @@ import Testing
         #expect(result.entries.map(\.id) == [uuid(2), uuid(3)])
         // An entry that runs past midnight counts in full on its first day.
         #expect(result.total == 3 * hour)
-        #expect(result.days.map(\.date) == (21...27).map { date(2026, 9, $0) })
-        #expect(result.days.map(\.milliseconds) == [hour, 0, 0, 0, 0, 0, 2 * hour])
+        #expect(result.daysWorked == 2)
     }
 
     @Test func leavesTheRunningTimerOutOfTheTotals() {
@@ -188,20 +187,6 @@ import Testing
         #expect(ids(ReportRequest(range: days(21, 27), tags: ["DESIGN"])) == [uuid(1), uuid(3)])
         #expect(ids(ReportRequest(range: days(21, 27), tags: [])) == [uuid(1), uuid(2), uuid(3), uuid(4), uuid(5)])
         #expect(ids(ReportRequest(range: days(21, 27), clients: [acme], tags: ["call"])) == [uuid(2)])
-    }
-
-    @Test func chartsEachDayByProject() {
-        let result = report([
-            entry(1, website, "23T09:00", "23T10:00"),
-            entry(2, website, "23T11:00", "23T12:00"),
-            entry(3, nil, "23T13:00", "23T13:30"),
-            entry(4, app, "25T09:00", "25T10:00"),
-        ], ReportRequest(range: days(23, 25)))
-
-        #expect(result.days.count == 3)
-        #expect(result.days[0].projects == [website: 2 * hour, nil: hour / 2])
-        #expect(result.days[1].projects.isEmpty)
-        #expect(result.days[2].projects == [app: hour])
     }
 
     @Test func periodsFollowTheFirstDayOfTheWeek() {
@@ -282,6 +267,8 @@ import Testing
             entry(3, website, "17T09:00", "17T14:00"),
             entry(4, website, "21T09:00", "21T14:00"),
             entry(5, website, "23T09:00", "23T10:00"),
+            // Not a day so far.
+            entry(6, website, "25T09:00", "25T10:00"),
         ], ReportRequest(range: days(21, 27)), .week, today: date(2026, 9, 23))
 
         #expect(result.previousRange == days(14, 16))

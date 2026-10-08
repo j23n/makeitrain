@@ -4,11 +4,6 @@ import Foundation
 // average of those days, and how the total compares with the period before.
 
 extension Report {
-    /// How many days in the range have time logged.
-    public var daysWorked: Int {
-        days.filter { $0.milliseconds > 0 }.count
-    }
-
     /// The time logged on an average day with time logged, or 0 when no
     /// day has any. Days off don't pull it down.
     public var averagePerDayWorked: Int64 {
@@ -59,7 +54,7 @@ public struct ReportComparison: Hashable, Sendable {
             let elapsed = today.daysSince1970 - range.lowerBound.daysSince1970
             previous = previous.lowerBound...min(previous.lowerBound.adding(days: elapsed), previous.upperBound)
             isPartial = true
-            total = report.days.filter { $0.date <= today }.reduce(0) { $0 + $1.milliseconds }
+            total = report.entries.reduce(0) { $1.entry.day <= today ? $0 + $1.duration(now: now) : $0 }
         } else {
             isPartial = false
             total = report.total
