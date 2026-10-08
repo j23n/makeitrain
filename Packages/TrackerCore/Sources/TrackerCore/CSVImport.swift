@@ -58,9 +58,7 @@ public enum CSVImport {
 
         /// The days the new entries are on, in their own time zones.
         public var days: ClosedRange<LocalDate>? {
-            let days = entries.map(\.day)
-            guard let first = days.min(), let last = days.max() else { return nil }
-            return first...last
+            LocalDate.span(of: entries.map(\.day))
         }
     }
 

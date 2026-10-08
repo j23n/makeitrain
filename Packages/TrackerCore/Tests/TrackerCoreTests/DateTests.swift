@@ -43,6 +43,13 @@ import Testing
         #expect(LocalDate(year: 2026, month: 9, day: 23).description == "2026-09-23")
     }
 
+    @Test func spansDays() {
+        let (first, middle, last) = (LocalDate(year: 2025, month: 12, day: 31), LocalDate(year: 2026, month: 1, day: 5), LocalDate(year: 2026, month: 2, day: 1))
+        #expect(LocalDate.span(of: [middle, last, first, middle]) == first...last)
+        #expect(LocalDate.span(of: [middle]) == middle...middle)
+        #expect(LocalDate.span(of: []) == nil)
+    }
+
     @Test func parsesMonths() {
         #expect(MonthKey("2026-09") == MonthKey(year: 2026, month: 9))
         #expect(MonthKey(year: 2026, month: 9).fileName == "2026-09.json")

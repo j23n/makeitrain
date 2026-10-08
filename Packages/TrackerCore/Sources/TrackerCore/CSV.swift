@@ -53,8 +53,8 @@ public enum CSVExport {
     /// first entry to the last, such as "Time Entries 2025-03-04 to
     /// 2026-09-30". Nil when there are no entries.
     public static func fileName(for entries: [ResolvedEntry]) -> String? {
-        let days = entries.map(\.entry.day)
-        guard let first = days.min(), let last = days.max() else { return nil }
+        guard let days = LocalDate.span(of: entries.map(\.entry.day)) else { return nil }
+        let (first, last) = (days.lowerBound, days.upperBound)
         return first == last ? "Time Entries \(first)" : "Time Entries \(first) to \(last)"
     }
 

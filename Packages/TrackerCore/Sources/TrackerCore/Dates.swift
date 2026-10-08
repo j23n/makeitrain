@@ -74,6 +74,14 @@ extension LocalDate: CustomStringConvertible {
     }
 }
 
+extension LocalDate {
+    /// The days from the first of `days` to the last, or nil for none.
+    static func span(of days: [LocalDate]) -> ClosedRange<LocalDate>? {
+        guard let first = days.min(), let last = days.max() else { return nil }
+        return first...last
+    }
+}
+
 /// A calendar month. Each one names a month file, such as `2026-09.json`.
 public struct MonthKey: Hashable, Comparable, Sendable {
     public var year: Int
