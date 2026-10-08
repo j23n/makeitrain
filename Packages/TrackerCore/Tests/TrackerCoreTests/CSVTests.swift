@@ -19,7 +19,7 @@ import Testing
         var ledger = ledger
         for entry in entries { ledger.merge(entry) }
         let range = LocalDate(year: 2026, month: 9, day: 21)...LocalDate(year: 2026, month: 9, day: 27)
-        return CSVExport.text(for: Report(ReportRequest(range: range), ledger: ledger), ledger: ledger)
+        return CSVExport.text(for: Report(ReportRequest(range: range), ledger: ledger).entries, ledger: ledger)
     }
 
     func lines(_ text: String) -> [String] {
@@ -141,7 +141,7 @@ import Testing
         for entry in entries { ledger.merge(entry) }
         let range = LocalDate(year: 2026, month: 9, day: 21)...LocalDate(year: 2026, month: 9, day: 27)
         let report = Report(ReportRequest(range: range), ledger: ledger)
-        let rows = lines(CSVExport.text(for: report, ledger: ledger)).dropFirst().dropLast()
+        let rows = lines(CSVExport.text(for: report.entries, ledger: ledger)).dropFirst().dropLast()
         let tenThousandths = rows.map { row -> Int64 in
             let hours = row.split(separator: ",", omittingEmptySubsequences: false)[3].split(separator: ".")
             return Int64(hours[0])! * 10000 + Int64(hours[1])!

@@ -72,7 +72,7 @@ struct PhoneMonth: View {
             stepButton("chevron.right", "Next", 1)
             Menu {
                 Button("Save CSV…", systemImage: "tablecells") {
-                    csv = CSVDocument(data: CSVExport.data(for: report, ledger: model.ledger))
+                    csv = CSVDocument(data: CSVExport.data(for: report.entries, ledger: model.ledger))
                     savingCSV = true
                 }
                 Button("Save PDF…", systemImage: "doc.richtext") {

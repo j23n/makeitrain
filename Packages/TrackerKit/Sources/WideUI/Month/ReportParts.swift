@@ -507,7 +507,7 @@ struct StatementPanel: View {
     private var buttons: some View {
         HStack(spacing: 8) {
             Button {
-                csv = CSVDocument(data: CSVExport.data(for: report, ledger: model.ledger))
+                csv = CSVDocument(data: CSVExport.data(for: report.entries, ledger: model.ledger))
                 savingCSV = true
             } label: {
                 HStack {

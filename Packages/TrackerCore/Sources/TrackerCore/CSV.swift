@@ -16,17 +16,10 @@ import Foundation
 public enum CSVExport {
     private static let header = ["date", "start", "end", "hours", "client", "project", "tags", "note"]
 
-    public static func data(for report: Report, ledger: Ledger) -> Data {
-        data(for: report.entries, ledger: ledger)
-    }
-
-    /// The entries in the order given, such as every entry the app has.
+    /// The entries in the order given, such as a report's or every entry
+    /// the app has.
     public static func data(for entries: [ResolvedEntry], ledger: Ledger) -> Data {
         Data(text(for: entries, ledger: ledger).utf8)
-    }
-
-    public static func text(for report: Report, ledger: Ledger) -> String {
-        text(for: report.entries, ledger: ledger)
     }
 
     public static func text(for entries: [ResolvedEntry], ledger: Ledger) -> String {
