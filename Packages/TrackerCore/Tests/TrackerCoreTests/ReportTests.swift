@@ -254,7 +254,6 @@ import Testing
         #expect(result.previousRange == days(14, 20))
         #expect(result.previousTotal == 8 * hour)
         #expect(result.total == 6 * hour)
-        #expect(!result.isPartial)
         #expect(result.percent == -25)
     }
 
@@ -274,7 +273,6 @@ import Testing
         #expect(result.previousRange == days(14, 16))
         #expect(result.previousTotal == 4 * hour)
         #expect(result.total == 6 * hour)
-        #expect(result.isPartial)
         #expect(result.percent == 50)
     }
 
@@ -283,7 +281,6 @@ import Testing
         let result = comparison([], ReportRequest(range: march), .month, today: date(2027, 3, 30))
 
         #expect(result.previousRange == date(2027, 2, 1)...date(2027, 2, 28))
-        #expect(result.isPartial)
         // Nothing logged before has no percentage.
         #expect(result.percent == nil)
     }

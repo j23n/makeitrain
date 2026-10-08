@@ -26,8 +26,6 @@ public struct ReportComparison: Hashable, Sendable {
     public var previousTotal: Int64
     /// The time logged in the report's period, or on its days so far.
     public var total: Int64
-    /// Whether the period is under way, so only its days so far count.
-    public var isPartial: Bool
 
     /// The change in percent of the time logged before, rounded, or nil
     /// when nothing was logged before, which no percentage describes.
@@ -53,10 +51,8 @@ public struct ReportComparison: Hashable, Sendable {
         if range.contains(today), today < range.upperBound {
             let elapsed = today.daysSince1970 - range.lowerBound.daysSince1970
             previous = previous.lowerBound...min(previous.lowerBound.adding(days: elapsed), previous.upperBound)
-            isPartial = true
             total = report.entries.reduce(0) { $1.entry.day <= today ? $0 + $1.duration(now: now) : $0 }
         } else {
-            isPartial = false
             total = report.total
         }
         previousRange = previous
