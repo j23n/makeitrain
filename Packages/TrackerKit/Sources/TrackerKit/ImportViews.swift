@@ -1,5 +1,6 @@
 import SwiftUI
 import TrackerCore
+import UniformTypeIdentifiers
 
 /// A CSV file picked for import, with what importing it adds.
 public struct ImportRequest: Identifiable {
@@ -13,22 +14,210 @@ public struct ImportRequest: Identifiable {
     }
 }
 
+extension View {
+    /// Picks a CSV file to import while `isPresented` is true, then shows
+    /// what importing it adds, or why it can't be read. The import undoes
+    /// in `undoManager`, the presenting window's.
+    public func csvImporter(isPresented: Binding<Bool>, model: AppModel, undoManager: UndoManager?) -> some View {
+        modifier(CSVImporter(isPresented: isPresented, model: model, undoManager: undoManager))
+    }
+}
+
+/// The file importer for CSV files, the sheet with what the picked file
+/// adds, and the alert for a file that can't be read.
+private struct CSVImporter: ViewModifier {
+    @Binding var isPresented: Bool
+    let model: AppModel
+    let undoManager: UndoManager?
+    @State private var request: ImportRequest?
+    @State private var failure: String?
+
+    func body(content: Content) -> some View {
+        content
+            .fileImporter(isPresented: $isPresented, allowedContentTypes: [.commaSeparatedText, .tabSeparatedText, .plainText]) { result in
+                do {
+                    request = try model.importRequest(forFileAt: result.get())
+                } catch {
+                    failure = error.localizedDescription
+                }
+            }
+            .sheet(item: $request) { request in
+                ImportSheet(model: model, request: request, undoManager: undoManager)
+            }
+            .alert("Couldn't Import the File", isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })) {
+                Button("OK") { failure = nil }
+            } message: {
+                Text(failure ?? "")
+            }
+    }
+}
+
+/// Shows what importing a CSV file adds, and adds it.
+struct ImportSheet: View {
+    let model: AppModel
+    let request: ImportRequest
+    /// The presenting window's, so the import undoes there.
+    let undoManager: UndoManager?
+
+    var body: some View {
+        ImportSheetFrame(title: title, count: request.plan.entries.count, height: 460, model: model) {
+            model.importEntries(request.plan, undoManager: undoManager)
+        } content: {
+            ImportSummary(plan: request.plan, ledger: model.ledger)
+        }
+    }
+
+    private var title: String {
+        #if os(macOS)
+        return "Import \u{201C}\(request.fileName)\u{201D}"
+        #else
+        return request.fileName
+        #endif
+    }
+}
+
+/// Imports the events of linked calendars that start on some days, after
+/// showing what that adds.
+public struct CalendarImportSheet: View {
+    let model: AppModel
+    /// The presenting window's, so the import undoes there.
+    let undoManager: UndoManager?
+    @State private var first: LocalDate
+    @State private var last: LocalDate
+    @State private var includingDeleted = false
+
+    /// Starts with this week up to today.
+    public init(model: AppModel, undoManager: UndoManager?) {
+        self.model = model
+        self.undoManager = undoManager
+        let today = model.today
+        _first = State(initialValue: today.startOfWeek(firstWeekday: model.firstWeekday))
+        _last = State(initialValue: today)
+    }
+
+    public var body: some View {
+        let plan = model.calendarImportPlan(from: first, through: last, includingDeleted: includingDeleted)
+        ImportSheetFrame(title: title, count: plan.entries.count, height: 540, model: model) {
+            model.importEvents(plan, undoManager: undoManager)
+        } content: {
+            Section {
+                DatePicker("From", selection: pickerDate($first), in: ...last.pickerDate, displayedComponents: .date)
+                DatePicker("Through", selection: pickerDate($last), in: first.pickerDate..., displayedComponents: .date)
+            }
+            if model.hasLinkedCalendars {
+                CalendarImportSummary(plan: plan, ledger: model.ledger, includingDeleted: $includingDeleted)
+            } else {
+                Section {
+                    #if os(macOS)
+                    Text("No project has a calendar. Link one on a project's page.")
+                        .foregroundStyle(.secondary)
+                    #else
+                    Text("No project has a calendar. Link one in Settings or on a project's page.")
+                        .foregroundStyle(Theme.text2)
+                    #endif
+                }
+            }
+        }
+        .onAppear {
+            model.refreshCalendars()
+        }
+    }
+
+    private var title: String {
+        #if os(macOS)
+        return "Import Calendar Events"
+        #else
+        return "Import Events"
+        #endif
+    }
+
+    private func pickerDate(_ day: Binding<LocalDate>) -> Binding<Date> {
+        Binding(
+            get: { day.wrappedValue.pickerDate },
+            set: { day.wrappedValue = LocalDate(pickerDate: $0) }
+        )
+    }
+}
+
+/// An import's sheet around a form with what it adds, with Cancel and
+/// Import: on the Mac a title over the form and the buttons under it, and
+/// on iPhone and iPad the buttons in the sheet's bar.
+private struct ImportSheetFrame<Content: View>: View {
+    let title: String
+    /// How many entries the import adds.
+    let count: Int
+    /// The sheet's height on the Mac.
+    let height: CGFloat
+    let model: AppModel
+    /// Adds what the import found, when Import is chosen.
+    let perform: () -> Void
+    @ViewBuilder var content: Content
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        #if os(macOS)
+        VStack(spacing: 0) {
+            Text(title)
+                .font(.headline)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding([.top, .horizontal], 20)
+            Form {
+                content
+            }
+            .formStyle(.grouped)
+            HStack {
+                Spacer()
+                Button("Cancel", role: .cancel) {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+                Button(count == 1 ? "Import 1 Entry" : "Import \(count) Entries") {
+                    perform()
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(count == 0 || model.isReadOnly)
+            }
+            .padding([.bottom, .horizontal], 20)
+        }
+        .frame(width: 540, height: height)
+        #else
+        NavigationStack {
+            Form {
+                content
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Import") {
+                        perform()
+                        dismiss()
+                    }
+                    .disabled(count == 0 || model.isReadOnly)
+                }
+            }
+        }
+        #endif
+    }
+}
+
 /// What importing a CSV file adds, as sections of a form: the entries and
 /// the days they're on, new clients and projects, rows already there, and
 /// rows that can't be read.
-public struct ImportSummary: View {
+struct ImportSummary: View {
     let plan: CSVImport.Plan
     let ledger: Ledger
 
     /// Rows that can't be read shown before "and N more".
     static let shownProblems = 50
 
-    public init(plan: CSVImport.Plan, ledger: Ledger) {
-        self.plan = plan
-        self.ledger = ledger
-    }
-
-    public var body: some View {
+    var body: some View {
         Section {
             LabeledContent("Entries", value: "\(plan.entries.count)")
             if let days = plan.days {
@@ -98,18 +287,12 @@ public struct ImportSummary: View {
 /// What importing calendar events adds, as sections of a form: the entries,
 /// the days they're on and the time per project, the events left out and
 /// why, and a switch to bring back entries that were imported and deleted.
-public struct CalendarImportSummary: View {
+struct CalendarImportSummary: View {
     let plan: CalendarImport.Plan
     let ledger: Ledger
     @Binding var includingDeleted: Bool
 
-    public init(plan: CalendarImport.Plan, ledger: Ledger, includingDeleted: Binding<Bool>) {
-        self.plan = plan
-        self.ledger = ledger
-        _includingDeleted = includingDeleted
-    }
-
-    public var body: some View {
+    var body: some View {
         Section {
             LabeledContent("Entries", value: "\(plan.entries.count)")
             if let days = plan.days {
@@ -271,5 +454,25 @@ private struct ProjectDot: View {
     }
     .formStyle(.grouped)
     .frame(width: 480, height: 420)
+}
+
+#Preview("Import") {
+    let csv = """
+    start,end,client,project,tags,note
+    2026-09-24T09:00:00+02:00,2026-09-24T10:30:00+02:00,Acme,Website redesign,design,Review
+    2026-09-24T11:00:00+02:00,2026-09-24T12:00:00+02:00,Initech,Consulting,,Kickoff
+    2026-09-23T09:00:00+02:00,2026-09-23T10:30:00+02:00,Acme,Website redesign,client-call,Kickoff with the new team
+    """
+    let model = PreviewData.model()
+    let plan = try! model.importPlan(for: Data(csv.utf8))
+    return ImportSheet(model: model, request: ImportRequest(fileName: "toggl-september.csv", plan: plan), undoManager: nil)
+}
+
+#Preview("Import Events") {
+    CalendarImportSheet(model: PreviewData.model(), undoManager: nil)
+}
+
+#Preview("Nothing Linked") {
+    CalendarImportSheet(model: PreviewData.model(calendarLinks: []), undoManager: nil)
 }
 #endif

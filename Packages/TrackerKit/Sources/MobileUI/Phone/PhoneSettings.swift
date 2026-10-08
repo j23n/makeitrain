@@ -11,9 +11,8 @@ import UniformTypeIdentifiers
 struct PhoneSettings: View {
     let model: AppModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.undoManager) private var undoManager
     @State private var importing = false
-    @State private var importRequest: ImportRequest?
-    @State private var importError: String?
     @State private var importingEvents = false
     @State private var export: CSVDocument?
     @State private var exportName = ""
@@ -98,23 +97,9 @@ struct PhoneSettings: View {
         .onAppear {
             model.refreshCalendars()
         }
-        .fileImporter(isPresented: $importing, allowedContentTypes: [.commaSeparatedText, .tabSeparatedText, .plainText]) { result in
-            do {
-                importRequest = try model.importRequest(forFileAt: result.get())
-            } catch {
-                importError = error.localizedDescription
-            }
-        }
-        .sheet(item: $importRequest) { request in
-            MobileImportSheet(model: model, request: request)
-        }
+        .csvImporter(isPresented: $importing, model: model, undoManager: undoManager)
         .sheet(isPresented: $importingEvents) {
-            MobileCalendarImportSheet(model: model)
-        }
-        .alert("Couldn't Import the File", isPresented: Binding(get: { importError != nil }, set: { if !$0 { importError = nil } })) {
-            Button("OK") { importError = nil }
-        } message: {
-            Text(importError ?? "")
+            CalendarImportSheet(model: model, undoManager: undoManager)
         }
         .fileExporter(isPresented: $exporting, document: export, contentType: .commaSeparatedText, defaultFilename: exportName) { _ in }
     }

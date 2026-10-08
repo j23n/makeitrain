@@ -12,8 +12,6 @@ struct MainWindow: View {
     let model: AppModel
     @Environment(\.undoManager) private var undoManager
     @State private var importing = false
-    @State private var importRequest: ImportRequest?
-    @State private var importError: String?
     @State private var importingEvents = false
     @State private var exporting = false
     @State private var exportDocument: CSVDocument?
@@ -45,26 +43,9 @@ struct MainWindow: View {
         } message: {
             Text(exportError ?? "")
         }
-        .fileImporter(isPresented: $importing, allowedContentTypes: [.commaSeparatedText, .tabSeparatedText, .plainText]) { result in
-            do {
-                importRequest = try model.importRequest(forFileAt: result.get())
-            } catch {
-                importError = error.localizedDescription
-            }
-        }
-        .sheet(item: $importRequest) { request in
-            ImportSheet(model: model, request: request, undoManager: undoManager)
-        }
+        .csvImporter(isPresented: $importing, model: model, undoManager: undoManager)
         .sheet(isPresented: $importingEvents) {
             CalendarImportSheet(model: model, undoManager: undoManager)
-        }
-        .alert(
-            "Couldn't Import the File",
-            isPresented: Binding(get: { importError != nil }, set: { if !$0 { importError = nil } })
-        ) {
-            Button("OK") { importError = nil }
-        } message: {
-            Text(importError ?? "")
         }
     }
 
