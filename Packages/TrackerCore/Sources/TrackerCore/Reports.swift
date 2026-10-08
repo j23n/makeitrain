@@ -193,7 +193,7 @@ public struct Report: Hashable, Sendable {
 }
 
 /// The periods a report can cover.
-public enum ReportPeriod: String, CaseIterable, Hashable, Sendable {
+public enum ReportPeriod: Hashable, Sendable {
     case day, week, month, custom
 
     /// The period containing `date`. Weeks start on `firstWeekday`, 1 for
@@ -206,15 +206,13 @@ public enum ReportPeriod: String, CaseIterable, Hashable, Sendable {
             let start = date.startOfWeek(firstWeekday: firstWeekday)
             return start...start.adding(days: 6)
         case .month:
-            let start = LocalDate(year: date.year, month: date.month, day: 1)
-            let end = LocalDate(year: date.year, month: date.month, day: LocalDate.daysIn(month: date.month, year: date.year))
-            return start...end
+            return Self.days(ofMonth: date.month, in: date.year)
         }
     }
 
     /// The period before (`by: -1`) or after (`by: 1`) a range. A custom
     /// range moves by its own length.
-    public func shift(_ range: ClosedRange<LocalDate>, by steps: Int, firstWeekday: Int) -> ClosedRange<LocalDate> {
+    public func shift(_ range: ClosedRange<LocalDate>, by steps: Int) -> ClosedRange<LocalDate> {
         switch self {
         case .day, .week, .custom:
             let length = range.upperBound.daysSince1970 - range.lowerBound.daysSince1970 + 1
@@ -224,8 +222,13 @@ public enum ReportPeriod: String, CaseIterable, Hashable, Sendable {
             var month = range.lowerBound.month + steps
             while month < 1 { month += 12; year -= 1 }
             while month > 12 { month -= 12; year += 1 }
-            return self.range(containing: LocalDate(year: year, month: month, day: 1), firstWeekday: firstWeekday)
+            return Self.days(ofMonth: month, in: year)
         }
+    }
+
+    /// Every day of a month.
+    private static func days(ofMonth month: Int, in year: Int) -> ClosedRange<LocalDate> {
+        LocalDate(year: year, month: month, day: 1)...LocalDate(year: year, month: month, day: LocalDate.daysIn(month: month, year: year))
     }
 }
 

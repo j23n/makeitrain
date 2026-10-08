@@ -145,10 +145,10 @@ extension CommandReader {
             switch unit {
             case "week":
                 let range = ReportPeriod.week.range(containing: today, firstWeekday: firstWeekday)
-                return (ReportPeriod.week.shift(range, by: back, firstWeekday: firstWeekday), .week, 2)
+                return (ReportPeriod.week.shift(range, by: back), .week, 2)
             case "month":
                 let range = ReportPeriod.month.range(containing: today, firstWeekday: firstWeekday)
-                return (ReportPeriod.month.shift(range, by: back, firstWeekday: firstWeekday), .month, 2)
+                return (ReportPeriod.month.shift(range, by: back), .month, 2)
             case "year":
                 let lastYear = today.year + back
                 return (LocalDate(year: lastYear, month: 1, day: 1)...LocalDate(year: lastYear, month: 12, day: 31), .custom, 2)

@@ -52,7 +52,6 @@ public final class ReportState {
             first,
             period: period,
             today: model.today,
-            firstWeekday: model.firstWeekday,
             ledger: model.ledger,
             resolved: model.resolved,
             now: model.now
@@ -82,7 +81,7 @@ public final class ReportState {
 
     /// The same length of time before or after.
     public func step(_ direction: Int) {
-        show(period.shift(range, by: direction, firstWeekday: model.firstWeekday), period: period)
+        show(period.shift(range, by: direction), period: period)
     }
 
     /// Takes what a typed report says: its days, if it names any, its
@@ -116,7 +115,6 @@ public final class ReportState {
             report,
             period: period,
             today: model.today,
-            firstWeekday: model.firstWeekday,
             ledger: model.ledger,
             resolved: model.resolved,
             now: model.now

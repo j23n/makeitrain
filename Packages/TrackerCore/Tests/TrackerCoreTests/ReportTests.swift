@@ -228,17 +228,17 @@ import Testing
 
     @Test func periodsStepBackAndForward() {
         let week = days(21, 27)
-        #expect(ReportPeriod.week.shift(week, by: -1, firstWeekday: 2) == days(14, 20))
-        #expect(ReportPeriod.week.shift(week, by: 1, firstWeekday: 2) == date(2026, 9, 28)...date(2026, 10, 4))
-        #expect(ReportPeriod.day.shift(days(23, 23), by: 1, firstWeekday: 2) == days(24, 24))
-        #expect(ReportPeriod.custom.shift(days(10, 12), by: 1, firstWeekday: 2) == days(13, 15))
+        #expect(ReportPeriod.week.shift(week, by: -1) == days(14, 20))
+        #expect(ReportPeriod.week.shift(week, by: 1) == date(2026, 9, 28)...date(2026, 10, 4))
+        #expect(ReportPeriod.day.shift(days(23, 23), by: 1) == days(24, 24))
+        #expect(ReportPeriod.custom.shift(days(10, 12), by: 1) == days(13, 15))
 
         let december = date(2026, 12, 1)...date(2026, 12, 31)
         let january = date(2027, 1, 1)...date(2027, 1, 31)
         let february = date(2027, 2, 1)...date(2027, 2, 28)
-        #expect(ReportPeriod.month.shift(december, by: 1, firstWeekday: 2) == january)
-        #expect(ReportPeriod.month.shift(january, by: -1, firstWeekday: 2) == december)
-        #expect(ReportPeriod.month.shift(january, by: 1, firstWeekday: 2) == february)
+        #expect(ReportPeriod.month.shift(december, by: 1) == january)
+        #expect(ReportPeriod.month.shift(january, by: -1) == december)
+        #expect(ReportPeriod.month.shift(january, by: 1) == february)
     }
 
     // MARK: Figures
@@ -249,7 +249,7 @@ import Testing
         var ledger = ledger
         for entry in entries { ledger.merge(entry) }
         let report = Report(request, ledger: ledger, now: now)
-        return ReportComparison(report, period: period, today: today, firstWeekday: 2, ledger: ledger, resolved: ledger.resolvedEntries(), now: now)
+        return ReportComparison(report, period: period, today: today, ledger: ledger, resolved: ledger.resolvedEntries(), now: now)
     }
 
     @Test func averagesTheDaysWithTimeLogged() {

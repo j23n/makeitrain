@@ -137,7 +137,7 @@ struct QueryBar: View {
             Button("This Month") { state.show(ReportPeriod.month.range(containing: today, firstWeekday: first), period: .month) }
             Button("Last Month") {
                 let thisMonth = ReportPeriod.month.range(containing: today, firstWeekday: first)
-                state.show(ReportPeriod.month.shift(thisMonth, by: -1, firstWeekday: first), period: .month)
+                state.show(ReportPeriod.month.shift(thisMonth, by: -1), period: .month)
             }
             Button("This Year") {
                 state.show(LocalDate(year: today.year, month: 1, day: 1)...LocalDate(year: today.year, month: 12, day: 31), period: .custom)

@@ -35,19 +35,17 @@ public struct ReportComparison: Hashable, Sendable {
     }
 
     /// Compares `report`, which covers a `period`, with the period before
-    /// it. `today` decides whether the period is under way; weeks start on
-    /// `firstWeekday`, 1 for Sunday through 7 for Saturday.
+    /// it. `today` decides whether the period is under way.
     public init(
         _ report: Report,
         period: ReportPeriod,
         today: LocalDate,
-        firstWeekday: Int,
         ledger: Ledger,
         resolved: [ResolvedEntry],
         now: Timestamp
     ) {
         let range = report.request.range
-        var previous = period.shift(range, by: -1, firstWeekday: firstWeekday)
+        var previous = period.shift(range, by: -1)
         if range.contains(today), today < range.upperBound {
             let elapsed = today.daysSince1970 - range.lowerBound.daysSince1970
             previous = previous.lowerBound...min(previous.lowerBound.adding(days: elapsed), previous.upperBound)
