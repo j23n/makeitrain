@@ -22,8 +22,6 @@ public final class CommandLineModel {
     public private(set) var reading = CommandReading(text: "")
     /// What Return would change.
     public private(set) var preview: CommandPreview?
-    /// What Option-Return would change.
-    public private(set) var alternatePreview: CommandPreview?
     /// What happened when a line last ran, such as a problem, until the
     /// next keystroke.
     public var message: String?
@@ -64,7 +62,6 @@ public final class CommandLineModel {
         message = nil
         reading = model.read(text)
         preview = nil
-        alternatePreview = nil
         found = []
         switch reading.primary {
         case let .find(query)?:
@@ -73,9 +70,6 @@ public final class CommandLineModel {
             preview = model.preview(command)
         case nil:
             break
-        }
-        if let alternate = reading.alternate {
-            alternatePreview = model.preview(alternate)
         }
         if !text.isEmpty {
             showsToday = false

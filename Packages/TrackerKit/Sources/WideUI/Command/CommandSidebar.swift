@@ -74,7 +74,7 @@ struct CommandSidebar: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(model.isReadOnly)
-                if let alternate = line.reading.alternate, line.alternatePreview != nil {
+                if let alternate = line.reading.alternate {
                     Button {
                         submit(true)
                     } label: {
