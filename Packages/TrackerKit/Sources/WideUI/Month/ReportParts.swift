@@ -478,22 +478,19 @@ struct StatementPanel: View {
     }
 
     private var csvPreview: some View {
-        let text = String(CSVExport.text(for: report, ledger: model.ledger).dropFirst())
+        // The heading and the first two rows.
+        let text = String(CSVExport.text(for: Array(report.entries.prefix(2)), ledger: model.ledger).dropFirst())
         let lines = text.components(separatedBy: "\r\n").filter { !$0.isEmpty }
-        let hours = lines.dropFirst().reduce(0.0) { sum, line in
-            let fields = line.split(separator: ",", omittingEmptySubsequences: false)
-            return sum + (fields.count > 3 ? Double(fields[3]) ?? 0 : 0)
-        }
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                Text("CSV · \(max(lines.count - 1, 0)) rows")
+                Text("CSV · \(report.entries.count) rows")
                     .font(.system(size: 13, weight: .semibold))
                 Spacer()
-                Text("Total hours: ") + Text(String(format: "%.4f", hours)).foregroundColor(Theme.text)
+                Text("Total hours: ") + Text(CSVExport.totalHours(report.entries)).foregroundColor(Theme.text)
             }
             .font(.system(size: 12))
             .foregroundStyle(Theme.text2)
-            Text((lines.prefix(3) + (lines.count > 3 ? ["…"] : [])).joined(separator: "\n"))
+            Text((lines + (report.entries.count > 2 ? ["…"] : [])).joined(separator: "\n"))
                 .font(.system(size: 11, design: .monospaced))
                 .foregroundStyle(Theme.text4)
                 .lineLimit(4)
