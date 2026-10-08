@@ -46,15 +46,14 @@ public final class ReportState {
         self.period = period
         self.grouping = grouping
         let request = ReportRequest(range: range, grouping: grouping)
-        let first = Report(request, ledger: model.ledger, resolved: model.resolved, now: model.now)
+        let first = Report(request, ledger: model.ledger, resolved: model.resolved)
         report = first
         comparison = ReportComparison(
             first,
             period: period,
             today: model.today,
             ledger: model.ledger,
-            resolved: model.resolved,
-            now: model.now
+            resolved: model.resolved
         )
         recompute()
     }
@@ -110,14 +109,13 @@ public final class ReportState {
     /// Works out the report, and with `totals` the year's daily totals too.
     public func recompute(totals: Bool = true) {
         loadedRevision = model.revision
-        report = Report(request, ledger: model.ledger, resolved: model.resolved, now: model.now)
+        report = Report(request, ledger: model.ledger, resolved: model.resolved)
         comparison = ReportComparison(
             report,
             period: period,
             today: model.today,
             ledger: model.ledger,
-            resolved: model.resolved,
-            now: model.now
+            resolved: model.resolved
         )
         guard totals else { return }
         // The year around the range, and a week either side for the month

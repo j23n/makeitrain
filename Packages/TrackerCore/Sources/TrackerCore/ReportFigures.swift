@@ -41,15 +41,14 @@ public struct ReportComparison: Hashable, Sendable {
         period: ReportPeriod,
         today: LocalDate,
         ledger: Ledger,
-        resolved: [ResolvedEntry],
-        now: Timestamp
+        resolved: [ResolvedEntry]
     ) {
         let range = report.request.range
         var previous = period.shift(range, by: -1)
         if range.contains(today), today < range.upperBound {
             let elapsed = today.daysSince1970 - range.lowerBound.daysSince1970
             previous = previous.lowerBound...min(previous.lowerBound.adding(days: elapsed), previous.upperBound)
-            total = report.entries.reduce(0) { $1.entry.day <= today ? $0 + $1.duration(now: now) : $0 }
+            total = report.entries.reduce(0) { $1.entry.day <= today ? $0 + $1.length : $0 }
         } else {
             total = report.total
         }
@@ -61,7 +60,7 @@ public struct ReportComparison: Hashable, Sendable {
         request.range = previous
         let matches = request.filter.matcher(in: ledger)
         previousTotal = resolved.reduce(0) { sum, entry in
-            !entry.isRunning && matches(entry) ? sum + entry.duration(now: now) : sum
+            !entry.isRunning && matches(entry) ? sum + entry.length : sum
         }
     }
 }

@@ -38,7 +38,7 @@ import Testing
             timeZone: "America/New_York", note: "Unassigned", updated: now
         ))
         let range = LocalDate(year: 2026, month: 9, day: 21)...LocalDate(year: 2026, month: 9, day: 27)
-        let csv = CSVExport.text(for: Report(ReportRequest(range: range), ledger: original, now: now), ledger: original)
+        let csv = CSVExport.text(for: Report(ReportRequest(range: range), ledger: original), ledger: original)
 
         let result = try plan(csv)
         #expect(result.problems.isEmpty)

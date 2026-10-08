@@ -81,23 +81,23 @@ public struct Report: Hashable, Sendable {
 
     /// Builds the report from entries already resolved, as the app model
     /// keeps them.
-    public init(_ request: ReportRequest, ledger: Ledger, resolved: [ResolvedEntry], now: Timestamp) {
+    public init(_ request: ReportRequest, ledger: Ledger, resolved: [ResolvedEntry]) {
         self.request = request
         let matching = resolved.filter(request.filter.matcher(in: ledger))
         entries = matching.filter { !$0.isRunning }
         running = matching.first { $0.isRunning }
-        total = entries.reduce(0) { $0 + $1.duration(now: now) }
+        total = entries.reduce(0) { $0 + $1.length }
         doubleCounted = Overlaps.doubleCounted(entries.compactMap { entry in
             entry.end.map { TimeSpan(start: entry.start, end: $0) }
         })
-        groups = Report.groups(entries, request.grouping, ledger, now)
-        daysWorked = Set(entries.filter { $0.duration(now: now) > 0 }.map(\.entry.day)).count
+        groups = Report.groups(entries, request.grouping, ledger)
+        daysWorked = Set(entries.filter { $0.length > 0 }.map(\.entry.day)).count
     }
 
-    private static func groups(_ entries: [ResolvedEntry], _ grouping: ReportRequest.Grouping, _ ledger: Ledger, _ now: Timestamp) -> [ReportGroup] {
+    private static func groups(_ entries: [ResolvedEntry], _ grouping: ReportRequest.Grouping, _ ledger: Ledger) -> [ReportGroup] {
         switch grouping {
         case .project:
-            return projectGroups(entries, ledger, now, titledWithClient: true)
+            return projectGroups(entries, ledger, titledWithClient: true)
         case .client:
             var byClient: [UUID?: [ResolvedEntry]] = [:]
             var unassigned: [ResolvedEntry] = []
@@ -110,7 +110,7 @@ public struct Report: Hashable, Sendable {
             }
             var result = byClient.compactMap { clientID, members -> ReportGroup? in
                 guard let clientID else { return nil }
-                let children = projectGroups(members, ledger, now, titledWithClient: false)
+                let children = projectGroups(members, ledger, titledWithClient: false)
                 return ReportGroup(
                     kind: .client(clientID),
                     title: ledger.clients[clientID]?.name ?? "Unknown client",
@@ -121,7 +121,7 @@ public struct Report: Hashable, Sendable {
             }
             .sorted { $0.title.lowercased() < $1.title.lowercased() }
             if let members = byClient[nil] {
-                let children = projectGroups(members, ledger, now, titledWithClient: false)
+                let children = projectGroups(members, ledger, titledWithClient: false)
                 result.append(ReportGroup(
                     kind: .noClient,
                     title: "No client",
@@ -135,7 +135,7 @@ public struct Report: Hashable, Sendable {
                     kind: .unassigned,
                     title: "Unassigned",
                     color: nil,
-                    milliseconds: unassigned.reduce(0) { $0 + $1.duration(now: now) },
+                    milliseconds: unassigned.reduce(0) { $0 + $1.length },
                     children: []
                 ))
             }
@@ -145,7 +145,7 @@ public struct Report: Hashable, Sendable {
             var byTag: [String: Int64] = [:]
             var untagged: Int64 = 0
             for entry in entries {
-                let duration = entry.duration(now: now)
+                let duration = entry.length
                 if entry.entry.tags.isEmpty {
                     untagged += duration
                 }
@@ -169,10 +169,10 @@ public struct Report: Hashable, Sendable {
         }
     }
 
-    private static func projectGroups(_ entries: [ResolvedEntry], _ ledger: Ledger, _ now: Timestamp, titledWithClient: Bool) -> [ReportGroup] {
+    private static func projectGroups(_ entries: [ResolvedEntry], _ ledger: Ledger, titledWithClient: Bool) -> [ReportGroup] {
         var byProject: [UUID?: Int64] = [:]
         for entry in entries {
-            byProject[entry.entry.projectID, default: 0] += entry.duration(now: now)
+            byProject[entry.entry.projectID, default: 0] += entry.length
         }
         var result = byProject.compactMap { projectID, milliseconds -> ReportGroup? in
             guard let projectID else { return nil }
@@ -189,6 +189,14 @@ public struct Report: Hashable, Sendable {
             result.append(ReportGroup(kind: .unassigned, title: "Unassigned", color: nil, milliseconds: milliseconds, children: []))
         }
         return result
+    }
+}
+
+extension ResolvedEntry {
+    /// Milliseconds from start to end, or 0 while running. Reports leave
+    /// the running timer out, so the time now never changes them.
+    var length: Int64 {
+        end.map { max(0, start.distance(to: $0)) } ?? 0
     }
 }
 

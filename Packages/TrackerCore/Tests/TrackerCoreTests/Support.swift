@@ -149,7 +149,7 @@ extension Changes {
 
 extension Report {
     /// The report of a ledger's entries.
-    init(_ request: ReportRequest, ledger: Ledger, now: Timestamp) {
-        self.init(request, ledger: ledger, resolved: ledger.resolvedEntries(), now: now)
+    init(_ request: ReportRequest, ledger: Ledger) {
+        self.init(request, ledger: ledger, resolved: ledger.resolvedEntries())
     }
 }

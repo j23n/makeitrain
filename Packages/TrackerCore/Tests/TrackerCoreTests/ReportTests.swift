@@ -48,7 +48,7 @@ import Testing
     func report(_ entries: [TimeEntry], _ request: ReportRequest) -> Report {
         var ledger = ledger
         for entry in entries { ledger.merge(entry) }
-        return Report(request, ledger: ledger, now: now)
+        return Report(request, ledger: ledger)
     }
 
     func days(_ first: Int, _ last: Int) -> ClosedRange<LocalDate> {
@@ -198,7 +198,7 @@ import Testing
             entry(3, app, "23T11:00", "23T12:00", tags: ["#7", "#9"]),
         ]
         for entry in entries { ledger.merge(entry) }
-        let result = Report(ReportRequest(range: days(21, 27), grouping: .tag), ledger: ledger, now: now)
+        let result = Report(ReportRequest(range: days(21, 27), grouping: .tag), ledger: ledger)
         func url(_ key: String) -> String? {
             result.issueURL(forTag: key, in: ledger)?.absoluteString
         }
@@ -248,8 +248,8 @@ import Testing
     func comparison(_ entries: [TimeEntry], _ request: ReportRequest, _ period: ReportPeriod, today: LocalDate) -> ReportComparison {
         var ledger = ledger
         for entry in entries { ledger.merge(entry) }
-        let report = Report(request, ledger: ledger, now: now)
-        return ReportComparison(report, period: period, today: today, ledger: ledger, resolved: ledger.resolvedEntries(), now: now)
+        let report = Report(request, ledger: ledger)
+        return ReportComparison(report, period: period, today: today, ledger: ledger, resolved: ledger.resolvedEntries())
     }
 
     @Test func averagesTheDaysWithTimeLogged() {
