@@ -52,8 +52,9 @@ struct EntriesExport: ViewModifier {
                     error = failure.localizedDescription
                 }
             }
-            .onChange(of: model.request) { _, request in
-                // Settings' Export All Entries….
+            .onChange(of: model.request, initial: true) { _, request in
+                // Settings' Export All Entries…, which opens the window
+                // first if it was closed.
                 if request == .exportEntries {
                     model.request = nil
                     save()
