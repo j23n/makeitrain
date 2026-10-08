@@ -1,4 +1,3 @@
-import CoreGraphics
 import CryptoKit
 import EventKit
 import Foundation
@@ -27,14 +26,11 @@ public struct CalendarInfo: Identifiable, Hashable, Sendable {
     public var title: String
     /// The account it's in, such as "iCloud" or "Exchange".
     public var account: String
-    /// A hex color, such as "#4F7CAC".
-    public var color: String
 
-    public init(id: String, title: String, account: String, color: String) {
+    public init(id: String, title: String, account: String) {
         self.id = id
         self.title = title
         self.account = account
-        self.color = color
     }
 }
 
@@ -186,12 +182,10 @@ public final class EventKitCalendars: CalendarProvider {
             .filter { $0.type != .birthday }
             .map { calendar in
                 let source: EKSource? = calendar.source
-                let color: CGColor? = calendar.cgColor
                 return CalendarInfo(
                     id: calendar.calendarIdentifier,
                     title: calendar.title,
-                    account: source?.title ?? "",
-                    color: Self.hex(color)
+                    account: source?.title ?? ""
                 )
             }
     }
@@ -222,19 +216,5 @@ public final class EventKitCalendars: CalendarProvider {
             isDeclined: attendance == .declined,
             isFree: event.availability == .free || event.availability == .unavailable
         )
-    }
-
-    /// A color as hex, such as "#4F7CAC", or gray.
-    private static func hex(_ color: CGColor?) -> String {
-        guard let color,
-              let sRGB = CGColorSpace(name: CGColorSpace.sRGB),
-              let converted = color.converted(to: sRGB, intent: .defaultIntent, options: nil),
-              let components = converted.components,
-              components.count >= 3
-        else { return "#8E8E93" }
-        func byte(_ value: CGFloat) -> Int {
-            Int((min(max(value, 0), 1) * 255).rounded())
-        }
-        return String(format: "#%02X%02X%02X", byte(components[0]), byte(components[1]), byte(components[2]))
     }
 }

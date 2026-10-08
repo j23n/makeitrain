@@ -238,10 +238,10 @@ public enum PreviewData {
     /// Acme's Exchange calendar and a Google calendar for Globex, plus two
     /// personal ones in iCloud.
     public static let calendars = [
-        CalendarInfo(id: "acme", title: "Calendar", account: "jo@acme.example", color: "#0078D4"),
-        CalendarInfo(id: "globex", title: "Globex", account: "Google", color: "#33B679"),
-        CalendarInfo(id: "home", title: "Home", account: "iCloud", color: "#34C759"),
-        CalendarInfo(id: "family", title: "Family", account: "iCloud", color: "#FF9500"),
+        CalendarInfo(id: "acme", title: "Calendar", account: "jo@acme.example"),
+        CalendarInfo(id: "globex", title: "Globex", account: "Google"),
+        CalendarInfo(id: "home", title: "Home", account: "iCloud"),
+        CalendarInfo(id: "family", title: "Family", account: "iCloud"),
     ]
 
     /// Acme's calendar goes to Website redesign and Globex's to Brand refresh.

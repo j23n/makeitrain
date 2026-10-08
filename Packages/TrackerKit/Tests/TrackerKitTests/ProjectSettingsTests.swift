@@ -46,8 +46,8 @@ import TrackerCore
         defer { harness.cleanUp() }
         let calendars = FakeCalendars()
         calendars.list = [
-            CalendarInfo(id: "acme", title: "Calendar", account: "jo@acme.example", color: "#0078D4"),
-            CalendarInfo(id: "globex", title: "Globex", account: "Google", color: "#33B679"),
+            CalendarInfo(id: "acme", title: "Calendar", account: "jo@acme.example"),
+            CalendarInfo(id: "globex", title: "Globex", account: "Google"),
         ]
         let model = harness.model(calendars: calendars)
         await model.start()

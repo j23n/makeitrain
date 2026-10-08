@@ -53,9 +53,9 @@ final class FakeCalendars: CalendarProvider {
             CalendarLink(calendarID: "gone", title: "Old client", account: "Exchange", projectID: UUID()),
         ]
         let calendars = [
-            CalendarInfo(id: "new-acme", title: "Calendar", account: "jo@acme.example", color: "#0078D4"),
-            CalendarInfo(id: "globex", title: "Globex, renamed", account: "Google", color: "#33B679"),
-            CalendarInfo(id: "home", title: "Home", account: "iCloud", color: "#34C759"),
+            CalendarInfo(id: "new-acme", title: "Calendar", account: "jo@acme.example"),
+            CalendarInfo(id: "globex", title: "Globex, renamed", account: "Google"),
+            CalendarInfo(id: "home", title: "Home", account: "iCloud"),
         ]
         let relinked = CalendarLink.relinked(links, to: calendars)
         #expect(relinked.map(\.calendarID) == ["new-acme", "globex", "gone"])
@@ -68,8 +68,8 @@ final class FakeCalendars: CalendarProvider {
         defer { harness.cleanUp() }
         let calendars = FakeCalendars()
         calendars.list = [
-            CalendarInfo(id: "acme", title: "Calendar", account: "jo@acme.example", color: "#0078D4"),
-            CalendarInfo(id: "home", title: "Home", account: "iCloud", color: "#34C759"),
+            CalendarInfo(id: "acme", title: "Calendar", account: "jo@acme.example"),
+            CalendarInfo(id: "home", title: "Home", account: "iCloud"),
         ]
         let kickoff = CalendarEntryID.forEvent(externalID: "kickoff", occurrence: nil)
         calendars.sample = [
