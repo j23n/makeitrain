@@ -293,7 +293,7 @@ struct UsualEnd {
 /// on the day it starts, as in reports.
 public struct DayTotals: Hashable, Sendable {
     /// Stopped entries' time by day and project.
-    public private(set) var days: [LocalDate: [UUID?: Int64]] = [:]
+    private var days: [LocalDate: [UUID?: Int64]] = [:]
     /// The running timer, counted up to the time asked about.
     public private(set) var running: ResolvedEntry?
 
@@ -317,17 +317,13 @@ public struct DayTotals: Hashable, Sendable {
         return result
     }
 
-    /// A day's time, for some projects or all, the running timer up to
-    /// `now` if `now` is given. `nil` in `projects` stands for unassigned
-    /// entries.
-    public func total(on day: LocalDate, now: Timestamp? = nil, projects: Set<UUID?>? = nil) -> Int64 {
-        self.projects(on: day, now: now).reduce(0) { sum, item in
-            projects.map { $0.contains(item.key) } ?? true ? sum + item.value : sum
-        }
+    /// A day's time, the running timer up to `now` if `now` is given.
+    public func total(on day: LocalDate, now: Timestamp? = nil) -> Int64 {
+        projects(on: day, now: now).values.reduce(0, +)
     }
 
-    /// The time on some days, as `total(on:now:projects:)` counts it.
-    public func total(in range: ClosedRange<LocalDate>, now: Timestamp? = nil, projects: Set<UUID?>? = nil) -> Int64 {
-        range.days.reduce(0) { $0 + total(on: $1, now: now, projects: projects) }
+    /// The time on some days, as `total(on:now:)` counts it.
+    public func total(in range: ClosedRange<LocalDate>, now: Timestamp? = nil) -> Int64 {
+        range.days.reduce(0) { $0 + total(on: $1, now: now) }
     }
 }

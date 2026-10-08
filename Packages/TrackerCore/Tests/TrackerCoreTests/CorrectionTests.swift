@@ -162,7 +162,6 @@ import Testing
         #expect(totals.projects(on: friday) == [F.bookings: 195 * minute])
         #expect(totals.total(on: monday) == 60 * minute)
         #expect(totals.total(on: monday, now: F.at("10:40")) == 130 * minute)
-        #expect(totals.total(on: monday, now: F.at("10:40"), projects: [F.inHouse]) == 60 * minute)
         #expect(totals.total(in: week) == (80 + 195) * minute)
     }
 
