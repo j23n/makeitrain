@@ -419,7 +419,7 @@ struct DataSettings: View {
     }
 
     private var backupDetail: String {
-        model.backupNames.first ?? "None yet"
+        model.latestBackup ?? "None yet"
     }
 
     @ViewBuilder

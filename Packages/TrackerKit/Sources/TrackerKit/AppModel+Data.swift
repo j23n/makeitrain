@@ -53,16 +53,22 @@ extension AppModel {
         return files
     }
 
-    /// The backups kept on this device, newest first.
-    public var backupNames: [String] {
-        ((try? Backups(root: backupsFolder).names()) ?? []).reversed()
+    /// The newest backup kept on this device, if there's one.
+    public var latestBackup: String? {
+        try? Backups(root: backupsFolder).names().last
     }
 
     /// Writes a backup now, named for today, as Settings' Back Up Now does.
     public func backUpNow() async throws {
+        try await writeBackup("by hand")
+    }
+
+    /// Writes a backup of all the data, named for today and `label`, such
+    /// as "2026-09-23 by hand", off the main thread.
+    func writeBackup(_ label: String) async throws {
         let backups = Backups(root: backupsFolder)
         let snapshot = ledger
-        let name = "\(today) by hand"
+        let name = "\(today) \(label)"
         _ = try await Task.detached { try backups.write(snapshot, named: name) }.value
     }
 }

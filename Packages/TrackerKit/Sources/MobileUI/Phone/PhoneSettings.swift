@@ -73,7 +73,7 @@ struct PhoneSettings: View {
                     } label: {
                         LabeledContent("Files", value: filesSummary)
                     }
-                    LabeledContent("Latest backup", value: model.backupNames.first ?? "None yet")
+                    LabeledContent("Latest backup", value: model.latestBackup ?? "None yet")
                     Button(backingUp ? "Backing Up…" : "Back Up Now") {
                         backingUp = true
                         Task {
