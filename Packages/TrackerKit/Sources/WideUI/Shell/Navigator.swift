@@ -65,6 +65,8 @@ enum Screen: Hashable {
 @Observable
 final class Navigator {
     private(set) var screen: Screen
+    /// An entry for the week shown next to select, as one "find" turned up.
+    var entryToSelect: UUID?
     private var back: [Screen] = []
     private var forward: [Screen] = []
 

@@ -146,3 +146,53 @@ public struct EntryLineGuide: View {
         return "\(start)–\(Format.time(end, zone: parts.zone)), \(Format.duration(parts.start.distance(to: end)))"
     }
 }
+
+/// Something to add to a line, as a button's label: outlined, with a
+/// project's color, and highlighted with ⇥ when Tab takes it.
+struct ChipLabel: View {
+    let title: String
+    var tint: ProjectTint?
+    var isTag = false
+    var isHighlighted = false
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if let tint {
+                TintDot(tint, size: 7)
+            }
+            Text(title)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            if isHighlighted {
+                KeyCap("⇥")
+            }
+        }
+        .font(.system(size: 12.5))
+        .foregroundStyle(isTag ? Theme.tag : Theme.text)
+        .padding(.horizontal, 10)
+        .frame(height: 28)
+        .background(Capsule().fill(isHighlighted ? Theme.accentFill : Color.clear))
+        .overlay(Capsule().strokeBorder(isHighlighted ? Theme.accentLine : Theme.strongLine))
+        .contentShape(Capsule())
+        .frame(maxWidth: Sidebar.width - 48, alignment: .leading)
+    }
+}
+
+extension LineSuggestion {
+    /// The color of the project or palette color it names, if it names one.
+    func tint(in ledger: Ledger) -> ProjectTint? {
+        switch kind {
+        case let .project(id):
+            ledger.tint(ofProject: id)
+        case let .color(hex):
+            ProjectTint(hex: hex)
+        default:
+            nil
+        }
+    }
+
+    /// What a chip for it says: its title, and its detail after a dot.
+    var chipTitle: String {
+        detail.isEmpty ? title : "\(title) · \(detail)"
+    }
+}

@@ -527,6 +527,7 @@ struct DayColumn: View {
                 .offset(x: width - 18, y: max(top - 8, 0))
                 .zIndex(4)
                 .onTapGesture {
+                    week.selectedEntry = nil
                     week.selectedCorrection = preview.id
                 }
         }

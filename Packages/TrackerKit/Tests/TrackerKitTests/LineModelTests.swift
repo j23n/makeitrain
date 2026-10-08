@@ -45,6 +45,30 @@ import TrackerCore
         #expect(line.suggestions.map(\.title) == ["Website"])
     }
 
+    @Test func offersLinesRunLatelyThenWordsToAdd() async throws {
+        let harness = Harness()
+        defer { harness.cleanUp() }
+        let model = harness.model()
+        await model.start()
+        model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
+        model.preferences.remember("web review")
+        let line = CommandLineModel(model: model)
+
+        #expect(line.chips.map(\.title) == ["web review"])
+        line.apply(line.chips[0])
+        #expect(line.text == "web review")
+
+        line.text = "web"
+        let chips = line.chips
+        #expect(chips.map(\.title) == ["Website", "−15m", "#"])
+        #expect(chips[0].isHighlighted)
+        #expect(chips[2].isTag)
+        line.apply(chips[0])
+        #expect(line.text == "Website ")
+        line.apply(line.chips.first { $0.title == "#" }!)
+        #expect(line.text == "Website #")
+    }
+
     @Test func readsAnEntrysLineAndAppliesIt() async throws {
         let harness = Harness()
         defer { harness.cleanUp() }

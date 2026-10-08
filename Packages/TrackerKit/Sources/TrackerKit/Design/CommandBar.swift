@@ -196,6 +196,103 @@ public final class CommandLineModel {
     }
 }
 
+/// Something to add to a line with a click or a tap: what could replace
+/// the word being typed, a start, a time ago, a tag, or the completion of a
+/// project's name; or, with nothing typed, a line run lately.
+public struct LineChip: Identifiable {
+    public enum Action {
+        case append(String)
+        case replace(String)
+        case complete
+        /// Takes the line's suggestion at this index.
+        case suggestion(Int)
+    }
+
+    public var id: String
+    public var title: String
+    public var action: Action
+    public var tint: ProjectTint?
+    public var isTag = false
+    /// Whether it's the suggestion Tab takes.
+    public var isHighlighted = false
+}
+
+extension CommandLineModel {
+    /// What to offer under the line: the suggestions for the word being
+    /// typed, a start from when today's last entry ended, a time ago, a tag
+    /// and the completion; with nothing typed, the lines run lately.
+    public var chips: [LineChip] {
+        guard !text.isEmpty else {
+            var seen: Set<String> = []
+            return model.preferences.history.reversed()
+                .filter { seen.insert($0.lowercased()).inserted }
+                .prefix(4)
+                .map { LineChip(id: "again " + $0, title: $0, action: .replace($0)) }
+        }
+        var chips = suggestions.enumerated().map { index, suggestion -> LineChip in
+            var tint: ProjectTint?
+            switch suggestion.kind {
+            case let .project(id):
+                tint = model.ledger.tint(ofProject: id)
+            case let .color(hex):
+                tint = ProjectTint(hex: hex)
+            default:
+                tint = nil
+            }
+            let title = suggestion.detail.isEmpty ? suggestion.title : "\(suggestion.title) · \(suggestion.detail)"
+            return LineChip(
+                id: "suggestion \(index) \(suggestion.title)",
+                title: title,
+                action: .suggestion(index),
+                tint: tint,
+                isTag: suggestion.kind == .tag,
+                isHighlighted: index == highlightedSuggestion
+            )
+        }
+        let words = text.lowercased().split(separator: " ")
+        if let end = lastEndToday, !words.contains("from") {
+            let time = Format.time(end, zone: model.environment.timeZone())
+            chips.append(LineChip(id: "from", title: "from \(time)", action: .append("from \(time)")))
+        }
+        if !text.contains("-") {
+            chips.append(LineChip(id: "ago", title: "−15m", action: .append("-15m")))
+        }
+        chips.append(LineChip(id: "tag", title: "#", action: .append("#"), isTag: true))
+        if let completion = reading.completion {
+            let projectID = model.resolved.first { $0.id == completion.entryID }?.entry.projectID
+            chips.append(LineChip(
+                id: "complete",
+                title: "\(completion.text), from \(Format.weekday(completion.day))",
+                action: .complete,
+                tint: projectID.map { model.ledger.tint(ofProject: $0) }
+            ))
+        }
+        return chips
+    }
+
+    /// Adds a chip to the line, or puts it in the line's place.
+    public func apply(_ chip: LineChip) {
+        switch chip.action {
+        case let .append(words):
+            text = text.isEmpty || text.hasSuffix(" ") ? text + words : text + " " + words
+            cursor = nil
+        case let .replace(line):
+            text = line
+            cursor = nil
+        case .complete:
+            _ = complete()
+        case let .suggestion(index):
+            acceptSuggestion(at: index)
+        }
+    }
+
+    /// When today's last finished entry ended, for "from".
+    private var lastEndToday: Timestamp? {
+        let today = model.today
+        return model.resolved.filter { $0.entry.day == today && !$0.isRunning }.compactMap(\.end).max()
+    }
+}
+
 /// What a line would do, under the command line: the action, with its
 /// key, and what it changes, or why it can't.
 public struct CommandPreviewView: View {

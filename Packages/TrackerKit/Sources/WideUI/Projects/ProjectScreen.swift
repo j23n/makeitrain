@@ -16,6 +16,7 @@ struct ProjectScreen: View {
     @State private var removing: ProjectOverview.Tag?
     @FocusState private var renaming: Bool
     @Environment(\.undoManager) private var undoManager
+    @Environment(\.commandSidebarShown) private var commandSidebarShown
 
     private var project: Project? {
         model.ledger.projects[projectID].flatMap { $0.isDeleted ? nil : $0 }
@@ -40,8 +41,10 @@ struct ProjectScreen: View {
                         .padding(.horizontal, 28)
                         .padding(.vertical, 22)
                     }
-                    ProjectSettingsPanel(model: model, project: project, navigator: navigator)
-                        .frame(width: 380)
+                    if !commandSidebarShown {
+                        ProjectSettingsPanel(model: model, project: project, navigator: navigator)
+                            .frame(width: Sidebar.width)
+                    }
                 }
             }
             .onAppear(perform: load)

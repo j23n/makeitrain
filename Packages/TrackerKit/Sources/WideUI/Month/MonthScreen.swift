@@ -14,6 +14,7 @@ struct MonthScreen: View {
     let navigator: Navigator
     let anchor: LocalDate
     @State private var state: ReportState
+    @Environment(\.commandSidebarShown) private var commandSidebarShown
     @State private var cursor: LocalDate
     @FocusState private var focused: Bool
 
@@ -43,8 +44,10 @@ struct MonthScreen: View {
                     .padding(.top, 20)
                     .padding(.bottom, 28)
                 }
-                StatementPanel(model: model, state: state, navigator: navigator)
-                    .frame(width: 400)
+                if !commandSidebarShown {
+                    StatementPanel(model: model, state: state, navigator: navigator)
+                        .frame(width: 400)
+                }
             }
         }
         .focusable()
@@ -259,6 +262,7 @@ struct YearScreen: View {
     let navigator: Navigator
     let year: Int
     @State private var state: ReportState
+    @Environment(\.commandSidebarShown) private var commandSidebarShown
 
     init(model: AppModel, navigator: Navigator, year: Int) {
         self.model = model
@@ -290,8 +294,10 @@ struct YearScreen: View {
                     .padding(.top, 20)
                     .padding(.bottom, 28)
                 }
-                StatementPanel(model: model, state: state, navigator: navigator)
-                    .frame(width: 400)
+                if !commandSidebarShown {
+                    StatementPanel(model: model, state: state, navigator: navigator)
+                        .frame(width: 400)
+                }
             }
         }
         .onChange(of: year) { _, year in

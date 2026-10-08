@@ -2,9 +2,9 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 
-/// What needs correcting on the days shown, beside them: a card for each,
-/// the selected one with what its suggestion changes, and accepting every
-/// suggestion at once.
+/// What needs correcting on the days shown, in the sidebar while there's
+/// anything: a card for each, the selected one with what its suggestion
+/// changes, and accepting every suggestion at once.
 struct CorrectionsPanel: View {
     let model: AppModel
     let week: WeekModel
@@ -27,18 +27,7 @@ struct CorrectionsPanel: View {
                     }
                 }
             }
-            if week.previews.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle")
-                        .font(.system(size: 28))
-                        .foregroundStyle(Theme.ok)
-                    Text("Nothing to correct")
-                        .font(.system(size: 13, weight: .semibold))
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.top, 40)
-                Spacer()
-            } else {
+            if !week.previews.isEmpty {
                 ScrollViewReader { proxy in
                     ScrollView {
                         VStack(spacing: 10) {
@@ -148,9 +137,6 @@ struct CorrectionCard: View {
         .contentShape(RoundedRectangle(cornerRadius: 12))
         .onTapGesture {
             week.selectedCorrection = preview.id
-            if let id = correction.entryIDs.first {
-                week.selectedEntry = id
-            }
         }
     }
 

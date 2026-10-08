@@ -7,8 +7,15 @@ enum WeekSpan {
     case day, week
 }
 
+/// What the week's sidebar shows.
+private enum WeekSide: Equatable {
+    case entry(UUID)
+    case corrections
+}
+
 /// A week, or a day, on an hour grid, with what needs correcting shown in
-/// place and listed beside it, and the selected entry as a line to edit.
+/// place, and beside it the selected entry or, when there's no selection,
+/// what needs correcting.
 struct WeekScreen: View {
     let model: AppModel
     let navigator: Navigator
@@ -16,7 +23,11 @@ struct WeekScreen: View {
     let span: WeekSpan
     @State private var week: WeekModel
     @FocusState private var focused: Bool
+    /// Changes when Return should put the keyboard in the selected entry's
+    /// line.
+    @State private var lineFocusRequest = 0
     @Environment(\.undoManager) private var undoManager
+    @Environment(\.commandSidebarShown) private var commandSidebarShown
 
     init(model: AppModel, navigator: Navigator, anchor: LocalDate, span: WeekSpan) {
         self.model = model
@@ -51,6 +62,16 @@ struct WeekScreen: View {
         }
     }
 
+    /// What the sidebar shows: the selected entry, or else what needs
+    /// correcting when anything does. Nothing while the command line has it.
+    private var side: WeekSide? {
+        guard !commandSidebarShown else { return nil }
+        if let id = week.selectedEntry, model.ledger.entries[id].map({ !$0.isDeleted }) == true {
+            return .entry(id)
+        }
+        return week.previews.isEmpty ? nil : .corrections
+    }
+
     var body: some View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 14) {
@@ -58,31 +79,58 @@ struct WeekScreen: View {
                 WeekCanvas(model: model, week: week, days: shownDays) {
                     focused = true
                 }
-                LineEditor(model: model, entryID: week.selectedEntry)
             }
             .padding(.top, 18)
             .padding(.horizontal, 24)
             .padding(.bottom, 20)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            CorrectionsPanel(model: model, week: week)
-                .frame(width: 380)
+            switch side {
+            case let .entry(id)?:
+                EntryPanel(model: model, entryID: id, focusRequest: lineFocusRequest) { copy in
+                    week.selectedEntry = copy
+                } close: {
+                    week.selectedEntry = nil
+                    focused = true
+                }
+                .transition(.move(edge: .trailing))
+            case .corrections?:
+                CorrectionsPanel(model: model, week: week)
+                    .frame(width: Sidebar.width)
+                    .transition(.move(edge: .trailing))
+            case nil:
+                EmptyView()
+            }
         }
+        .animation(.easeOut(duration: 0.15), value: side)
         .focusable()
         .focusEffectDisabled()
         .focused($focused)
         .onKeyPress(keys: ["j", "k"]) { press in
             guard !isEditingText() else { return .ignored }
+            week.selectedEntry = nil
             week.moveSelection(by: press.key == "j" ? 1 : -1)
             return .handled
         }
         .onKeyPress(.return) {
             guard !isEditingText() else { return .ignored }
-            week.acceptSelected(undoManager: undoManager)
+            switch side {
+            case .entry?:
+                lineFocusRequest += 1
+            case .corrections?:
+                week.acceptSelected(undoManager: undoManager)
+            case nil:
+                return .ignored
+            }
             return .handled
         }
         .onKeyPress(.tab) {
-            guard !isEditingText() else { return .ignored }
+            guard !isEditingText(), side == .corrections else { return .ignored }
             week.skipSelected()
+            return .handled
+        }
+        .onKeyPress(.escape) {
+            guard !isEditingText(), week.selectedEntry != nil else { return .ignored }
+            week.selectedEntry = nil
             return .handled
         }
         .onKeyPress(.leftArrow) {
@@ -103,6 +151,11 @@ struct WeekScreen: View {
         }
         .onChange(of: model.preferences.skippedCorrections) {
             week.refresh(force: true)
+        }
+        .onChange(of: navigator.entryToSelect, initial: true) { _, id in
+            guard let id else { return }
+            week.selectedEntry = id
+            navigator.entryToSelect = nil
         }
         .onAppear {
             focused = true
@@ -220,110 +273,6 @@ struct WeekScreen: View {
                 .font(.system(size: 17, weight: .semibold))
                 .monospacedDigit()
                 .fixedSize()
-        }
-    }
-}
-
-/// The selected entry as a line, to change it by typing: Return applies
-/// the line, Escape puts it back. While it's edited, what could replace the
-/// word being typed shows under it, and what the line reads as.
-struct LineEditor: View {
-    let model: AppModel
-    let entryID: UUID?
-    @State private var line: EntryLineModel
-    @State private var editing = false
-    @Environment(\.undoManager) private var undoManager
-
-    init(model: AppModel, entryID: UUID?) {
-        self.model = model
-        self.entryID = entryID
-        _line = State(initialValue: EntryLineModel(model: model))
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 14) {
-                Text("Selected")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Theme.text3)
-                    .frame(width: 52, alignment: .leading)
-                if let entry = line.entry {
-                    HStack(spacing: 10) {
-                        CommandField(
-                            text: Binding(get: { line.text }, set: { line.text = $0 }),
-                            placeholder: "",
-                            reading: model.read(line.text),
-                            ledger: model.ledger,
-                            fontSize: 13.5,
-                            cursorRequest: line.cursorRequest,
-                            cursor: line.requestedCursor,
-                            onSubmit: { _ in
-                                if line.apply(undoManager: undoManager) {
-                                    line.revert()
-                                }
-                            },
-                            onTab: { line.acceptSuggestion() },
-                            onUp: { line.moveSuggestion(by: -1) },
-                            onDown: { line.moveSuggestion(by: 1) },
-                            onCancel: { line.revert() },
-                            onCursorChange: { line.cursor = $0 },
-                            onFocusChange: { editing = $0 }
-                        )
-                        .frame(height: 22)
-                        Text(Format.duration(model.duration(of: entry)))
-                            .font(.system(size: 13))
-                            .monospacedDigit()
-                            .foregroundStyle(Theme.text2)
-                    }
-                    .padding(.horizontal, 10)
-                    .frame(height: 38)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Theme.field))
-                    .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(line.refused ? Theme.amber : editing ? Theme.accent : Theme.strongLine, lineWidth: editing || line.refused ? 1.5 : 1))
-                    HStack(spacing: 6) {
-                        KeyCap("⏎")
-                        Text("apply")
-                        KeyCap("esc")
-                        Text("revert")
-                    }
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.text2)
-                    .fixedSize()
-                } else {
-                    Text("Select an entry to edit it here.")
-                        .font(.system(size: 12.5))
-                        .foregroundStyle(Theme.text3)
-                        .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
-                }
-            }
-            if line.entry != nil, editing || line.refused {
-                VStack(alignment: .leading, spacing: 8) {
-                    // The row stays while suggestions come and go, so the
-                    // line above doesn't move.
-                    Color.clear
-                        .frame(height: 24)
-                        .overlay(alignment: .leading) {
-                            if !line.suggestions.isEmpty {
-                                SuggestionStrip(suggestions: line.suggestions, highlighted: line.highlightedSuggestion, ledger: model.ledger) { index in
-                                    line.acceptSuggestion(at: index)
-                                }
-                            }
-                        }
-                    EntryLineGuide(model: model, line: line)
-                }
-                .padding(.leading, 66)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Theme.panel))
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.line))
-        .onChange(of: entryID, initial: true) {
-            line.show(entryID)
-        }
-        .onChange(of: model.revision) {
-            if !editing {
-                line.revert()
-            }
         }
     }
 }

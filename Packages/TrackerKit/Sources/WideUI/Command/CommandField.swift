@@ -185,7 +185,11 @@ extension CommandField: NSViewRepresentable {
             coordinator.lastFocusRequest = focusRequest
             DispatchQueue.main.async {
                 field.window?.makeKeyAndOrderFront(nil)
-                field.window?.makeFirstResponder(field)
+                // A field being edited keeps its insertion point, rather
+                // than having its line selected again.
+                if field.currentEditor() == nil {
+                    field.window?.makeFirstResponder(field)
+                }
             }
         }
     }

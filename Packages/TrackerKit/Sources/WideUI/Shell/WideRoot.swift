@@ -4,7 +4,8 @@ import TrackerKit
 
 /// A wide window, on the Mac or an iPad: a bar with the zoom, the running
 /// timer and the command line, over the day, week, month, year or
-/// projects. The Mac's main window and the iPad's wide windows wrap it in
+/// projects, and while the command line is used, a sidebar with what it
+/// would do. The Mac's main window and the iPad's wide windows wrap it in
 /// what each does on its own, such as importing.
 public struct WideRoot<Trailing: View>: View {
     let model: AppModel
@@ -17,6 +18,7 @@ public struct WideRoot<Trailing: View>: View {
     @State private var line: CommandLineModel
     @State private var commandFocused = false
     @State private var focusRequest = 0
+    @Environment(\.undoManager) private var undoManager
 
     public init(model: AppModel, leadingInset: CGFloat = 0, @ViewBuilder trailing: () -> Trailing) {
         self.model = model
@@ -35,17 +37,26 @@ public struct WideRoot<Trailing: View>: View {
                 commandFocused: $commandFocused,
                 focusRequest: focusRequest,
                 leadingInset: leadingInset,
-                trailing: trailing
+                trailing: trailing,
+                submit: { submit(alternate: $0) },
+                cancel: cancel
             )
-            content
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        .overlay(alignment: .top) {
-            if commandFocused, showsDropdown {
-                CommandDropdown(line: line)
-                    .padding(.top, 48)
-                    .transition(.opacity)
+            HStack(spacing: 0) {
+                content
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .environment(\.commandSidebarShown, showsCommandSidebar)
+                if showsCommandSidebar {
+                    CommandSidebar(
+                        line: line,
+                        submit: { submit(alternate: $0) },
+                        focus: { focusRequest += 1 },
+                        close: cancel,
+                        show: { show($0) }
+                    )
+                    .transition(.move(edge: .trailing))
+                }
             }
+            .animation(.easeOut(duration: 0.15), value: showsCommandSidebar)
         }
         .background(Theme.background)
         .foregroundStyle(Theme.text)
@@ -79,8 +90,37 @@ public struct WideRoot<Trailing: View>: View {
         }
     }
 
-    private var showsDropdown: Bool {
-        !line.text.isEmpty || line.showsToday || line.message != nil
+    /// Whether the sidebar shows the command line: while it has the
+    /// keyboard, a line, today's entries or what went wrong.
+    private var showsCommandSidebar: Bool {
+        commandFocused || !line.text.isEmpty || line.showsToday || line.message != nil
+    }
+
+    /// Runs the line, as Return does, or Option-Return with `alternate`.
+    private func submit(alternate: Bool) {
+        if line.submit(alternate: alternate, undoManager: undoManager) {
+            finish()
+        }
+    }
+
+    /// Clears the line and leaves it, as Escape does.
+    private func cancel() {
+        line.clear()
+        finish()
+    }
+
+    /// Shows an entry on its week, or its day when a day is shown, selected.
+    private func show(_ entry: ResolvedEntry) {
+        let day = entry.entry.day
+        navigator.go(navigator.screen.zoom == .day ? .day(day) : .week(day))
+        navigator.entryToSelect = entry.id
+        cancel()
+    }
+
+    /// Leaves the command line, so keys go back to the screen.
+    private func finish() {
+        endTextEditing()
+        commandFocused = false
     }
 
     @ViewBuilder
@@ -137,6 +177,10 @@ struct TopBar<Trailing: View>: View {
     let focusRequest: Int
     let leadingInset: CGFloat
     let trailing: Trailing
+    /// Runs the line, or with `alternate` what it could also mean.
+    let submit: (_ alternate: Bool) -> Void
+    /// Clears the line and leaves it.
+    let cancel: () -> Void
     @Environment(\.undoManager) private var undoManager
 
     var body: some View {
@@ -207,18 +251,11 @@ struct TopBar<Trailing: View>: View {
                 focusRequest: focusRequest,
                 cursorRequest: line.cursorRequest,
                 cursor: line.requestedCursor,
-                onSubmit: { alternate in
-                    if line.submit(alternate: alternate, undoManager: undoManager) {
-                        finish()
-                    }
-                },
+                onSubmit: submit,
                 onTab: { line.acceptSuggestion() || line.complete() },
                 onUp: { line.moveSuggestion(by: -1) || line.previousLine() },
                 onDown: { line.moveSuggestion(by: 1) || line.nextLine() },
-                onCancel: {
-                    line.clear()
-                    finish()
-                },
+                onCancel: cancel,
                 onCursorChange: { line.cursor = $0 },
                 onFocusChange: { focused in commandFocused = focused }
             )
@@ -245,50 +282,5 @@ struct TopBar<Trailing: View>: View {
         .background(RoundedRectangle(cornerRadius: 9).fill(Theme.field))
         .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(commandFocused ? Theme.accent : Theme.strongLine, lineWidth: commandFocused ? 1.5 : 1))
         .disabled(model.isReadOnly)
-    }
-
-    /// Leaves the command line, so keys go back to the screen.
-    private func finish() {
-        endTextEditing()
-        commandFocused = false
-    }
-}
-
-/// What the line in the top bar would do, dropping down under it.
-struct CommandDropdown: View {
-    let line: CommandLineModel
-
-    var body: some View {
-        VStack(spacing: 0) {
-            if !line.suggestions.isEmpty {
-                SuggestionStrip(suggestions: line.suggestions, highlighted: line.highlightedSuggestion, ledger: line.model.ledger) { index in
-                    line.acceptSuggestion(at: index)
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                Divider().overlay(Theme.line)
-            }
-            CommandPreviewView(line: line)
-            if case .find? = line.reading.primary {
-                EntryList(model: line.model, entries: Array(line.found.prefix(12)))
-            } else if line.showsToday {
-                EntryList(model: line.model, entries: Array(line.todaysEntries.prefix(12)))
-            }
-            // Tab takes a suggestion first.
-            if let completion = line.reading.completion, line.suggestions.isEmpty {
-                Divider().overlay(Theme.line)
-                HStack {
-                    KeyHint("⇥", "\(completion.text), from \(Format.weekday(completion.day))")
-                    Spacer()
-                }
-                .padding(.horizontal, 14)
-                .frame(height: 30)
-            }
-        }
-        .frame(width: 560)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Theme.popover))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.strongLine))
-        .shadow(color: .black.opacity(0.25), radius: 20, y: 10)
     }
 }

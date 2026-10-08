@@ -305,7 +305,7 @@ struct PhoneCommandSheet: View {
     /// a start, a time ago, a tag, and the completion of a project's name.
     /// With nothing typed, the lines run lately.
     private var additions: some View {
-        let chips = self.chips
+        let chips = line.chips
         return Group {
             if !chips.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
@@ -315,7 +315,8 @@ struct PhoneCommandSheet: View {
                     FlowLayout(spacing: 8) {
                         ForEach(chips) { chip in
                             Button {
-                                apply(chip)
+                                line.apply(chip)
+                                router.focusRequest += 1
                             } label: {
                                 HStack(spacing: 6) {
                                     if let tint = chip.tint {
@@ -342,85 +343,6 @@ struct PhoneCommandSheet: View {
                 .overlay(alignment: .top) { Rectangle().fill(Theme.line).frame(height: 1) }
             }
         }
-    }
-
-    private struct Chip: Identifiable {
-        enum Action {
-            case append(String)
-            case replace(String)
-            case complete
-            /// Takes the line's suggestion at this index.
-            case suggestion(Int)
-        }
-
-        var id: String
-        var title: String
-        var action: Action
-        var tint: ProjectTint?
-        var isTag = false
-    }
-
-    private var chips: [Chip] {
-        guard !line.text.isEmpty else {
-            var seen: Set<String> = []
-            return model.preferences.history.reversed()
-                .filter { seen.insert($0.lowercased()).inserted }
-                .prefix(4)
-                .map { Chip(id: "again " + $0, title: $0, action: .replace($0)) }
-        }
-        var chips: [Chip] = line.suggestions.enumerated().map { index, suggestion -> Chip in
-            var tint: ProjectTint?
-            switch suggestion.kind {
-            case let .project(id):
-                tint = model.ledger.tint(ofProject: id)
-            case let .color(hex):
-                tint = ProjectTint(hex: hex)
-            default:
-                tint = nil
-            }
-            let title = suggestion.detail.isEmpty ? suggestion.title : "\(suggestion.title) · \(suggestion.detail)"
-            return Chip(id: "suggestion \(index) \(suggestion.title)", title: title, action: .suggestion(index), tint: tint, isTag: suggestion.kind == .tag)
-        }
-        let words = line.text.lowercased().split(separator: " ")
-        if let end = lastEndToday, !words.contains("from") {
-            let time = Format.time(end, zone: model.environment.timeZone())
-            chips.append(Chip(id: "from", title: "from \(time)", action: .append("from \(time)")))
-        }
-        if !line.text.contains("-") {
-            chips.append(Chip(id: "ago", title: "−15m", action: .append("-15m")))
-        }
-        chips.append(Chip(id: "tag", title: "#", action: .append("#"), isTag: true))
-        if let completion = line.reading.completion {
-            let projectID = model.resolved.first { $0.id == completion.entryID }?.entry.projectID
-            chips.append(Chip(
-                id: "complete",
-                title: "\(completion.text), from \(Format.weekday(completion.day))",
-                action: .complete,
-                tint: projectID.map { model.ledger.tint(ofProject: $0) }
-            ))
-        }
-        return chips
-    }
-
-    /// When the last entry today that's done ended, for "from".
-    private var lastEndToday: Timestamp? {
-        let today = model.today
-        return model.resolved.filter { $0.entry.day == today && !$0.isRunning }.compactMap(\.end).max()
-    }
-
-    private func apply(_ chip: Chip) {
-        switch chip.action {
-        case let .append(words):
-            let text = line.text
-            line.text = text.isEmpty || text.hasSuffix(" ") ? text + words : text + " " + words
-        case let .replace(text):
-            line.text = text
-        case .complete:
-            _ = line.complete()
-        case let .suggestion(index):
-            line.acceptSuggestion(at: index)
-        }
-        router.focusRequest += 1
     }
 
     // MARK: Report
