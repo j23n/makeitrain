@@ -30,7 +30,7 @@ final class FakeCloud: CloudProvider {
 
     func documentsFolder() async -> URL? { isAvailable ? folder : nil }
     func fileAccess() -> any FileAccess { LocalFileAccess() }
-    func startWatching(folder: URL, onChange: @escaping (CloudSnapshot) -> Void) { self.onChange = onChange }
+    func startWatching(onChange: @escaping (CloudSnapshot) -> Void) { self.onChange = onChange }
     func stopWatching() { onChange = nil }
     func conflictVersions(of file: URL) async -> [Data] { [] }
     func resolveConflicts(of file: URL) async {}

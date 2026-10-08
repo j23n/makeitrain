@@ -229,7 +229,7 @@ public final class AppModel {
             }
             store = FileStore(folder: Folder(root: documents, access: cloud.fileAccess()))
             state = .waitingForICloud
-            cloud.startWatching(folder: documents) { [weak self] snapshot in
+            cloud.startWatching { [weak self] snapshot in
                 self?.cloudChanged(snapshot)
             }
         }

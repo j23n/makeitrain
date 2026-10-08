@@ -29,8 +29,9 @@ public protocol CloudProvider: AnyObject {
     func documentsFolder() async -> URL?
     /// File access that coordinates with iCloud.
     func fileAccess() -> any FileAccess
-    /// Starts reporting changes to the folder, downloading files as needed.
-    func startWatching(folder: URL, onChange: @escaping (CloudSnapshot) -> Void)
+    /// Starts reporting changes to the app's folder, downloading files as
+    /// needed.
+    func startWatching(onChange: @escaping (CloudSnapshot) -> Void)
     func stopWatching()
     /// The contents of the other versions iCloud kept of a file.
     func conflictVersions(of file: URL) async -> [Data]
@@ -83,7 +84,7 @@ public final class ICloudProvider: CloudProvider {
         CoordinatedFileAccess()
     }
 
-    public func startWatching(folder: URL, onChange: @escaping (CloudSnapshot) -> Void) {
+    public func startWatching(onChange: @escaping (CloudSnapshot) -> Void) {
         stopWatching()
         let query = NSMetadataQuery()
         query.searchScopes = [NSMetadataQueryUbiquitousDocumentsScope]
