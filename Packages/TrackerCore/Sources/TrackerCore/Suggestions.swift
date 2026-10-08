@@ -23,14 +23,6 @@ public struct LineSuggestion: Hashable, Sendable {
     public var text: String
     /// Where the insertion point goes after it, in UTF-16 units.
     public var cursor: Int
-
-    public init(kind: Kind, title: String, detail: String, text: String, cursor: Int) {
-        self.kind = kind
-        self.title = title
-        self.detail = detail
-        self.text = text
-        self.cursor = cursor
-    }
 }
 
 /// What could be typed next in a line, for the word at the insertion
@@ -54,6 +46,9 @@ public enum LineSuggestions {
     /// Words a time of day follows.
     static let timeWords: Set<String> = ["from", "since", "at", "starting", "until", "till", "til", "to"]
 
+    /// The most suggestions offered at once.
+    static let limit = 6
+
     /// Suggestions for the word at `cursor`, a UTF-16 offset into `text`,
     /// at most `limit`. `entryID` is the entry the line edits, if it edits
     /// one: commands aren't offered then, and the times come from the
@@ -62,8 +57,7 @@ public enum LineSuggestions {
         for text: String,
         cursor: Int,
         in context: CommandContext,
-        editing entryID: UUID? = nil,
-        limit: Int = 6
+        editing entryID: UUID? = nil
     ) -> [LineSuggestion] {
         let word = Word(text, cursor: cursor)
         let typed = word.typed

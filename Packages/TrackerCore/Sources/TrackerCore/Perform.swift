@@ -104,11 +104,6 @@ public struct LedgerDiff: Hashable, Sendable {
         public var before: Record?
         public var after: Record?
 
-        public init(before: Record?, after: Record?) {
-            self.before = before
-            self.after = after
-        }
-
         public var isNew: Bool {
             before == nil
         }
@@ -118,8 +113,6 @@ public struct LedgerDiff: Hashable, Sendable {
     public var entries: [Change<TimeEntry>] = []
     public var projects: [Change<Project>] = []
     public var clients: [Change<Client>] = []
-
-    public init() {}
 
     public var isEmpty: Bool {
         entries.isEmpty && projects.isEmpty && clients.isEmpty

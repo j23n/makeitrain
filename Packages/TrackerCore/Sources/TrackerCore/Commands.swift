@@ -118,11 +118,6 @@ public struct CommandToken: Hashable, Sendable {
 
     public var kind: Kind
     public var range: Range<String.Index>
-
-    public init(kind: Kind, range: Range<String.Index>) {
-        self.kind = kind
-        self.range = range
-    }
 }
 
 /// A way to finish a line, taken from an earlier entry, offered on Tab.
@@ -182,18 +177,18 @@ public struct CommandContext: Sendable {
 
     public init(
         ledger: Ledger,
-        resolved: [ResolvedEntry]? = nil,
-        projectTags: [UUID?: [String]]? = nil,
+        resolved: [ResolvedEntry],
+        projectTags: [UUID?: [String]],
         now: Timestamp,
         timeZone: String
     ) {
         self.ledger = ledger
-        self.resolved = resolved ?? ledger.resolvedEntries()
-        self.projectTags = projectTags ?? ledger.tagsByProject()
+        self.resolved = resolved
+        self.projectTags = projectTags
         self.now = now
         self.timeZone = timeZone
         var lastUsed: [UUID: Timestamp] = [:]
-        for entry in self.resolved {
+        for entry in resolved {
             if let projectID = entry.entry.projectID {
                 lastUsed[projectID] = entry.start
             }

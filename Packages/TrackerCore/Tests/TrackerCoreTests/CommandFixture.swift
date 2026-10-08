@@ -100,7 +100,7 @@ struct CommandFixture {
     }
 
     static func context(_ ledger: Ledger, now: String = "10:40", on day: String = "2026-10-05") -> CommandContext {
-        CommandContext(ledger: ledger, now: at(now, on: day), timeZone: zone)
+        CommandContext(ledger: ledger, resolved: ledger.resolvedEntries(), projectTags: ledger.tagsByProject(), now: at(now, on: day), timeZone: zone)
     }
 
     static func read(_ text: String, _ ledger: Ledger = ledger(), now: String = "10:40", on day: String = "2026-10-05") -> CommandReading {
