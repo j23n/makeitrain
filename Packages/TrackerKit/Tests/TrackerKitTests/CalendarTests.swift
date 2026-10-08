@@ -89,7 +89,8 @@ final class FakeCalendars: CalendarProvider {
         let model = harness.model(calendars: calendars)
         await model.start()
         model.refreshCalendars()
-        #expect(model.calendars.map(\.id) == ["acme", "home"])
+        // By account, then title.
+        #expect(model.calendars.map(\.id) == ["home", "acme"])
         #expect(!model.hasLinkedCalendars)
 
         let website = model.addProject(named: "Website", client: nil, color: "#4F7CAC", undoManager: nil)

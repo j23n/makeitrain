@@ -169,7 +169,7 @@ struct PhoneSettings: View {
                     Text("No calendars on this iPhone.")
                         .foregroundStyle(Theme.text2)
                 }
-                ForEach(sortedCalendars) { calendar in
+                ForEach(model.calendars) { calendar in
                     Picker(selection: projectBinding(for: calendar)) {
                         Text("None").tag(UUID?.none)
                         ForEach(model.ledger.pickerProjects()) { project in
@@ -189,14 +189,6 @@ struct PhoneSettings: View {
             }
         } header: {
             Text("Calendars on this iPhone")
-        }
-    }
-
-    private var sortedCalendars: [CalendarInfo] {
-        model.calendars.sorted { a, b in
-            a.account != b.account
-                ? a.account.localizedStandardCompare(b.account) == .orderedAscending
-                : a.title.localizedStandardCompare(b.title) == .orderedAscending
         }
     }
 

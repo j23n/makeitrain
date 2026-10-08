@@ -5,12 +5,16 @@ import TrackerCore
 // as entries.
 
 extension AppModel {
-    /// Reads this device's calendars again, and follows linked calendars
-    /// whose ids changed.
+    /// Reads this device's calendars again, by account and then title, and
+    /// follows linked calendars whose ids changed.
     public func refreshCalendars() {
         guard let provider = environment.calendars else { return }
         calendarAccess = provider.access
-        calendars = provider.calendars()
+        calendars = provider.calendars().sorted { a, b in
+            a.account != b.account
+                ? a.account.localizedStandardCompare(b.account) == .orderedAscending
+                : a.title.localizedStandardCompare(b.title) == .orderedAscending
+        }
         let relinked = CalendarLink.relinked(calendarLinks, to: calendars)
         if relinked != calendarLinks {
             calendarLinks = relinked
