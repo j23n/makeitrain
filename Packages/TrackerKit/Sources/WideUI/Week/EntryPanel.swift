@@ -88,16 +88,11 @@ struct EntryPanel: View {
     /// one, Up and Down move the highlight, and a click takes any.
     private var suggestions: some View {
         FlowLayout(spacing: 6) {
-            ForEach(Array(line.suggestions.items.enumerated()), id: \.offset) { index, suggestion in
+            ForEach(Array(line.suggestions.chips(ledger: model.ledger).enumerated()), id: \.offset) { index, chip in
                 Button {
                     line.acceptSuggestion(at: index)
                 } label: {
-                    ChipLabel(
-                        title: suggestion.chipTitle,
-                        tint: suggestion.tint(in: model.ledger),
-                        isTag: suggestion.kind == .tag,
-                        isHighlighted: index == line.suggestions.highlighted
-                    )
+                    ChipLabel(chip)
                 }
                 .buttonStyle(.plain)
             }

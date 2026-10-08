@@ -305,19 +305,7 @@ struct PhoneCommandSheet: View {
                                 line.apply(chip)
                                 router.focusRequest += 1
                             } label: {
-                                HStack(spacing: 6) {
-                                    if let tint = chip.tint {
-                                        TintDot(tint, size: 7)
-                                    }
-                                    Text(chip.title)
-                                        .lineLimit(1)
-                                }
-                                .font(.system(size: 13))
-                                .foregroundStyle(chip.isTag ? Theme.tag : Theme.text)
-                                .padding(.horizontal, 13)
-                                .frame(height: 36)
-                                .overlay(Capsule().strokeBorder(Theme.strongLine))
-                                .contentShape(Capsule())
+                                ChipLabel(chip, size: .touch)
                             }
                             .buttonStyle(.plain)
                         }

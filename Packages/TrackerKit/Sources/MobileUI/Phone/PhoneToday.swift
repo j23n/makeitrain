@@ -114,6 +114,74 @@ struct PhoneEmptyDay: View {
     }
 }
 
+/// What an entry's line reads as, part by part: its day, times, project,
+/// tags and note. A part the line leaves out shows as what could go there,
+/// and a line that isn't an entry says why.
+struct EntryLineGuide: View {
+    let model: AppModel
+    let line: EntryLineModel
+
+    var body: some View {
+        if let parts = line.parts {
+            HStack(spacing: 6) {
+                Text(Format.day(parts.start.local(in: parts.zone).date))
+                separator
+                Text(times(parts))
+                    .monospacedDigit()
+                separator
+                if let projectID = parts.draft.projectID {
+                    HStack(spacing: 4) {
+                        TintDot(model.ledger.tint(ofProject: projectID), size: 7)
+                        Text(model.ledger.projectTitle(projectID))
+                    }
+                } else {
+                    placeholder("project")
+                }
+                separator
+                if parts.draft.tags.isEmpty {
+                    placeholder("#tag")
+                } else {
+                    Text(parts.draft.tags.map(Tags.typed).joined(separator: " "))
+                        .foregroundStyle(Theme.tag)
+                }
+                separator
+                if parts.draft.note.isEmpty {
+                    placeholder("note")
+                } else {
+                    Text(parts.draft.note)
+                }
+            }
+            .font(.system(size: 12))
+            .foregroundStyle(Theme.text2)
+            .lineLimit(1)
+        } else if let problem = line.problem {
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.circle")
+                    .foregroundStyle(Theme.amber)
+                Text(problem)
+                    .foregroundStyle(line.refused ? Theme.amberText : Theme.text2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .font(.system(size: 12))
+        }
+    }
+
+    private var separator: some View {
+        Text("·").foregroundStyle(Theme.text3)
+    }
+
+    private func placeholder(_ text: String) -> some View {
+        Text(text).foregroundStyle(Theme.text3)
+    }
+
+    /// "13:30–16:30, 3:00", or "from 13:30" while it runs.
+    private func times(_ parts: EntryLineParts) -> String {
+        let start = Format.time(parts.start, zone: parts.zone)
+        guard let end = parts.end else { return "from \(start)" }
+        return "\(start)–\(Format.time(end, zone: parts.zone)), \(Format.duration(parts.start.distance(to: end)))"
+    }
+}
+
 /// An entry as a line to change by typing, such as "2 oct 13:30-16:30
 /// web #12 Fix login", and what else can be done with it.
 struct PhoneEntrySheet: View {
@@ -185,7 +253,7 @@ struct PhoneEntrySheet: View {
                     .background(RoundedRectangle(cornerRadius: 12).fill(Theme.field))
                     .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(line.refused ? Theme.amber : Theme.strongLine))
                     if !line.suggestions.isEmpty {
-                        SuggestionStrip(suggestions: line.suggestions.items, highlighted: line.suggestions.highlighted, ledger: model.ledger, showsKeys: false) { index in
+                        SuggestionStrip(suggestions: line.suggestions, ledger: model.ledger, showsKeys: false) { index in
                             line.acceptSuggestion(at: index)
                         }
                     }

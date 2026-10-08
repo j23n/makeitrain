@@ -231,6 +231,22 @@ public struct LineSuggestionState {
         cursorRequest += 1
         return items[chosen]
     }
+
+    /// The suggestions as chips to click: each one's title and what it's
+    /// about, such as "Website · Acme", with the color of the project or
+    /// color it names, and the one Tab takes highlighted.
+    public func chips(ledger: Ledger) -> [LineChip] {
+        items.enumerated().map { index, suggestion -> LineChip in
+            LineChip(
+                id: "suggestion \(index) \(suggestion.title)",
+                title: suggestion.detail.isEmpty ? suggestion.title : "\(suggestion.title) · \(suggestion.detail)",
+                action: .suggestion(index),
+                tint: suggestion.tint(in: ledger),
+                isTag: suggestion.kind == .tag,
+                isHighlighted: index == highlighted
+            )
+        }
+    }
 }
 
 /// Something to add to a line with a click or a tap: what could replace
@@ -254,6 +270,20 @@ public struct LineChip: Identifiable {
     public var isHighlighted = false
 }
 
+extension LineSuggestion {
+    /// The color of the project or palette color it names, if it names one.
+    func tint(in ledger: Ledger) -> ProjectTint? {
+        switch kind {
+        case let .project(id):
+            ledger.tint(ofProject: id)
+        case let .color(hex):
+            ProjectTint(hex: hex)
+        default:
+            nil
+        }
+    }
+}
+
 extension CommandLineModel {
     /// What to offer under the line: the suggestions for the word being
     /// typed, a start from when today's last entry ended, a time ago, a tag
@@ -266,26 +296,7 @@ extension CommandLineModel {
                 .prefix(4)
                 .map { LineChip(id: "again " + $0, title: $0, action: .replace($0)) }
         }
-        var chips = suggestions.items.enumerated().map { index, suggestion -> LineChip in
-            var tint: ProjectTint?
-            switch suggestion.kind {
-            case let .project(id):
-                tint = model.ledger.tint(ofProject: id)
-            case let .color(hex):
-                tint = ProjectTint(hex: hex)
-            default:
-                tint = nil
-            }
-            let title = suggestion.detail.isEmpty ? suggestion.title : "\(suggestion.title) · \(suggestion.detail)"
-            return LineChip(
-                id: "suggestion \(index) \(suggestion.title)",
-                title: title,
-                action: .suggestion(index),
-                tint: tint,
-                isTag: suggestion.kind == .tag,
-                isHighlighted: index == suggestions.highlighted
-            )
-        }
+        var chips = suggestions.chips(ledger: model.ledger)
         let words = text.lowercased().split(separator: " ")
         if !words.contains("from"), let end = model.commandContext.lastEndToday {
             let time = Format.time(end, zone: model.environment.timeZone())
@@ -320,6 +331,71 @@ extension CommandLineModel {
             _ = complete()
         case let .suggestion(index):
             acceptSuggestion(at: index)
+        }
+    }
+}
+
+/// What could replace the word being typed, as a row of chips: Tab takes
+/// the highlighted one, ↑ and ↓ move the highlight, and a click takes any.
+public struct SuggestionStrip: View {
+    let suggestions: LineSuggestionState
+    let ledger: Ledger
+    let showsKeys: Bool
+    let accept: (Int) -> Void
+
+    public init(suggestions: LineSuggestionState, ledger: Ledger, showsKeys: Bool = true, accept: @escaping (Int) -> Void) {
+        self.suggestions = suggestions
+        self.ledger = ledger
+        self.showsKeys = showsKeys
+        self.accept = accept
+    }
+
+    public var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(Array(suggestions.items.enumerated()), id: \.offset) { index, suggestion in
+                    Button {
+                        accept(index)
+                    } label: {
+                        chip(suggestion, highlighted: index == suggestions.highlighted)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text(suggestion.detail.isEmpty ? suggestion.title : "\(suggestion.title), \(suggestion.detail)"))
+                }
+            }
+        }
+    }
+
+    private func chip(_ suggestion: LineSuggestion, highlighted: Bool) -> some View {
+        HStack(spacing: 5) {
+            if let tint = suggestion.tint(in: ledger) {
+                TintDot(tint, size: 7)
+            }
+            Text(suggestion.title)
+                .foregroundStyle(color(of: suggestion.kind))
+            if !suggestion.detail.isEmpty {
+                Text(suggestion.detail)
+                    .foregroundStyle(Theme.text3)
+            }
+            if highlighted, showsKeys {
+                KeyCap("⇥")
+            }
+        }
+        .font(.system(size: 12))
+        .lineLimit(1)
+        .padding(.horizontal, 8)
+        .frame(height: 24)
+        .background(RoundedRectangle(cornerRadius: 6).fill(highlighted ? Theme.accentFill : Theme.fill))
+        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(highlighted ? Theme.accentLine : Color.clear))
+        .contentShape(Rectangle())
+    }
+
+    private func color(of kind: CommandToken.Kind) -> Color {
+        switch kind {
+        case .tag: Theme.tag
+        case .time: Theme.amberText
+        case .keyword: Theme.accent
+        default: Theme.text
         }
     }
 }

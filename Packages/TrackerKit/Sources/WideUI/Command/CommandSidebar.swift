@@ -135,7 +135,7 @@ struct CommandSidebar: View {
                             line.apply(chip)
                             focus()
                         } label: {
-                            ChipLabel(title: chip.title, tint: chip.tint, isTag: chip.isTag, isHighlighted: chip.isHighlighted)
+                            ChipLabel(chip)
                         }
                         .buttonStyle(.plain)
                     }
