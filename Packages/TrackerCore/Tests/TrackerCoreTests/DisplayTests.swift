@@ -3,6 +3,7 @@ import Testing
 @testable import TrackerCore
 
 @Suite struct DisplayTests {
+    typealias F = CommandFixture
     let now = t("2026-09-23T12:00:00Z")
 
     var ledger: Ledger {
@@ -21,18 +22,6 @@ import Testing
         )
     }
 
-    func entry(_ number: Int, project: UUID?, tags: [String] = [], at time: String) -> TimeEntry {
-        TimeEntry(
-            id: uuid(number),
-            projectID: project,
-            start: t("2026-09-\(time)+02:00"),
-            end: t("2026-09-\(time)+02:00").adding(seconds: 600),
-            timeZone: "Europe/Berlin",
-            tags: tags,
-            updated: now
-        )
-    }
-
     @Test func titlesProjects() {
         #expect(ledger.projectTitle(uuid(10)) == "Acme › Website")
         #expect(ledger.projectTitle(uuid(11)) == "Internal")
@@ -43,11 +32,9 @@ import Testing
     }
 
     @Test func titlesEntriesByTheirNoteOrProject() {
-        var noted = entry(1, project: uuid(10), at: "22T09:00:00")
-        noted.note = "Wireframes"
-        #expect(ledger.title(of: noted) == "Wireframes")
-        #expect(ledger.title(of: entry(2, project: uuid(10), at: "22T10:00:00")) == "Acme › Website")
-        #expect(ledger.title(of: entry(3, project: nil, at: "22T11:00:00")) == "Unassigned")
+        #expect(ledger.title(of: F.entry(1, uuid(10), "2026-09-22", "09:00", "10:00", note: "Wireframes")) == "Wireframes")
+        #expect(ledger.title(of: F.entry(2, uuid(10), "2026-09-22", "10:00", "11:00")) == "Acme › Website")
+        #expect(ledger.title(of: F.entry(3, nil, "2026-09-22", "11:00", "12:00")) == "Unassigned")
     }
 
     @Test func archivedIncludesDeletedProjectsAndArchivedClients() {
@@ -65,9 +52,9 @@ import Testing
 
     @Test func listsTagsOnceWithTheLatestSpelling() {
         var ledger = ledger
-        ledger.merge(entry(1, project: nil, tags: ["design", "Call"], at: "20T09:00:00"))
-        ledger.merge(entry(2, project: nil, tags: ["Design"], at: "21T09:00:00"))
-        var deleted = entry(3, project: nil, tags: ["secret"], at: "22T09:00:00")
+        ledger.merge(F.entry(1, nil, "2026-09-20", "09:00", "10:00", tags: ["design", "Call"]))
+        ledger.merge(F.entry(2, nil, "2026-09-21", "09:00", "10:00", tags: ["Design"]))
+        var deleted = F.entry(3, nil, "2026-09-22", "09:00", "10:00", tags: ["secret"])
         deleted.deleted = now
         ledger.merge(deleted)
         #expect(ledger.allTags() == ["Call", "Design"])
@@ -75,11 +62,11 @@ import Testing
 
     @Test func listsEachProjectsOwnTags() {
         var ledger = ledger
-        ledger.merge(entry(1, project: uuid(10), tags: ["design", "#12"], at: "20T09:00:00"))
-        ledger.merge(entry(2, project: uuid(10), tags: ["#9"], at: "21T09:00:00"))
-        ledger.merge(entry(3, project: uuid(11), tags: ["admin", "Design"], at: "21T10:00:00"))
-        ledger.merge(entry(4, project: nil, tags: ["email"], at: "22T09:00:00"))
-        ledger.merge(entry(5, project: uuid(13), at: "22T10:00:00"))
+        ledger.merge(F.entry(1, uuid(10), "2026-09-20", "09:00", "10:00", tags: ["design", "#12"]))
+        ledger.merge(F.entry(2, uuid(10), "2026-09-21", "09:00", "10:00", tags: ["#9"]))
+        ledger.merge(F.entry(3, uuid(11), "2026-09-21", "10:00", "11:00", tags: ["admin", "Design"]))
+        ledger.merge(F.entry(4, nil, "2026-09-22", "09:00", "10:00", tags: ["email"]))
+        ledger.merge(F.entry(5, uuid(13), "2026-09-22", "10:00", "11:00"))
         let byProject = ledger.tagsByProject()
         #expect(byProject[uuid(10)] == ["#9", "#12", "design"])
         #expect(byProject[uuid(11)] == ["admin", "Design"])
@@ -91,9 +78,9 @@ import Testing
 
     @Test func matchesEntriesWithTheSameProjectAndTags() {
         let combination = Combination(projectID: uuid(10), tags: ["design", "#12"])
-        #expect(combination.matches(entry(1, project: uuid(10), tags: ["#12", "Design"], at: "22T09:00:00")))
-        #expect(!combination.matches(entry(2, project: uuid(10), tags: ["design"], at: "22T09:00:00")))
-        #expect(!combination.matches(entry(3, project: uuid(11), tags: ["design", "#12"], at: "22T09:00:00")))
-        #expect(Combination(projectID: nil, tags: []).matches(entry(4, project: nil, at: "22T09:00:00")))
+        #expect(combination.matches(F.entry(1, uuid(10), "2026-09-22", "09:00", "10:00", tags: ["#12", "Design"])))
+        #expect(!combination.matches(F.entry(2, uuid(10), "2026-09-22", "09:00", "10:00", tags: ["design"])))
+        #expect(!combination.matches(F.entry(3, uuid(11), "2026-09-22", "09:00", "10:00", tags: ["design", "#12"])))
+        #expect(Combination(projectID: nil, tags: []).matches(F.entry(4, nil, "2026-09-22", "09:00", "10:00")))
     }
 }

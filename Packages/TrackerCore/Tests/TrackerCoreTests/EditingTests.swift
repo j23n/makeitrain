@@ -3,20 +3,13 @@ import Testing
 @testable import TrackerCore
 
 @Suite struct EditingTests {
-    let morning = t("2026-09-23T09:00:00+02:00")
-    let noon = t("2026-09-23T12:00:00+02:00")
+    typealias F = CommandFixture
+    let morning = F.at("09:00", on: "2026-09-23")
+    let noon = F.at("12:00", on: "2026-09-23")
 
+    /// An entry on 23 September from 9:00 to 10:00.
     func entry(_ number: Int, project: UUID? = nil, tags: [String] = [], note: String = "") -> TimeEntry {
-        TimeEntry(
-            id: uuid(number),
-            projectID: project,
-            start: t("2026-09-23T09:00:00+02:00"),
-            end: t("2026-09-23T10:00:00+02:00"),
-            timeZone: "Europe/Berlin",
-            tags: tags,
-            note: note,
-            updated: t("2026-09-23T10:00:00+02:00")
-        )
+        F.entry(number, project, "2026-09-23", "09:00", "10:00", tags: tags, note: note)
     }
 
     @Test func addingStampsTheEntryAndCleansItUp() {
@@ -158,10 +151,7 @@ import Testing
     }
 
     @Test func duplicatingSeveralKeepsTheirOrder() {
-        var second = entry(2)
-        second.start = t("2026-09-23T10:00:00+02:00")
-        second.end = t("2026-09-23T10:30:00+02:00")
-        var ledger = Ledger(entries: [entry(1), second])
+        var ledger = Ledger(entries: [entry(1), F.entry(2, nil, "2026-09-23", "10:00", "10:30")])
         ledger.duplicate([uuid(1): uuid(11), uuid(2): uuid(12)], now: noon)
         // The pair ran from 09:00 to 10:30, so the copies follow at 10:30.
         #expect(ledger.entries[uuid(11)]?.start == t("2026-09-23T10:30:00+02:00"))
