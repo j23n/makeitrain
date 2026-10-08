@@ -250,7 +250,7 @@ public enum LineSuggestions {
         var found: [LineSuggestion] = []
         for candidate in candidates {
             if let after, candidate.second <= after { continue }
-            let clock = "\(candidate.second / 3600):\(candidate.second / 60 % 60 < 10 ? "0" : "")\(candidate.second / 60 % 60)"
+            let clock = TimeWords.clockText(secondOfDay: candidate.second)
             guard clock.hasPrefix(partial), clock != partial, seen.insert(clock).inserted else { continue }
             found.append(word.suggestion(.time, head + clock, candidate.detail, insert: head + clock))
         }

@@ -2,7 +2,7 @@ import Foundation
 
 /// Times of day, days and durations as people type them into the command
 /// line and report queries. Words are English, as the app's are.
-enum TimeWords {
+public enum TimeWords {
     /// A time of day typed as "9", "09:30", "9:30am", "21:00" or "12pm".
     struct Clock: Hashable, Sendable {
         /// Seconds after midnight. "24:00" is 86 400.
@@ -46,6 +46,12 @@ enum TimeWords {
         return Clock(second: (hour * 60 + minute) * 60, bare: parts.count == 1, meridiem: false)
     }
 
+    /// A time of day as a line writes it, such as "9:05", from the seconds
+    /// after midnight.
+    static func clockText(secondOfDay second: Int) -> String {
+        "\(second / 3600):\(second / 60 % 60 < 10 ? "0" : "")\(second / 60 % 60)"
+    }
+
     /// The weekday a name such as "wed" or "Wednesday" stands for, 1 for
     /// Sunday through 7 for Saturday.
     static func weekday(_ word: String) -> Int? {
@@ -61,12 +67,14 @@ enum TimeWords {
         }
     }
 
+    /// The months as a line writes them, "jan" to "dec".
+    public static let monthNames = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
+
     /// The month a name such as "sep" or "September" stands for, 1 to 12.
     static func month(_ word: String) -> Int? {
-        let names = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
         let full = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"]
         let text = word.lowercased()
-        if let index = names.firstIndex(of: text) ?? full.firstIndex(of: text) {
+        if let index = monthNames.firstIndex(of: text) ?? full.firstIndex(of: text) {
             return index + 1
         }
         return text == "sept" ? 9 : nil

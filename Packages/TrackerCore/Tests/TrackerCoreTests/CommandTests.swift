@@ -185,6 +185,31 @@ import Testing
         #expect(F.read("harbor", F.ledger(since)).completion?.text == "harbor Check-in")
     }
 
+    // MARK: - Entries as lines
+
+    @Test func writesEntriesAsLinesThatReadBackAsThem() {
+        let ledger = F.ledger([
+            F.runningBookings,
+            F.entry(108, F.inHouse, "2025-10-01", "09:00", "10:00", tags: ["C#"], note: "Tooling"),
+        ])
+        let today = LocalDate(year: 2026, month: 10, day: 5)
+        let lines = Dictionary(uniqueKeysWithValues: ledger.resolvedEntries().map { ($0.id, ledger.line(for: $0, today: today)) })
+        #expect(lines[uuid(101)] == "2 oct 9:00-12:00 Bookings #227 Export to PDF")
+        #expect(lines[uuid(104)] == "2 oct 8:45-9:00 Bookings #Daily Standup")
+        #expect(lines[uuid(103)] == "5 oct from 9:30 Bookings #227 Export to PDF")
+        // A year back, the day has its year.
+        #expect(lines[uuid(108)] == "2025-10-01 9:00-10:00 Internal #C# Tooling")
+
+        for entry in ledger.resolvedEntries() {
+            // Read as an entry's own line is, without the entry.
+            var context = F.context(ledger)
+            context.resolved.removeAll { $0.id == entry.id }
+            let draft = EntryDraft(projectID: entry.entry.projectID, tags: entry.entry.tags, note: entry.entry.note)
+            let command = entry.end.map { Command.log(draft, start: entry.start, end: $0) } ?? Command.start(draft, at: entry.start, end: nil)
+            #expect(CommandReading(lines[entry.id] ?? "", in: context).primary == command, "\(lines[entry.id] ?? "")")
+        }
+    }
+
     // MARK: - Clients and projects
 
     @Test func addsProjectsAndClients() {
