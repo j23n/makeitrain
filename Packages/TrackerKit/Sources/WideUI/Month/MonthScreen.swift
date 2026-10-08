@@ -14,7 +14,6 @@ struct MonthScreen: View {
     let navigator: Navigator
     let anchor: LocalDate
     @State private var state: ReportState
-    @Environment(\.commandSidebarShown) private var commandSidebarShown
     @State private var cursor: LocalDate
     @FocusState private var focused: Bool
 
@@ -28,27 +27,12 @@ struct MonthScreen: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            QueryBar(model: model, state: state)
-            HStack(spacing: 0) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        YearRibbon(state: state)
-                        rangeLine
-                        MonthHeatGrid(model: model, state: state, month: shownMonth, cursor: $cursor) { day in
-                            navigator.go(.day(day))
-                        }
-                        keyHints
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 20)
-                    .padding(.bottom, 28)
-                }
-                if !commandSidebarShown {
-                    StatementPanel(model: model, state: state, navigator: navigator)
-                        .frame(width: 400)
-                }
+        ReportPage(model: model, state: state, navigator: navigator) {
+            rangeLine
+            MonthHeatGrid(model: model, state: state, month: shownMonth, cursor: $cursor) { day in
+                navigator.go(.day(day))
             }
+            keyHints
         }
         .focusable()
         .focusEffectDisabled()
@@ -252,7 +236,6 @@ struct YearScreen: View {
     let navigator: Navigator
     let year: Int
     @State private var state: ReportState
-    @Environment(\.commandSidebarShown) private var commandSidebarShown
 
     init(model: AppModel, navigator: Navigator, year: Int) {
         self.model = model
@@ -266,27 +249,12 @@ struct YearScreen: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            QueryBar(model: model, state: state)
-            HStack(spacing: 0) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
-                        YearRibbon(state: state)
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: 4), spacing: 14) {
-                            ForEach(1...12, id: \.self) { month in
-                                MiniMonth(model: model, state: state, month: LocalDate(year: state.range.lowerBound.year, month: month, day: 1)) {
-                                    navigator.go(.month(LocalDate(year: state.range.lowerBound.year, month: month, day: 1)))
-                                }
-                            }
-                        }
+        ReportPage(model: model, state: state, navigator: navigator) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: 4), spacing: 14) {
+                ForEach(1...12, id: \.self) { month in
+                    MiniMonth(model: model, state: state, month: LocalDate(year: state.range.lowerBound.year, month: month, day: 1)) {
+                        navigator.go(.month(LocalDate(year: state.range.lowerBound.year, month: month, day: 1)))
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 20)
-                    .padding(.bottom, 28)
-                }
-                if !commandSidebarShown {
-                    StatementPanel(model: model, state: state, navigator: navigator)
-                        .frame(width: 400)
                 }
             }
         }

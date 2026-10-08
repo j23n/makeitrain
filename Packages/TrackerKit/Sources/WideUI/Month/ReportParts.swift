@@ -3,6 +3,45 @@ import TrackerCore
 import TrackerKit
 import UniformTypeIdentifiers
 
+/// A report's page: what it covers, the year's weeks over the screen's
+/// own content, and the statement beside them unless the command line's
+/// sidebar takes its place.
+struct ReportPage<Content: View>: View {
+    let model: AppModel
+    let state: ReportState
+    let navigator: Navigator
+    let content: Content
+    @Environment(\.commandSidebarShown) private var commandSidebarShown
+
+    init(model: AppModel, state: ReportState, navigator: Navigator, @ViewBuilder content: () -> Content) {
+        self.model = model
+        self.state = state
+        self.navigator = navigator
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            QueryBar(model: model, state: state)
+            HStack(spacing: 0) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        YearRibbon(state: state)
+                        content
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 20)
+                    .padding(.bottom, 28)
+                }
+                if !commandSidebarShown {
+                    StatementPanel(model: model, state: state, navigator: navigator)
+                        .frame(width: 400)
+                }
+            }
+        }
+    }
+}
+
 /// What the report covers, as a sentence of choices: "Acme in September
 /// 2026 by tag", and the same typed, which ⌘L focuses.
 struct QueryBar: View {
@@ -109,9 +148,7 @@ struct QueryBar: View {
                 let thisMonth = ReportPeriod.month.range(containing: today, firstWeekday: first)
                 state.show(ReportPeriod.month.shift(thisMonth, by: -1), period: .month)
             }
-            Button("This Year") {
-                state.show(LocalDate(year: today.year, month: 1, day: 1)...LocalDate(year: today.year, month: 12, day: 31), period: .custom)
-            }
+            Button("This Year") { state.show(YearScreen.range(today.year), period: .custom) }
         } label: {
             choice(Format.days(state.range))
         }
