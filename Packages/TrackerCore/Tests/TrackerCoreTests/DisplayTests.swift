@@ -42,6 +42,14 @@ import Testing
         #expect(ledger.projectTitle(uuid(14)) == "Acme › Gone")
     }
 
+    @Test func titlesEntriesByTheirNoteOrProject() {
+        var noted = entry(1, project: uuid(10), at: "22T09:00:00")
+        noted.note = "Wireframes"
+        #expect(ledger.title(of: noted) == "Wireframes")
+        #expect(ledger.title(of: entry(2, project: uuid(10), at: "22T10:00:00")) == "Acme › Website")
+        #expect(ledger.title(of: entry(3, project: nil, at: "22T11:00:00")) == "Unassigned")
+    }
+
     @Test func archivedIncludesDeletedProjectsAndArchivedClients() {
         #expect(!ledger.isArchived(project: uuid(10)))
         #expect(ledger.isArchived(project: uuid(12)))

@@ -231,7 +231,7 @@ public enum LineSuggestions {
         for entry in context.resolved where entry.id != entryID {
             let start = entry.start.local(in: context.timeZone)
             guard start.date == day else { continue }
-            let title = entry.entry.note.isEmpty ? context.ledger.projectTitle(entry.entry.projectID) : entry.entry.note
+            let title = context.ledger.title(of: entry.entry)
             candidates.append((start.millisecondOfDay / 1000, "start of \(title)"))
             if let end = entry.end {
                 let local = end.local(in: context.timeZone)

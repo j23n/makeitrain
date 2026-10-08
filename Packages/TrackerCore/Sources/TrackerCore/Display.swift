@@ -22,6 +22,11 @@ extension Ledger {
         return project.name
     }
 
+    /// What an entry is called: its note, or else its project's title.
+    public func title(of entry: TimeEntry) -> String {
+        entry.note.isEmpty ? projectTitle(entry.projectID) : entry.note
+    }
+
     /// Whether a project shows as archived: it's archived or deleted, or its
     /// client is.
     public func isArchived(project projectID: UUID) -> Bool {
