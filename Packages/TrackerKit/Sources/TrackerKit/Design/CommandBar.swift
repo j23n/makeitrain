@@ -400,6 +400,30 @@ public struct SuggestionStrip: View {
     }
 }
 
+/// The running timer in a command line's bar: a dot, how long it's run,
+/// and its project's color and name. Callers set the font.
+public struct RunningTimerLabel: View {
+    let model: AppModel
+    let running: ResolvedEntry
+
+    public init(model: AppModel, running: ResolvedEntry) {
+        self.model = model
+        self.running = running
+    }
+
+    public var body: some View {
+        HStack(spacing: 7) {
+            Circle().fill(Theme.now).frame(width: 7, height: 7)
+            Text(Format.duration(model.duration(of: running)))
+                .fontWeight(.semibold)
+                .monospacedDigit()
+            TintDot(model.ledger.tint(ofProject: running.entry.projectID), size: 7)
+            Text(running.entry.projectID.flatMap { model.ledger.projects[$0]?.name } ?? "Unassigned")
+                .lineLimit(1)
+        }
+    }
+}
+
 /// What a line would do, under the command line: the action, with its
 /// key, and what it changes, or why it can't.
 public struct CommandPreviewView: View {

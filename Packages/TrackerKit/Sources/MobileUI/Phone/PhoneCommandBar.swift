@@ -17,18 +17,10 @@ struct PhoneCommandBar: View {
         HStack(spacing: 8) {
             if let running = model.running {
                 Button(action: open) {
-                    HStack(spacing: 7) {
-                        Circle().fill(Theme.now).frame(width: 7, height: 7)
-                        Text(Format.duration(model.duration(of: running)))
-                            .fontWeight(.semibold)
-                            .monospacedDigit()
-                        TintDot(model.ledger.tint(ofProject: running.entry.projectID), size: 7)
-                        Text(running.entry.projectID.flatMap { model.ledger.projects[$0]?.name } ?? "Unassigned")
-                            .lineLimit(1)
-                    }
-                    .font(.system(size: 13))
-                    .foregroundStyle(Theme.text)
-                    .fixedSize()
+                    RunningTimerLabel(model: model, running: running)
+                        .font(.system(size: 13))
+                        .foregroundStyle(Theme.text)
+                        .fixedSize()
                 }
                 .buttonStyle(.plain)
                 Rectangle()
@@ -139,7 +131,7 @@ struct PhoneCommandSheet: View {
         }
         field(text: $line.text, CommandField(
             line: line,
-            placeholder: model.running == nil ? "start a timer or log time" : "switch, stop or log time",
+            placeholder: CommandText.placeholder(running: model.running),
             fontSize: 17,
             focusesWithWindow: true,
             focusRequest: router.focusRequest,

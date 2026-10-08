@@ -219,23 +219,15 @@ struct TopBar<Trailing: View>: View {
     private var commandCapsule: some View {
         HStack(spacing: 10) {
             if let running = model.running {
-                HStack(spacing: 7) {
-                    Circle().fill(Theme.now).frame(width: 7, height: 7)
-                    Text(Format.duration(model.duration(of: running)))
-                        .fontWeight(.semibold)
-                        .monospacedDigit()
-                    TintDot(model.ledger.tint(ofProject: running.entry.projectID), size: 7)
-                    Text(running.entry.projectID.flatMap { model.ledger.projects[$0]?.name } ?? "Unassigned")
-                        .lineLimit(1)
-                }
-                .font(.system(size: 12.5))
-                .fixedSize()
-                .accessibilityElement(children: .combine)
+                RunningTimerLabel(model: model, running: running)
+                    .font(.system(size: 12.5))
+                    .fixedSize()
+                    .accessibilityElement(children: .combine)
                 Rectangle().fill(Theme.strongLine).frame(width: 1, height: 16)
             }
             CommandField(
                 line: line,
-                placeholder: model.running == nil ? "› start a timer or log time" : "› switch, stop or log time",
+                placeholder: "› " + CommandText.placeholder(running: model.running),
                 fontSize: 12.5,
                 focusRequest: focusRequest,
                 onSubmit: submit,
