@@ -120,7 +120,6 @@ struct PhoneEntrySheet: View {
     let model: AppModel
     let entryID: UUID
     @State private var line: EntryLineModel
-    @State private var focusRequest = 0
     @Environment(\.undoManager) private var undoManager
     @Environment(\.dismiss) private var dismiss
 
@@ -161,7 +160,6 @@ struct PhoneEntrySheet: View {
         .presentationDetents([.medium, .large])
         .onAppear {
             line.show(entryID)
-            focusRequest += 1
         }
     }
 
@@ -177,7 +175,6 @@ struct PhoneEntrySheet: View {
                             ledger: model.ledger,
                             fontSize: 15,
                             focusesWithWindow: true,
-                            focusRequest: focusRequest,
                             cursorRequest: line.cursorRequest,
                             cursor: line.requestedCursor,
                             onSubmit: { _ in apply() },
