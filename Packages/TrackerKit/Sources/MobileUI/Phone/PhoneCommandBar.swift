@@ -201,19 +201,17 @@ struct PhoneCommandSheet: View {
     private var actions: some View {
         if let command = line.reading.primary, line.preview != nil {
             VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 12) {
-                    Button {
-                        submit(alternate: false)
-                    } label: {
-                        Text(CommandText.verb(command, running: model.running))
-                            .font(.system(size: 16, weight: .semibold))
-                            .frame(maxWidth: .infinity, minHeight: 50)
-                            .foregroundStyle(Theme.inverseText)
-                            .background(RoundedRectangle(cornerRadius: 14).fill(Theme.inverse))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(model.isReadOnly)
+                Button {
+                    submit(alternate: false)
+                } label: {
+                    Text(CommandText.verb(command, running: model.running))
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(maxWidth: .infinity, minHeight: 50)
+                        .foregroundStyle(Theme.inverseText)
+                        .background(RoundedRectangle(cornerRadius: 14).fill(Theme.inverse))
                 }
+                .buttonStyle(.plain)
+                .disabled(model.isReadOnly)
                 if let alternate = line.reading.alternate {
                     Button {
                         submit(alternate: true)
