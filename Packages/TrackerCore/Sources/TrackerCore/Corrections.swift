@@ -209,7 +209,7 @@ public enum Corrections {
 
     /// Whether an entry ran too long: nil if not, otherwise whether it ran
     /// past midnight into the morning. A running timer counts up to now.
-    static func ranLong(_ entry: ResolvedEntry, now: Timestamp) -> Bool? {
+    public static func ranLong(_ entry: ResolvedEntry, now: Timestamp) -> Bool? {
         let end = entry.end ?? now
         let length = entry.start.distance(to: end)
         let zone = entry.entry.timeZone
