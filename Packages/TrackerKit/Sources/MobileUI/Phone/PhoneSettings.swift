@@ -19,13 +19,12 @@ struct PhoneSettings: View {
     @State private var exportName = ""
     @State private var exporting = false
 
-    private var preferences: Preferences { model.preferences }
-
     var body: some View {
+        @Bindable var preferences = model.preferences
         NavigationStack {
             Form {
                 Section("Appearance") {
-                    Picker("Appearance", selection: Binding(get: { preferences.appearance }, set: { preferences.appearance = $0 })) {
+                    Picker("Appearance", selection: $preferences.appearance) {
                         ForEach(Preferences.Appearance.allCases) { appearance in
                             Text(appearance.title).tag(appearance)
                         }
@@ -36,7 +35,7 @@ struct PhoneSettings: View {
                 }
 
                 Section {
-                    Toggle("Live Activity", isOn: Binding(get: { preferences.showsLiveActivity }, set: { preferences.showsLiveActivity = $0 }))
+                    Toggle("Live Activity", isOn: $preferences.showsLiveActivity)
                     NavigationLink("Shortcuts and controls") {
                         PhoneShortcutsHelp()
                     }
