@@ -50,6 +50,12 @@ import Testing
         #expect(LocalDate.span(of: []) == nil)
     }
 
+    @Test func listsTheDaysOfARange() {
+        let first = LocalDate(year: 2024, month: 2, day: 28)
+        #expect((first...first).days == [first])
+        #expect((first...LocalDate(year: 2024, month: 3, day: 1)).days.map(\.description) == ["2024-02-28", "2024-02-29", "2024-03-01"])
+    }
+
     @Test func parsesMonths() {
         #expect(MonthKey("2026-09") == MonthKey(year: 2026, month: 9))
         #expect(MonthKey(year: 2026, month: 9).fileName == "2026-09.json")

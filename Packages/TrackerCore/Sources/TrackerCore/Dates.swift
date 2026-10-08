@@ -82,6 +82,13 @@ extension LocalDate {
     }
 }
 
+extension ClosedRange where Bound == LocalDate {
+    /// Every day in the range, in order.
+    public var days: [LocalDate] {
+        sequence(first: lowerBound) { $0.adding(days: 1) }.prefix(while: { $0 <= upperBound })
+    }
+}
+
 /// A calendar month. Each one names a month file, such as `2026-09.json`.
 public struct MonthKey: Hashable, Comparable, Sendable {
     public var year: Int

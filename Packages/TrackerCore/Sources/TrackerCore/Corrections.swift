@@ -328,12 +328,6 @@ public struct DayTotals: Hashable, Sendable {
 
     /// The time on some days, as `total(on:now:projects:)` counts it.
     public func total(in range: ClosedRange<LocalDate>, now: Timestamp? = nil, projects: Set<UUID?>? = nil) -> Int64 {
-        var sum: Int64 = 0
-        var day = range.lowerBound
-        while day <= range.upperBound {
-            sum += total(on: day, now: now, projects: projects)
-            day = day.adding(days: 1)
-        }
-        return sum
+        range.days.reduce(0) { $0 + total(on: $1, now: now, projects: projects) }
     }
 }
