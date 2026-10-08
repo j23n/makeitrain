@@ -15,6 +15,10 @@ struct MainWindow: View {
     @State private var importRequest: ImportRequest?
     @State private var importError: String?
     @State private var importingEvents = false
+    @State private var exporting = false
+    @State private var exportDocument: CSVDocument?
+    @State private var exportFileName = ""
+    @State private var exportError: String?
 
     var body: some View {
         WideRoot(model: model, leadingInset: 62) {
@@ -22,10 +26,24 @@ struct MainWindow: View {
         }
         .frame(minWidth: 960, minHeight: 600)
         .background(WindowConfigurator())
-        .exportsEntries(of: model)
-        .focusedSceneValue(\.imports, imports)
+        .focusedSceneValue(\.fileActions, fileActions)
         .onChange(of: model.request, initial: true) { _, request in
             handle(request)
+        }
+        .fileExporter(
+            isPresented: $exporting,
+            document: exportDocument,
+            contentType: .commaSeparatedText,
+            defaultFilename: exportFileName
+        ) { result in
+            if case .failure(let failure) = result {
+                exportError = failure.localizedDescription
+            }
+        }
+        .alert("Couldn't Export", isPresented: Binding(get: { exportError != nil }, set: { if !$0 { exportError = nil } })) {
+            Button("OK") { exportError = nil }
+        } message: {
+            Text(exportError ?? "")
         }
         .fileImporter(isPresented: $importing, allowedContentTypes: [.commaSeparatedText, .tabSeparatedText, .plainText]) { result in
             do {
@@ -50,26 +68,86 @@ struct MainWindow: View {
         }
     }
 
-    private var imports: ImportActions {
-        ImportActions {
-            importing = true
-        } calendar: {
-            importingEvents = true
-        }
+    private var fileActions: FileActions {
+        let hasFinishedEntries = model.resolved.contains { !$0.isRunning }
+        return FileActions(
+            importCSV: { importing = true },
+            importEvents: { importingEvents = true },
+            exportEntries: hasFinishedEntries ? { exportEntries() } : nil
+        )
     }
 
-    /// Imports as Settings asked. The screens take the other requests,
-    /// and EntriesExport the export.
+    /// Imports or exports as Settings asked, also when it opened the
+    /// window to do so. The screens take the other requests.
     private func handle(_ request: AppRequest?) {
         switch request {
         case .importCSV?:
             importing = true
         case .importEvents?:
             importingEvents = true
+        case .exportEntries?:
+            exportEntries()
         default:
             return
         }
         model.request = nil
+    }
+
+    /// Saves every finished entry through the save dialog, with the columns
+    /// of a report's export.
+    private func exportEntries() {
+        let entries = model.resolved.filter { !$0.isRunning }
+        guard let name = CSVExport.fileName(for: entries) else { return }
+        exportDocument = CSVDocument(data: CSVExport.data(for: entries, ledger: model.ledger))
+        exportFileName = name
+        exporting = true
+    }
+}
+
+/// What the File menu does in the focused main window.
+struct FileActions {
+    /// Picks a CSV file to import.
+    let importCSV: () -> Void
+    /// Imports events from linked calendars.
+    let importEvents: () -> Void
+    /// Saves every finished entry as a CSV file, or nil when there's none
+    /// yet.
+    let exportEntries: (() -> Void)?
+}
+
+struct FileActionsKey: FocusedValueKey {
+    typealias Value = FileActions
+}
+
+extension FocusedValues {
+    /// The File menu's actions in the focused main window.
+    var fileActions: FileActions? {
+        get { self[FileActionsKey.self] }
+        set { self[FileActionsKey.self] = newValue }
+    }
+}
+
+/// File › Import CSV…, Import Calendar Events… and Export CSV….
+struct FileCommands: Commands {
+    @FocusedValue(\.fileActions) private var actions
+
+    var body: some Commands {
+        CommandGroup(after: .importExport) {
+            Button("Import CSV…") {
+                actions?.importCSV()
+            }
+            .keyboardShortcut("i", modifiers: [.command, .shift])
+            .disabled(actions == nil)
+            Button("Import Calendar Events…") {
+                actions?.importEvents()
+            }
+            .disabled(actions == nil)
+            Button("Export CSV…") {
+                actions?.exportEntries?()
+            }
+            .keyboardShortcut("e", modifiers: [.command, .shift])
+            .disabled(actions?.exportEntries == nil)
+        }
     }
 }
 
