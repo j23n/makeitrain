@@ -90,16 +90,15 @@ struct GeneralSettings: View {
     @State private var monitor: Any?
     @State private var showsCheatSheet = false
 
-    private var preferences: Preferences { model.preferences }
-
     var body: some View {
+        @Bindable var preferences = model.preferences
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 SettingsSection(title: "Appearance") {
                     SettingsRow(title: "Light or dark", divided: false) {
                         SegmentPicker(
                             Preferences.Appearance.allCases.map { (value: $0, title: $0.title) },
-                            selection: Binding(get: { preferences.appearance }, set: { preferences.appearance = $0 })
+                            selection: $preferences.appearance
                         )
                     }
                 }
@@ -146,7 +145,7 @@ struct GeneralSettings: View {
                         }
                     }
                     SettingsRow(title: "Close after Return") {
-                        Toggle("Close after Return", isOn: Binding(get: { preferences.closesAfterReturn }, set: { preferences.closesAfterReturn = $0 }))
+                        Toggle("Close after Return", isOn: $preferences.closesAfterReturn)
                             .toggleStyle(.switch)
                             .labelsHidden()
                     }
@@ -160,18 +159,18 @@ struct GeneralSettings: View {
 
                 SettingsSection(title: "Menu bar") {
                     SettingsRow(title: "Show elapsed time", divided: false) {
-                        Toggle("Show elapsed time", isOn: Binding(get: { preferences.menuBarShowsTime }, set: { preferences.menuBarShowsTime = $0 }))
+                        Toggle("Show elapsed time", isOn: $preferences.menuBarShowsTime)
                             .toggleStyle(.switch)
                             .labelsHidden()
                     }
                     SettingsRow(title: "Show project name") {
-                        Toggle("Show project name", isOn: Binding(get: { preferences.menuBarShowsProject }, set: { preferences.menuBarShowsProject = $0 }))
+                        Toggle("Show project name", isOn: $preferences.menuBarShowsProject)
                             .toggleStyle(.switch)
                             .labelsHidden()
                             .disabled(!preferences.menuBarShowsTime)
                     }
                     SettingsRow(title: "Show when there are corrections") {
-                        Toggle("Show when there are corrections", isOn: Binding(get: { preferences.menuBarMarksCorrections }, set: { preferences.menuBarMarksCorrections = $0 }))
+                        Toggle("Show when there are corrections", isOn: $preferences.menuBarMarksCorrections)
                             .toggleStyle(.switch)
                             .labelsHidden()
                     }
@@ -194,7 +193,7 @@ struct GeneralSettings: View {
                 return nil
             }
             guard let shortcut = HotKey.shortcut(from: event) else { return nil }
-            preferences.shortcut = shortcut
+            model.preferences.shortcut = shortcut
             stopRecording()
             return nil
         }

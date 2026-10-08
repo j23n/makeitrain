@@ -9,7 +9,7 @@ import WideUI
 /// under it and the keys to know: in the menu bar's popover and in the
 /// panel the shortcut opens. It's disabled while the data is read-only.
 struct CommandBar: View {
-    let line: CommandLineModel
+    @Bindable var line: CommandLineModel
     /// After a line ran, or Escape with nothing typed, as for closing the
     /// popover.
     let close: () -> Void
@@ -28,7 +28,7 @@ struct CommandBar: View {
                     .foregroundStyle(Theme.accent)
                     .accessibilityHidden(true)
                 CommandField(
-                    text: Binding(get: { line.text }, set: { line.text = $0 }),
+                    text: $line.text,
                     placeholder: placeholder,
                     reading: line.reading,
                     ledger: line.model.ledger,
