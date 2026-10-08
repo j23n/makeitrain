@@ -1,15 +1,12 @@
 import Foundation
 import TrackerCore
 
-/// Something one window asks the main window to do.
+/// Something a window is asked to do from elsewhere in the app.
 public enum AppRequest: Equatable, Sendable {
+    /// The Mac's Settings asks its main window to import or export.
     case importCSV
     case importEvents
     case exportEntries
-    /// Show the week with this day.
-    case showWeek(LocalDate)
-    /// Show a project's page.
-    case showProject(UUID)
     /// Type this into the main window's command line, as the projects'
     /// New and Rename do.
     case command(String)

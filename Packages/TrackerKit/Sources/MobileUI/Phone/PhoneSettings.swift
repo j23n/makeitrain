@@ -113,7 +113,6 @@ struct PhoneSettings: View {
         }
         .onAppear {
             model.refreshCalendars()
-            handle(model.request)
         }
         .alert("Couldn't Switch Storage", isPresented: Binding(get: { switchError != nil }, set: { if !$0 { switchError = nil } })) {
             Button("OK") { switchError = nil }
@@ -139,21 +138,6 @@ struct PhoneSettings: View {
             Text(importError ?? "")
         }
         .fileExporter(isPresented: $exporting, document: export, contentType: .commaSeparatedText, defaultFilename: exportName) { _ in }
-    }
-
-    /// Imports or exports, as another part of the app asked.
-    private func handle(_ request: AppRequest?) {
-        switch request {
-        case .importCSV?:
-            importing = true
-        case .importEvents?:
-            importingEvents = true
-        case .exportEntries?:
-            exportAll()
-        default:
-            return
-        }
-        model.request = nil
     }
 
     private func exportAll() {

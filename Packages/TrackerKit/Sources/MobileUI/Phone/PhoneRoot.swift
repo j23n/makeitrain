@@ -70,11 +70,6 @@ final class PhoneRouter {
         }
         tab = .week
     }
-
-    func showProject(_ id: UUID) {
-        projectsPath = [.project(id)]
-        tab = .projects
-    }
 }
 
 /// The iPhone app: Today, Week, Month and Projects, with the command line
@@ -162,20 +157,9 @@ struct PhoneRoot: View {
     /// Does what another part of the app asked for, such as an App
     /// Intent opening the command line.
     private func handle(_ request: AppRequest?) {
-        guard let request else { return }
-        switch request {
-        case let .command(text):
-            line.text = text
-            router.openCommandLine()
-        case let .showWeek(day):
-            router.showWeek(day, firstWeekday: model.firstWeekday)
-        case let .showProject(id):
-            router.showProject(id)
-        case .importCSV, .importEvents, .exportEntries:
-            router.showsSettings = true
-            // Settings takes these from here.
-            return
-        }
+        guard case let .command(text)? = request else { return }
+        line.text = text
+        router.openCommandLine()
         model.request = nil
     }
 }

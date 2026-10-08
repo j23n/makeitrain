@@ -29,15 +29,6 @@ struct PadWideRoot: View {
         .sheet(isPresented: $showsSettings) {
             PhoneSettings(model: model)
         }
-        .onChange(of: model.request, initial: true) { _, request in
-            switch request {
-            case .importCSV?, .importEvents?, .exportEntries?:
-                // Settings imports and exports, and takes the request.
-                showsSettings = true
-            default:
-                break
-            }
-        }
     }
 }
 #endif

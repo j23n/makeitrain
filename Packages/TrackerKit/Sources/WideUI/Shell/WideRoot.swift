@@ -145,18 +145,9 @@ public struct WideRoot<Trailing: View>: View {
     /// Does what another part of the app asked for, such as the projects'
     /// New. Importing and exporting are left to the window around it.
     private func handle(_ request: AppRequest?) {
-        guard let request else { return }
-        switch request {
-        case let .showWeek(day):
-            navigator.go(.week(day))
-        case let .showProject(id):
-            navigator.go(.project(id))
-        case let .command(text):
-            line.text = text
-            focusRequest += 1
-        case .importCSV, .importEvents, .exportEntries:
-            return
-        }
+        guard case let .command(text)? = request else { return }
+        line.text = text
+        focusRequest += 1
         model.request = nil
     }
 }
