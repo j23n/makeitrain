@@ -90,11 +90,11 @@ import TrackerCore
         model.addEntry(second, undoManager: nil)
 
         model.renameTag("design", to: "UX", inProject: website, undoManager: nil)
-        #expect(model.ledger.tags(ofProject: website) == ["UX"])
-        #expect(model.ledger.tags(ofProject: brand) == ["design"])
+        #expect(model.projectTags[website] == ["UX"])
+        #expect(model.projectTags[brand] == ["design"])
 
         model.removeTag("design", fromProject: brand, undoManager: nil)
-        #expect(model.ledger.tags(ofProject: brand).isEmpty)
-        #expect(model.ledger.tags(ofProject: website) == ["UX"])
+        #expect(model.projectTags[brand] == nil)
+        #expect(model.projectTags[website] == ["UX"])
     }
 }

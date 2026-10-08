@@ -51,34 +51,23 @@ extension Ledger {
     /// Every tag on an entry that isn't deleted, once each, ignoring case,
     /// sorted. The spelling used most recently wins.
     public func allTags() -> [String] {
-        tags { _ in true }
+        Self.latestSpellings(entries.values.filter { !$0.isDeleted })
     }
 
-    /// A project's tags: the tags on its entries that aren't deleted, or on
-    /// unassigned entries for nil, once each, ignoring case, sorted. The
-    /// spelling used most recently wins.
-    public func tags(ofProject projectID: UUID?) -> [String] {
-        tags { $0.projectID == projectID }
-    }
-
-    /// Every project's tags at once, as `tags(ofProject:)` lists them, by
-    /// project id, with nil for unassigned entries. Projects without tags
-    /// are left out.
+    /// Every project's tags, by project id, with nil for unassigned
+    /// entries: the tags on its entries that aren't deleted, as `allTags()`
+    /// lists them. Projects without tags are left out.
     public func tagsByProject() -> [UUID?: [String]] {
-        var spelling: [UUID?: [String: (tag: String, start: Timestamp)]] = [:]
-        for entry in entries.values where !entry.isDeleted {
-            for tag in entry.tags {
-                let key = tag.lowercased()
-                if let known = spelling[entry.projectID]?[key], known.start >= entry.start { continue }
-                spelling[entry.projectID, default: [:]][key] = (tag, entry.start)
-            }
-        }
-        return spelling.mapValues { $0.values.map(\.tag).sorted(by: Tags.order) }
+        Dictionary(grouping: entries.values.filter { !$0.isDeleted }, by: \.projectID)
+            .mapValues(Self.latestSpellings)
+            .filter { !$0.value.isEmpty }
     }
 
-    private func tags(where included: (TimeEntry) -> Bool) -> [String] {
+    /// The tags of some entries, once each, ignoring case, sorted, each in
+    /// the spelling used most recently.
+    private static func latestSpellings(_ entries: [TimeEntry]) -> [String] {
         var spelling: [String: (tag: String, start: Timestamp)] = [:]
-        for entry in entries.values where !entry.isDeleted && included(entry) {
+        for entry in entries {
             for tag in entry.tags {
                 let key = tag.lowercased()
                 if let known = spelling[key], known.start >= entry.start { continue }

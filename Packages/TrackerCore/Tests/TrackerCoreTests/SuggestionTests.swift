@@ -50,6 +50,11 @@ import Testing
         #expect(suggest("harbor #d").isEmpty)
     }
 
+    @Test func offersEveryTagWithoutAProject() {
+        let context = F.context(F.ledger([F.entry(108, F.harbor, "2026-10-01", "09:00", "10:00", tags: ["#9"], note: "Fix")]))
+        #expect(LineSuggestions.suggestions(for: "#", cursor: 1, in: context).map(\.title) == ["#9", "#227", "#Daily"])
+    }
+
     @Test func writesTagsSoTheLineReadsThemBack() throws {
         let context = F.context(F.ledger([F.entry(108, F.inHouse, "2026-10-01", "09:00", "10:00", tags: ["C#"], note: "Tooling")]))
         let tag = try #require(LineSuggestions.suggestions(for: "internal #c", cursor: 11, in: context).first)

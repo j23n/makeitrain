@@ -71,14 +71,13 @@ import Testing
         ledger.merge(entry(2, project: uuid(10), tags: ["#9"], at: "21T09:00:00"))
         ledger.merge(entry(3, project: uuid(11), tags: ["admin", "Design"], at: "21T10:00:00"))
         ledger.merge(entry(4, project: nil, tags: ["email"], at: "22T09:00:00"))
-        #expect(ledger.tags(ofProject: uuid(10)) == ["#9", "#12", "design"])
-        #expect(ledger.tags(ofProject: uuid(11)) == ["admin", "Design"])
-        #expect(ledger.tags(ofProject: nil) == ["email"])
-        #expect(ledger.tags(ofProject: uuid(13)).isEmpty)
+        ledger.merge(entry(5, project: uuid(13), at: "22T10:00:00"))
         let byProject = ledger.tagsByProject()
-        #expect(byProject[uuid(10)] == ledger.tags(ofProject: uuid(10)))
-        #expect(byProject[uuid(11)] == ledger.tags(ofProject: uuid(11)))
+        #expect(byProject[uuid(10)] == ["#9", "#12", "design"])
+        #expect(byProject[uuid(11)] == ["admin", "Design"])
         #expect(byProject[nil] == ["email"])
+        // A project without tags is left out.
+        #expect(byProject[uuid(13)] == nil)
         #expect(byProject.count == 3)
     }
 
