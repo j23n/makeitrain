@@ -29,26 +29,9 @@ public struct Correction: Identifiable, Hashable, Sendable {
     /// be remembered.
     public var id: String
 
-    public init(kind: Kind, day: LocalDate, start: Timestamp, fixes: [CorrectionFix], id: String) {
-        self.kind = kind
-        self.day = day
-        self.start = start
-        self.fixes = fixes
-        self.id = id
-    }
-
     /// The fix to suggest, if there is one.
     public var suggestion: CorrectionFix? {
         fixes.first
-    }
-
-    /// The entries it's about.
-    public var entryIDs: [UUID] {
-        switch kind {
-        case let .overlap(overlap): [overlap.earlier, overlap.later]
-        case let .ranLong(id, _), let .noProject(id): [id]
-        case .notLogged: []
-        }
     }
 }
 
@@ -181,8 +164,8 @@ public enum Corrections {
         _ ids: Set<String>,
         to ledger: inout Ledger,
         on days: ClosedRange<LocalDate>,
-        events: [CalendarImport.Event] = [],
-        calendarProjects: [String: UUID] = [:],
+        events: [CalendarImport.Event],
+        calendarProjects: [String: UUID],
         timeZone: String,
         now: Timestamp
     ) -> Changes {
