@@ -196,3 +196,16 @@ extension Ledger {
         issue(forTag: tag, projectID: projectID)?.url
     }
 }
+
+extension Report {
+    /// The web address of the issue or pull request a tag refers to, when
+    /// the report's entries with the tag are all in one project. `key` is
+    /// the tag in any case; it's read as the first of those entries spells
+    /// it.
+    public func issueURL(forTag key: String, in ledger: Ledger) -> URL? {
+        let projects = Set(entries.filter { entry in entry.entry.tags.contains { Tags.same($0, key) } }.map(\.entry.projectID))
+        guard projects.count == 1, let projectID = projects.first else { return nil }
+        let spelled = entries.lazy.flatMap(\.entry.tags).first { Tags.same($0, key) } ?? key
+        return ledger.issueURL(forTag: spelled, projectID: projectID)
+    }
+}

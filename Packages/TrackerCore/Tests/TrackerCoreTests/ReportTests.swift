@@ -189,6 +189,29 @@ import Testing
         #expect(ids(ReportRequest(range: days(21, 27), clients: [acme], tags: ["call"])) == [uuid(2)])
     }
 
+    @Test func linksATagToItsIssueWhenItsEntriesAreInOneProject() {
+        var ledger = ledger
+        ledger.setRepositories(["https://github.com/acme/web"], ofProject: website, now: now)
+        let entries = [
+            entry(1, website, "23T09:00", "23T10:00", tags: ["#12", "Other/Lib#5"]),
+            entry(2, website, "23T10:00", "23T11:00", tags: ["other/lib#5", "#7"]),
+            entry(3, app, "23T11:00", "23T12:00", tags: ["#7", "#9"]),
+        ]
+        for entry in entries { ledger.merge(entry) }
+        let result = Report(ReportRequest(range: days(21, 27), grouping: .tag), ledger: ledger, now: now)
+        func url(_ key: String) -> String? {
+            result.issueURL(forTag: key, in: ledger)?.absoluteString
+        }
+
+        #expect(url("#12") == "https://github.com/acme/web/issues/12")
+        // As the first entry with the tag spells it.
+        #expect(url("other/lib#5") == "https://github.com/Other/Lib/issues/5")
+        // Entries in two projects, or in one without repositories.
+        #expect(url("#7") == nil)
+        #expect(url("#9") == nil)
+        #expect(url("design") == nil)
+    }
+
     @Test func periodsFollowTheFirstDayOfTheWeek() {
         // Wednesday, September 23, 2026.
         let wednesday = date(2026, 9, 23)
