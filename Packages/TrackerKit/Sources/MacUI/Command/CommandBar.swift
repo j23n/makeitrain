@@ -5,22 +5,23 @@ import TrackerCore
 import TrackerKit
 import WideUI
 
-/// The command line with what it would do under it, and the keys to know:
-/// in the menu bar's popover, in the panel the shortcut opens, and in the
-/// main window.
+/// The running timer and the command line, with what the line would do
+/// under it and the keys to know: in the menu bar's popover and in the
+/// panel the shortcut opens. It's disabled while the data is read-only.
 struct CommandBar: View {
     let line: CommandLineModel
-    var placeholder = "Start, switch, stop or log time"
-    var focusesWithWindow = false
-    var focusRequest = 0
-    /// After a line ran, as for closing the popover.
-    var onDone: () -> Void = {}
-    /// After Escape with nothing typed.
-    var onCancel: () -> Void = {}
+    /// After a line ran, or Escape with nothing typed, as for closing the
+    /// popover.
+    let close: () -> Void
     @Environment(\.undoManager) private var undoManager
+    private let placeholder = "Start, switch, stop or log time"
 
     var body: some View {
         VStack(spacing: 0) {
+            if let running = line.model.running {
+                RunningHeader(model: line.model, running: running)
+                Divider().overlay(Theme.line)
+            }
             HStack(spacing: 10) {
                 Text("›")
                     .font(.system(size: 18, weight: .semibold, design: .monospaced))
@@ -31,8 +32,7 @@ struct CommandBar: View {
                     placeholder: placeholder,
                     reading: line.reading,
                     ledger: line.model.ledger,
-                    focusesWithWindow: focusesWithWindow,
-                    focusRequest: focusRequest,
+                    focusesWithWindow: true,
                     cursorRequest: line.cursorRequest,
                     cursor: line.requestedCursor,
                     onSubmit: submit,
@@ -68,6 +68,10 @@ struct CommandBar: View {
             Divider().overlay(Theme.line)
             hints
         }
+        .disabled(line.model.isReadOnly)
+        .onChange(of: line.model.revision) {
+            line.refresh()
+        }
     }
 
     private var hasPreview: Bool {
@@ -84,13 +88,13 @@ struct CommandBar: View {
 
     private func submit(alternate: Bool) {
         if line.submit(alternate: alternate, undoManager: undoManager), line.model.preferences.closesAfterReturn {
-            onDone()
+            close()
         }
     }
 
     private func cancel() {
         if line.text.isEmpty && !line.showsToday {
-            onCancel()
+            close()
         } else {
             line.clear()
         }

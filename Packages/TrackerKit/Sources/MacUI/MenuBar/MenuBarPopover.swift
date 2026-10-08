@@ -19,20 +19,13 @@ struct MenuBarPopover: View {
     var body: some View {
         VStack(spacing: 0) {
             Notices(model: model)
-            if let running = model.running {
-                RunningHeader(model: model, running: running)
-                Divider().overlay(Theme.line)
-            }
-            CommandBar(line: line, focusesWithWindow: true, onDone: close, onCancel: close)
+            CommandBar(line: line, close: close)
             Divider().overlay(Theme.line)
             footer
         }
         .frame(width: 410)
         .background(Theme.popover)
         .disabled(model.isReadOnly)
-        .onChange(of: model.revision) {
-            line.refresh()
-        }
     }
 
     /// Opening the main window and Settings, and quitting.

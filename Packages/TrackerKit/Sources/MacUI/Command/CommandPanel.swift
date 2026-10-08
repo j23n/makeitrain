@@ -7,7 +7,7 @@ import TrackerKit
 /// middle of the screen that takes the keyboard without bringing the app's
 /// windows forward, and goes away after Return or Escape.
 @MainActor
-final class CommandPanel {
+final class CommandPanel: NSObject, NSWindowDelegate {
     static let shared = CommandPanel()
 
     private var panel: NSPanel?
@@ -39,6 +39,13 @@ final class CommandPanel {
         panel?.orderOut(nil)
     }
 
+    /// Hides the panel when it loses the keyboard, as a popover goes away.
+    nonisolated func windowDidResignKey(_ notification: Notification) {
+        MainActor.assumeIsolated {
+            hide()
+        }
+    }
+
     private func makePanel(model: AppModel) -> NSPanel {
         let line = CommandLineModel(model: model)
         self.line = line
@@ -59,13 +66,15 @@ final class CommandPanel {
         panel.isMovableByWindowBackground = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.backgroundColor = NSColor(Theme.popover)
-        let root = CommandPanelView(model: model, line: line) { [weak self] in
+        let root = CommandBar(line: line) { [weak self] in
             self?.hide()
         }
+        .frame(width: 560)
+        .background(Theme.popover)
         let hosting = NSHostingController(rootView: root)
         hosting.sizingOptions = [.preferredContentSize]
         panel.contentViewController = hosting
-        panel.delegate = PanelDelegate.shared
+        panel.delegate = self
         return panel
     }
 }
@@ -73,38 +82,5 @@ final class CommandPanel {
 /// A panel that can take the keyboard though it doesn't activate the app.
 private final class KeyPanel: NSPanel {
     override var canBecomeKey: Bool { true }
-}
-
-/// Hides the panel when it loses the keyboard, as a popover goes away.
-private final class PanelDelegate: NSObject, NSWindowDelegate {
-    static let shared = PanelDelegate()
-
-    func windowDidResignKey(_ notification: Notification) {
-        MainActor.assumeIsolated {
-            CommandPanel.shared.hide()
-        }
-    }
-}
-
-private struct CommandPanelView: View {
-    let model: AppModel
-    let line: CommandLineModel
-    let close: () -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            if let running = model.running {
-                RunningHeader(model: model, running: running)
-                Divider().overlay(Theme.line)
-            }
-            CommandBar(line: line, focusesWithWindow: true, onDone: close, onCancel: close)
-        }
-        .frame(width: 560)
-        .background(Theme.popover)
-        .disabled(model.isReadOnly)
-        .onChange(of: model.revision) {
-            line.refresh()
-        }
-    }
 }
 #endif
