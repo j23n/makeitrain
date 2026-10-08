@@ -15,7 +15,8 @@ public struct ReportQuery: Hashable, Sendable {
     public var projects: Set<UUID> = []
     /// Tags to include, or all when empty.
     public var tags: Set<String> = []
-    public var tokens: [CommandToken] = []
+    /// The text with its words marked, as the command line marks a line's.
+    public var reading = CommandReading(text: "")
 
     public init() {}
 
@@ -91,7 +92,7 @@ extension CommandReader {
                 }
             }
         }
-        query.tokens = reading.tokens
+        query.reading = reading
         return query
     }
 

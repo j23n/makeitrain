@@ -351,17 +351,10 @@ struct PhoneCommandSheet: View {
         ReportQuery.read(reportText, ledger: model.ledger, today: model.today, firstWeekday: model.firstWeekday)
     }
 
-    /// The typed report, with its words marked as the command line's are.
-    private func reading(of query: ReportQuery) -> CommandReading {
-        var reading = CommandReading(text: reportText)
-        reading.tokens = query.tokens
-        return reading
-    }
-
     @ViewBuilder
     private var reportLine: some View {
         let query = self.query
-        field(text: $reportText, placeholder: "acme last month by tag", reading: reading(of: query), submit: { _ in showReport() })
+        field(text: $reportText, placeholder: "acme last month by tag", reading: query.reading, submit: { _ in showReport() })
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
                 Text("Show").fontWeight(.semibold)

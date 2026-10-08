@@ -129,7 +129,7 @@ import Testing
         #expect(query.range == days("2026-09-01", "2026-09-30"))
         #expect(query.period == .month)
         #expect(query.grouping == .tag)
-        #expect(query.tokens.map(\.kind) == [.client(F.northbridge), .time, .keyword])
+        #expect(query.reading.tokens.map(\.kind) == [.client(F.northbridge), .time, .keyword])
     }
 
     @Test func readsProjectsAndTags() {
@@ -158,7 +158,7 @@ import Testing
 
     @Test func marksWordsItDoesntKnow() {
         let query = read("blah in sep")
-        #expect(query.tokens.map(\.kind) == [.unknown, .keyword, .time])
+        #expect(query.reading.tokens.map(\.kind) == [.unknown, .keyword, .time])
         #expect(query.clients.isEmpty && query.projects.isEmpty)
     }
 }

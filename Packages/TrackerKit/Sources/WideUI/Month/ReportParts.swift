@@ -35,7 +35,7 @@ struct QueryBar: View {
                 CommandField(
                     text: $typed,
                     placeholder: state.typed,
-                    reading: reading,
+                    reading: query.reading,
                     ledger: model.ledger,
                     fontSize: 12.5,
                     focusRequest: focusRequest,
@@ -72,12 +72,6 @@ struct QueryBar: View {
 
     private var query: ReportQuery {
         ReportQuery.read(typed, ledger: model.ledger, today: model.today, firstWeekday: model.firstWeekday)
-    }
-
-    private var reading: CommandReading {
-        var reading = CommandReading(text: typed)
-        reading.tokens = query.tokens
-        return reading
     }
 
     /// A word of the sentence that's a choice, dotted underneath.
