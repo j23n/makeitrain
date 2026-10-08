@@ -90,8 +90,8 @@ public final class ReportState {
         figures.comparison
     }
 
-    /// The filtered time on each day of the range's year, the running
-    /// timer left out as in reports.
+    /// The filtered time on each day of the years the range is in, the
+    /// running timer left out as in reports.
     public var dayTotals: DayTotals {
         daily.totals
     }
@@ -113,11 +113,10 @@ public final class ReportState {
     }
 
     private var daily: (totals: DayTotals, overlapDays: Set<LocalDate>) {
-        // The year around the range, and a week either side for the month
+        // The years the range is in, and a week either side for the month
         // grid's first and last rows.
-        let year = range.lowerBound.year
-        let first = LocalDate(year: year, month: 1, day: 1).adding(days: -7)
-        let last = max(LocalDate(year: year, month: 12, day: 31), range.upperBound).adding(days: 7)
+        let first = LocalDate(year: range.lowerBound.year, month: 1, day: 1).adding(days: -7)
+        let last = LocalDate(year: range.upperBound.year, month: 12, day: 31).adding(days: 7)
         let filter = EntryFilter(range: first...last, clients: clients, projects: projects, tags: tags)
         let key = DailyKey(filter: filter, revision: model.revision)
         if let dailyCache, dailyCache.key == key {
