@@ -59,29 +59,38 @@ extension AppModel {
         calendars.contains { linkedProject(of: $0.id) != nil }
     }
 
-    /// What importing the events that start on the days from `first`
-    /// through `last` adds, without adding anything. Only linked calendars
-    /// are read.
-    public func calendarImportPlan(from first: LocalDate, through last: LocalDate, includingDeleted: Bool = false) -> CalendarImport.Plan {
-        guard let provider = environment.calendars else { return CalendarImport.Plan() }
+    /// The events in this device's linked calendars that start on the days
+    /// given, and each linked calendar's project, by calendar id.
+    func linkedEvents(on days: ClosedRange<LocalDate>) -> (events: [CalendarImport.Event], projects: [String: UUID]) {
+        guard let provider = environment.calendars, calendarAccess == .granted else { return ([], [:]) }
         var projects: [String: UUID] = [:]
         for link in calendarLinks {
             if let projectID = linkedProject(of: link.calendarID) {
                 projects[link.calendarID] = projectID
             }
         }
-        guard !projects.isEmpty else { return CalendarImport.Plan() }
+        guard !projects.isEmpty else { return ([], [:]) }
         let zone = environment.timeZone()
-        let start = Timestamp(date: first, secondOfDay: 0, zone: zone)
-        let end = Timestamp(date: last.adding(days: 1), secondOfDay: 0, zone: zone)
-        // An event that started the day before belongs to that day's import.
+        let start = Timestamp(date: days.lowerBound, secondOfDay: 0, zone: zone)
+        let end = Timestamp(date: days.upperBound.adding(days: 1), secondOfDay: 0, zone: zone)
+        // An event that started the day before belongs to that day.
         let events = provider.events(inCalendars: Set(projects.keys), from: start, to: end)
             .filter { $0.start >= start && $0.start < end }
+        return (events, projects)
+    }
+
+    /// What importing the events that start on the days from `first`
+    /// through `last` adds, without adding anything. Only linked calendars
+    /// are read.
+    public func calendarImportPlan(from first: LocalDate, through last: LocalDate, includingDeleted: Bool = false) -> CalendarImport.Plan {
+        guard first <= last else { return CalendarImport.Plan() }
+        let linked = linkedEvents(on: first...last)
+        guard !linked.projects.isEmpty else { return CalendarImport.Plan() }
         return CalendarImport.plan(
-            events,
-            projects: projects,
+            linked.events,
+            projects: linked.projects,
             into: ledger,
-            timeZone: zone,
+            timeZone: environment.timeZone(),
             includingDeleted: includingDeleted,
             now: environment.now()
         )
