@@ -16,6 +16,13 @@ import Testing
         #expect(Timestamp(milliseconds: -1000).wholeSeconds.milliseconds == -1000)
     }
 
+    @Test func roundsToMinutes() {
+        #expect(t("2026-09-23T09:02:29+02:00").rounded(toMinutes: 5) == t("2026-09-23T09:00:00+02:00"))
+        #expect(t("2026-09-23T09:02:30+02:00").rounded(toMinutes: 5) == t("2026-09-23T09:05:00+02:00"))
+        #expect(t("2026-09-23T09:02:29+02:00").rounded(toMinutes: 1) == t("2026-09-23T09:02:00+02:00"))
+        #expect(Timestamp(milliseconds: -200_000).rounded(toMinutes: 5) == Timestamp(milliseconds: -300_000))
+    }
+
     @Test func stampsBeatThePreviousStamp() {
         let now = t("2026-09-23T10:00:00Z")
         #expect(Timestamp.stamp(after: nil, now: now) == now)

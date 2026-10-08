@@ -31,6 +31,13 @@ public struct Timestamp: Hashable, Comparable, Sendable {
         Timestamp(milliseconds: milliseconds.floorDivided(by: 1000) * 1000)
     }
 
+    /// The nearest time on a multiple of `minutes` minutes, as times snap to
+    /// five minutes; halfway rounds up.
+    public func rounded(toMinutes minutes: Int64) -> Timestamp {
+        let step = minutes * 60000
+        return Timestamp(milliseconds: (milliseconds + step / 2).floorDivided(by: step) * step)
+    }
+
     public func adding(milliseconds delta: Int64) -> Timestamp {
         Timestamp(milliseconds: milliseconds + delta)
     }

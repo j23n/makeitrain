@@ -78,6 +78,27 @@ import Testing
         #expect(meetingDuringTimer.map(\.fixes) == [[.split(outer: uuid(1), inner: uuid(2)), .trimEarlier(id: uuid(1), end: at("10:00"))]])
     }
 
+    @Test func spansTheTimeBothEntriesCount() {
+        /// Each overlap's span, which is as long as the overlap.
+        func spans(_ entries: [TimeEntry], now: String = "23:00", running: UUID? = nil) -> [TimeSpan?] {
+            let ledger = Ledger(entries: entries)
+            return analyze(entries, now: now).map { overlap in
+                let span = ledger.doubleCountedSpan(overlap, running: running, now: at(now))
+                #expect(span.map { $0.duration == overlap.duration } ?? true)
+                return span
+            }
+        }
+        let tenToHalfPast = TimeSpan(start: at("10:00"), end: at("10:30"))
+        #expect(spans([entry(1, "09:00", "10:30"), entry(2, "10:00", "11:00")]) == [tenToHalfPast])
+        #expect(spans([entry(1, "09:00", "12:00"), entry(2, "10:00", "10:30")]) == [tenToHalfPast])
+        // The running timer counts until now.
+        #expect(spans([entry(1, "09:00", nil), entry(2, "10:00", "10:30")], now: "11:00", running: uuid(1)) == [tenToHalfPast])
+        #expect(spans([entry(1, "09:00", "11:00"), entry(2, "10:00", nil)], now: "10:40", running: uuid(2)) == [TimeSpan(start: at("10:00"), end: at("10:40"))])
+        // A timer overtaken by another device's has no end of its own.
+        #expect(spans([entry(1, "09:00", nil), entry(2, "10:00", "10:30"), entry(3, "10:15", nil)], now: "11:00", running: uuid(3))
+            == [nil, TimeSpan(start: at("10:15"), end: at("10:30"))])
+    }
+
     @Test func trimmingEndsTheEarlierEntry() {
         var ledger = Ledger(entries: [entry(1, "09:00", "10:30"), entry(2, "10:00", "11:00")])
         ledger.apply(.trimEarlier(id: uuid(1), end: at("10:00")), now: at("12:00"))

@@ -254,20 +254,14 @@ struct UsualEnd {
         let day = entry.entry.day
         let end = entry.end ?? now
         let earliest = entry.start.adding(seconds: 15 * 60)
-        let usual = rounded(Timestamp(date: day, secondOfDay: second, zone: zone))
+        let usual = Timestamp(date: day, secondOfDay: second, zone: zone).rounded(toMinutes: 5)
         var candidates: [Timestamp] = []
         if usual > earliest {
             candidates = [usual, usual.adding(seconds: -3600), usual.adding(seconds: 3600)]
         } else {
-            candidates = [rounded(entry.start.adding(seconds: 3600))]
+            candidates = [entry.start.adding(seconds: 3600).rounded(toMinutes: 5)]
         }
         return candidates.filter { $0 > entry.start && $0 < end }
-    }
-
-    /// A time on a multiple of five minutes.
-    private func rounded(_ time: Timestamp) -> Timestamp {
-        let step: Int64 = 300_000
-        return Timestamp(milliseconds: (time.milliseconds + step / 2).floorDivided(by: step) * step)
     }
 }
 

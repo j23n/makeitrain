@@ -140,6 +140,8 @@ import Testing
 
     @Test func movesTheSeamBetweenTwoEntries() {
         var ledger = self.ledger
+        #expect(ledger.canMoveSeam(earlier: uuid(3), later: uuid(4)))
+        #expect(!ledger.canMoveSeam(earlier: uuid(1), later: uuid(2)))
         ledger.moveSeam(earlier: uuid(3), later: uuid(4), to: F.at("14:50", on: "2026-09-30"), now: now)
         #expect(ledger.entries[uuid(3)]?.end == F.at("14:50", on: "2026-09-30"))
         #expect(ledger.entries[uuid(4)]?.start == F.at("14:50", on: "2026-09-30"))
@@ -171,8 +173,10 @@ import Testing
             F.entry(2, nil, "2026-10-01", "09:00", "09:30"),
         ])
         let overlap = Overlaps.analyze(ledger.resolvedEntries(), now: now).first
-        // Same start: the longer one starts when the shorter one ends.
+        // Same start: the longer one starts when the shorter one ends. They
+        // have no seam to move.
         #expect(overlap?.fixes == [.trimLater(id: uuid(1), start: F.at("09:30", on: "2026-10-01"))])
+        #expect(!ledger.canMoveSeam(earlier: uuid(1), later: uuid(2)))
         var fixed = ledger
         fixed.apply(OverlapFix.trimLater(id: uuid(1), start: F.at("09:30", on: "2026-10-01")), now: now)
         #expect(fixed.entries[uuid(1)]?.start == F.at("09:30", on: "2026-10-01"))

@@ -188,17 +188,26 @@ extension Ledger {
         return changes
     }
 
+    /// Whether two entries have a seam to move: the earlier one starts first
+    /// and has ended where the later one runs, from its start to its end.
+    public func canMoveSeam(earlier earlierID: UUID, later laterID: UUID) -> Bool {
+        guard let earlier = entries[earlierID], let later = entries[laterID], !earlier.isDeleted, !later.isDeleted,
+              let earlierEnd = earlier.end
+        else { return false }
+        return earlier.start < later.start && earlierEnd >= later.start && later.end.map({ earlierEnd <= $0 }) ?? true
+    }
+
     /// Moves the seam between two entries that meet or overlap: the earlier
     /// one ends and the later one starts at `time`, as one change. `time`
     /// stays inside both, at least a minute from either's other end; the
-    /// later one runs until now while it runs.
+    /// later one runs until now while it runs. Nothing changes unless
+    /// `canMoveSeam(earlier:later:)`.
     @discardableResult
     public mutating func moveSeam(earlier earlierID: UUID, later laterID: UUID, to time: Timestamp, now: Timestamp) -> Changes {
         var changes = settleOvertakenTimers(now: now)
-        guard let earlier = entries[earlierID], let later = entries[laterID], !earlier.isDeleted, !later.isDeleted,
-              earlier.start < later.start, let earlierEnd = earlier.end, earlierEnd >= later.start,
-              later.end.map({ earlierEnd <= $0 }) ?? true
-        else { return changes }
+        guard canMoveSeam(earlier: earlierID, later: laterID), let earlier = entries[earlierID], let later = entries[laterID] else {
+            return changes
+        }
         let first = earlier.start.adding(seconds: 60)
         let last = (later.end ?? now).adding(seconds: -60)
         guard first <= last else { return changes }
