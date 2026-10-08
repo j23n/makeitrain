@@ -47,6 +47,16 @@ import Testing
         #expect(preview.newOverlaps.first?.duration == Int64(30 * 60000))
     }
 
+    @Test func previewsTheOverlapsWithATimerLeftRunning() {
+        // Running since Saturday, it overlaps what's logged today.
+        let forgotten = F.entry(107, F.harbor, "2026-10-03", "17:00", nil, note: "Release")
+        let context = F.context(F.ledger([forgotten]), now: "18:00")
+        let command = Command.log(EntryDraft(projectID: F.bookings, note: "Review"), start: F.at("16:00"), end: F.at("17:00"))
+        let preview = CommandPreview(command, in: context)
+        #expect(preview.newOverlaps.map(\.earlier) == [uuid(107)])
+        #expect(preview.newOverlaps.first?.duration == Int64(60 * 60000))
+    }
+
     @Test func movesTheRunningTimersStart() throws {
         var ledger = F.ledger([F.runningBookings])
         try ledger.perform(.moveStart(to: F.at("09:00")), timeZone: zone, now: F.at("10:40"))

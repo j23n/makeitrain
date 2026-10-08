@@ -166,25 +166,16 @@ public struct CommandPreview: Hashable, Sendable {
         _ = try? after.perform(command, timeZone: context.timeZone, now: context.now)
         self.after = after
         diff = after.diff(from: context.ledger)
-        newOverlaps = Overlaps.introduced(by: diff, before: context.ledger, after: after, now: context.now)
+        newOverlaps = Self.introduced(by: diff, before: context.ledger, after: after, now: context.now)
     }
-}
 
-extension Overlaps {
     /// The overlaps in `after` that involve entries `diff` changed or added
     /// and weren't in `before`.
-    public static func introduced(by diff: LedgerDiff, before: Ledger, after: Ledger, now: Timestamp) -> [Overlap] {
+    private static func introduced(by diff: LedgerDiff, before: Ledger, after: Ledger, now: Timestamp) -> [Overlap] {
         let touched = Set(diff.entries.compactMap { $0.after?.id })
         guard !touched.isEmpty else { return [] }
-        // Only the days around the changed entries can gain overlaps.
-        let days = Set(diff.entries.flatMap { change in
-            [change.before?.day, change.after?.day].compactMap { $0 }.flatMap { [$0.adding(days: -1), $0, $0.adding(days: 1)] }
-        })
-        func near(_ ledger: Ledger) -> [ResolvedEntry] {
-            ledger.resolvedEntries().filter { days.contains($0.entry.day) }
-        }
-        let earlier = Set(analyze(near(before), now: now).map { [$0.earlier, $0.later] })
-        return analyze(near(after), now: now).filter { overlap in
+        let earlier = Set(Overlaps.analyze(before.resolvedEntries(), now: now).map { [$0.earlier, $0.later] })
+        return Overlaps.analyze(after.resolvedEntries(), now: now).filter { overlap in
             (touched.contains(overlap.earlier) || touched.contains(overlap.later)) && !earlier.contains([overlap.earlier, overlap.later])
         }
     }
