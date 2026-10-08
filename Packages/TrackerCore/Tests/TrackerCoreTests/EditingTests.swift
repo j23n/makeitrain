@@ -180,19 +180,19 @@ import Testing
         #expect(changes.isEmpty)
     }
 
-    @Test func renamingATagRenamesItEverywhere() {
+    @Test func renamingATagRenamesItOnEveryEntry() {
         var ledger = Ledger(entries: [
             entry(1, tags: ["Design"]),
             entry(2, tags: ["design", "call"]),
             entry(3, tags: ["call"]),
         ])
-        ledger.renameTag("design", to: "UX", now: noon)
+        ledger.renameTag("design", to: "UX", inProject: nil, now: noon)
         #expect(ledger.entries[uuid(1)]?.tags == ["UX"])
         #expect(ledger.entries[uuid(2)]?.tags == ["UX", "call"])
         #expect(ledger.entries[uuid(3)]?.tags == ["call"])
 
         // Renaming to an existing tag merges the two.
-        ledger.renameTag("call", to: "ux", now: noon)
+        ledger.renameTag("call", to: "ux", inProject: nil, now: noon)
         #expect(ledger.entries[uuid(2)]?.tags == ["UX"])
         #expect(ledger.entries[uuid(3)]?.tags == ["ux"])
     }

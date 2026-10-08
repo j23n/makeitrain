@@ -250,25 +250,14 @@ extension Ledger {
         return changes
     }
 
-    /// Renames a tag, ignoring case, on every entry that has it. Renaming a
-    /// tag to another tag's name merges the two.
-    @discardableResult
-    public mutating func renameTag(_ tag: String, to newName: String, now: Timestamp) -> Changes {
-        renameTag(tag, to: newName, now: now) { _ in true }
-    }
-
-    /// Renames a tag on the entries of one project, or on unassigned entries
-    /// for nil, leaving other projects' tags of the same name alone.
-    /// Renaming to a tag the project has already merges the two; renaming to
-    /// nothing removes the tag.
+    /// Renames a tag, ignoring case, on the entries of one project, or on
+    /// unassigned entries for nil, leaving other projects' tags of the same
+    /// name alone. Renaming to a tag the project has already merges the
+    /// two; renaming to nothing removes the tag.
     @discardableResult
     public mutating func renameTag(_ tag: String, to newName: String, inProject projectID: UUID?, now: Timestamp) -> Changes {
-        renameTag(tag, to: newName, now: now) { $0.projectID == projectID }
-    }
-
-    private mutating func renameTag(_ tag: String, to newName: String, now: Timestamp, where included: (TimeEntry) -> Bool) -> Changes {
         var changes = settleOvertakenTimers(now: now)
-        for entry in entries.values where !entry.isDeleted && included(entry) && entry.tags.contains(where: { Tags.same($0, tag) }) {
+        for entry in entries.values where !entry.isDeleted && entry.projectID == projectID && entry.tags.contains(where: { Tags.same($0, tag) }) {
             changes.formUnion(edit(entry.id, now: now) { entry in
                 entry.tags = entry.tags.map { Tags.same($0, tag) ? newName : $0 }
             })
@@ -376,7 +365,7 @@ extension Ledger {
     @discardableResult
     public mutating func deleteProject(_ id: UUID, now: Timestamp) throws -> Changes {
         guard projects[id]?.isDeleted == false else { throw LedgerError.notFound }
-        guard !hasEntries(inProjects: [id]) else { throw LedgerError.hasEntries }
+        guard !entries.values.contains(where: { !$0.isDeleted && $0.projectID == id }) else { throw LedgerError.hasEntries }
         return updateProject(id, now: now) { $0.deleted = now }
     }
 
@@ -392,11 +381,5 @@ extension Ledger {
         }
         changes.formUnion(updateProject(id, now: now) { $0.deleted = now })
         return changes
-    }
-
-    private func hasEntries(inProjects ids: Set<UUID>) -> Bool {
-        entries.values.contains { entry in
-            !entry.isDeleted && entry.projectID.map { ids.contains($0) } == true
-        }
     }
 }
