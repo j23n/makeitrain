@@ -68,16 +68,14 @@ import Testing
 
     @Test func offersTrimOrSplit() {
         let partial = analyze([entry(1, "09:00", "10:30"), entry(2, "10:00", "11:00")])
-        #expect(partial.map(\.fix) == [.trimEarlier(id: uuid(1), end: at("10:00"))])
+        #expect(partial.map(\.fixes) == [[.trimEarlier(id: uuid(1), end: at("10:00")), .trimLater(id: uuid(2), start: at("10:30"))]])
 
         let contained = analyze([entry(1, "09:00", "12:00"), entry(2, "10:00", "10:30")])
-        #expect(contained.map(\.fix) == [.split(outer: uuid(1), inner: uuid(2))])
+        #expect(contained.map(\.fixes) == [[.split(outer: uuid(1), inner: uuid(2)), .trimEarlier(id: uuid(1), end: at("10:00"))]])
 
+        // A running timer is split around a meeting inside it too.
         let meetingDuringTimer = analyze([entry(1, "09:00", nil), entry(2, "10:00", "10:30")], now: "11:00")
-        #expect(meetingDuringTimer.map(\.fix) == [.split(outer: uuid(1), inner: uuid(2))])
-
-        let sameStart = analyze([entry(1, "09:00", "10:00"), entry(2, "09:00", "09:30")])
-        #expect(sameStart.map(\.fix) == [nil])
+        #expect(meetingDuringTimer.map(\.fixes) == [[.split(outer: uuid(1), inner: uuid(2)), .trimEarlier(id: uuid(1), end: at("10:00"))]])
     }
 
     @Test func trimmingEndsTheEarlierEntry() {

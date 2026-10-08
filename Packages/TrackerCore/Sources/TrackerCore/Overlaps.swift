@@ -23,9 +23,6 @@ public struct Overlap: Hashable, Sendable {
     public var later: UUID
     /// How long they overlap, in milliseconds.
     public var duration: Int64
-    /// The one-click fix to offer. nil when both start at the same moment,
-    /// where neither fix makes sense.
-    public var fix: OverlapFix?
     /// Every fix to offer, the one to suggest first: splitting the outer
     /// entry around an inner one or ending it early, or, where they only
     /// partly overlap, ending the earlier one or starting the later one
@@ -67,7 +64,6 @@ public enum Overlaps {
                     earlier: latest.entry.id,
                     later: span.entry.id,
                     duration: span.entry.start.distance(to: min(span.end, latest.end)),
-                    fix: fix(earlier: latest, later: span),
                     fixes: fixes(earlier: latest, later: span)
                 ))
             }
@@ -101,15 +97,6 @@ public enum Overlaps {
     private struct Span {
         var entry: ResolvedEntry
         var end: Timestamp
-    }
-
-    private static func fix(earlier: Span, later: Span) -> OverlapFix? {
-        guard earlier.entry.start < later.entry.start else { return nil }
-        if earlier.end > later.end {
-            // The earlier entry contains the later one, which must have stopped to split around it.
-            return later.entry.isRunning ? nil : .split(outer: earlier.entry.id, inner: later.entry.id)
-        }
-        return .trimEarlier(id: earlier.entry.id, end: later.entry.start)
     }
 
     private static func fixes(earlier: Span, later: Span) -> [OverlapFix] {
