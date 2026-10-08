@@ -244,7 +244,7 @@ extension CommandLineModel {
             )
         }
         let words = text.lowercased().split(separator: " ")
-        if let end = lastEndToday, !words.contains("from") {
+        if !words.contains("from"), let end = model.commandContext.lastEndToday {
             let time = Format.time(end, zone: model.environment.timeZone())
             chips.append(LineChip(id: "from", title: "from \(time)", action: .append("from \(time)")))
         }
@@ -278,12 +278,6 @@ extension CommandLineModel {
         case let .suggestion(index):
             acceptSuggestion(at: index)
         }
-    }
-
-    /// When today's last finished entry ended, for "from".
-    private var lastEndToday: Timestamp? {
-        let today = model.today
-        return model.resolved.filter { $0.entry.day == today && !$0.isRunning }.compactMap(\.end).max()
     }
 }
 
