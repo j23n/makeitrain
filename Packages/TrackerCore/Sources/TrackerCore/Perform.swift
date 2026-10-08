@@ -96,7 +96,8 @@ extension Ledger {
     }
 }
 
-/// Records as they were and as they are, for showing what an edit changes.
+/// Records as they were and as they are, for showing what an edit changes
+/// and for undoing it.
 public struct LedgerDiff: Hashable, Sendable {
     /// A record before and after. `before` is nil for a record that's new.
     public struct Change<Record: Hashable & Sendable>: Hashable, Sendable {

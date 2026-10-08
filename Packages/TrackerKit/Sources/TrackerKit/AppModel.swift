@@ -419,7 +419,7 @@ public final class AppModel {
         let changes = try change(&ledger, stamp)
         guard !changes.isEmpty else { return false }
         record(changes)
-        registerUndo(ledger.snapshot(since: before), actionName: actionName, undoManager: undoManager)
+        registerUndo(ledger.diff(from: before), actionName: actionName, undoManager: undoManager)
         return true
     }
 
@@ -430,23 +430,23 @@ public final class AppModel {
         }
     }
 
-    private func registerUndo(_ snapshot: Snapshot, actionName: String, undoManager: UndoManager?) {
-        guard let undoManager, !snapshot.isEmpty else { return }
+    private func registerUndo(_ diff: LedgerDiff, actionName: String, undoManager: UndoManager?) {
+        guard let undoManager, !diff.isEmpty else { return }
         undoManager.registerUndo(withTarget: self) { model in
             MainActor.assumeIsolated {
-                model.undo(snapshot, actionName: actionName, undoManager: undoManager)
+                model.undo(diff, actionName: actionName, undoManager: undoManager)
             }
         }
         undoManager.setActionName(actionName)
     }
 
-    private func undo(_ snapshot: Snapshot, actionName: String, undoManager: UndoManager) {
+    private func undo(_ diff: LedgerDiff, actionName: String, undoManager: UndoManager) {
         guard !isReadOnly else { return }
         let before = ledger
         let stamp = environment.now()
         now = stamp
-        record(ledger.restore(snapshot, now: stamp))
-        registerUndo(ledger.snapshot(since: before), actionName: actionName, undoManager: undoManager)
+        record(ledger.restore(diff, now: stamp))
+        registerUndo(ledger.diff(from: before), actionName: actionName, undoManager: undoManager)
     }
 }
 
