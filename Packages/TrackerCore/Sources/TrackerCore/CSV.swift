@@ -14,7 +14,7 @@ import Foundation
 ///   client cell; an unassigned entry has empty client and project cells.
 /// - A running timer is left out until it stops.
 public enum CSVExport {
-    public static let header = ["date", "start", "end", "hours", "client", "project", "tags", "note"]
+    private static let header = ["date", "start", "end", "hours", "client", "project", "tags", "note"]
 
     public static func data(for report: Report, ledger: Ledger) -> Data {
         data(for: report.entries, ledger: ledger)
