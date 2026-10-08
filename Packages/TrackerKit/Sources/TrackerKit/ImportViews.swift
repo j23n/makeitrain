@@ -203,6 +203,47 @@ public struct CalendarImportSummary: View {
     }
 }
 
+/// A project's color and title, such as "● Acme › Website".
+private struct ProjectLabel: View {
+    let ledger: Ledger
+    let projectID: UUID?
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ProjectDot(ledger: ledger, projectID: projectID)
+            Text(ledger.projectTitle(projectID))
+                .lineLimit(1)
+                .foregroundStyle(projectID == nil ? .secondary : .primary)
+        }
+    }
+}
+
+/// A project's color as a dot, or a ring for no project, as pickers show
+/// "No Project". The ring keeps unassigned entries apart from a gray
+/// project. The dot grows with Dynamic Type, like the text beside it.
+private struct ProjectDot: View {
+    let color: RGBA?
+    @ScaledMetric private var size: CGFloat = 8
+
+    init(ledger: Ledger, projectID: UUID?) {
+        color = projectID.map { ledger.tint(ofProject: $0).base }
+    }
+
+    var body: some View {
+        Group {
+            if let color {
+                Circle()
+                    .fill(Color(light: color, dark: color))
+            } else {
+                Circle()
+                    .strokeBorder(.secondary, lineWidth: 1)
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+}
+
 #if DEBUG
 #Preview("Calendar Import Summary") {
     let model = PreviewData.model()
