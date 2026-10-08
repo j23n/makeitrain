@@ -14,34 +14,29 @@ public enum TimerActions {
         let model = AppModel.shared
         await model.start()
         let zone = model.environment.timeZone()
+        let prompt = "Say a project, tags or a note."
         let reading = model.read(line)
         guard let command = reading.primary else {
-            return reading.problem.map { CommandText.message($0, zone: zone) }
-                ?? "Say a project, tags or a note."
+            return reading.problem.map { CommandText.message($0, zone: zone) } ?? prompt
         }
-        let draft: EntryDraft
-        switch command {
-        case let .start(start, _, _), let .log(start, _, _):
-            draft = start
-        default:
-            return "That doesn't start a timer. Say a project, tags or a note."
+        guard let draft = reading.draft else {
+            return "That doesn't start a timer. \(prompt)"
         }
         let switching = model.running != nil
         switch model.run(line, undoManager: nil) {
         case .done:
             await model.flush()
             let what = describe(draft, in: model.ledger)
-            if case .log = command {
+            switch command {
+            case .log, .start(_, _, .some):
                 return "Logged \(what)."
+            default:
+                return switching ? "Switched to \(what)." : "Started \(what)."
             }
-            if case .start(_, _, .some) = command {
-                return "Logged \(what)."
-            }
-            return switching ? "Switched to \(what)." : "Started \(what)."
         case let .problem(problem):
             return CommandText.message(problem, zone: zone)
         case .nothing:
-            return "Say a project, tags or a note."
+            return prompt
         }
     }
 

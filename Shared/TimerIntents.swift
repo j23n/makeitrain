@@ -21,10 +21,6 @@ struct StartTimerIntent: LiveActivityIntent {
 
     init() {}
 
-    init(line: String) {
-        self.line = line
-    }
-
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         #if WIDGET_EXTENSION
