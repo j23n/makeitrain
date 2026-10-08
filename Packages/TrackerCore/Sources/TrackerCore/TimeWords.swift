@@ -126,14 +126,23 @@ enum TimeWords {
         return day
     }
 
-    /// Whether a word is a dash between two times: "-", "–" or "—".
+    /// The words a start time follows, as in "from 9:00".
+    static let startWords: Set<String> = ["from", "since", "at", "starting"]
+
+    /// The words an end time follows, as in "until 17:00".
+    static let endWords: Set<String> = ["until", "till", "til", "to"]
+
+    /// The dashes between two times: "-", "–" and "—".
+    static let dashes: Set<Character> = ["-", "–", "—"]
+
+    /// Whether a word is a dash between two times.
     static func isDash(_ word: String) -> Bool {
-        word == "-" || word == "–" || word == "—"
+        word.count == 1 && word.allSatisfy(dashes.contains)
     }
 
     /// Splits a word such as "9:00-9:30" or "9–10" at its dash.
     static func splitRange(_ text: String) -> (String, String)? {
-        guard let dash = text.firstIndex(where: { $0 == "-" || $0 == "–" || $0 == "—" }), dash != text.startIndex else {
+        guard let dash = text.firstIndex(where: dashes.contains), dash != text.startIndex else {
             return nil
         }
         return (String(text[..<dash]), String(text[text.index(after: dash)...]))

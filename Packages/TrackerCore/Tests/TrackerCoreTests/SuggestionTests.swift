@@ -72,6 +72,7 @@ import Testing
         // After a start and a dash, the ends after it.
         #expect(suggest("book 8:00-").map(\.title) == ["8:00-9:00"])
         #expect(suggest("8").map(\.title) == ["8:00"])
+        #expect(suggest("book till 9").map(\.title) == ["9:00"])
     }
 
     @Test func leavesTheEditedEntrysOwnTimesOut() {

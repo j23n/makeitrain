@@ -89,6 +89,8 @@ import Testing
         #expect(range("book 9am-11am") == [F.at("09:00"), F.at("11:00")])
         #expect(range("book 11-1pm") == [F.at("11:00"), F.at("13:00")])
         #expect(range("book 13:30–17:45") == [F.at("13:30"), F.at("17:45")])
+        #expect(range("book 9:00 — 9:30") == [F.at("09:00"), F.at("09:30")])
+        #expect(range("book review for 45 minutes") == [F.at("17:15"), F.at("18:00")])
         #expect(range("book from 9 to 17:00") == [F.at("09:00"), F.at("17:00")])
         #expect(range("book review for 45m") == [F.at("17:15"), F.at("18:00")])
         #expect(range("book wed 9:00-9:30") == [F.at("09:00", on: "2026-09-30"), F.at("09:30", on: "2026-09-30")])

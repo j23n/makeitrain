@@ -51,7 +51,7 @@ public enum Durations {
     /// times of day there.
     public static func parseWithUnit(_ text: String) -> Int64? {
         var typed = text.lowercased()
-        for (long, short) in [("minutes", "m"), ("minute", "m"), ("mins", "m"), ("min", "m"), ("hours", "h"), ("hour", "h"), ("hrs", "h"), ("hr", "h")] {
+        for (long, short) in unitWords {
             typed = typed.replacingOccurrences(of: long, with: short)
         }
         guard typed.first?.isASCIIDigit == true || typed.first == ".",
@@ -60,4 +60,11 @@ public enum Durations {
         else { return nil }
         return duration
     }
+
+    /// The words for minutes and hours, each before the shorter ones it
+    /// starts with, and the letter each stands for.
+    static let unitWords: [(word: String, letter: String)] = [
+        ("minutes", "m"), ("minute", "m"), ("mins", "m"), ("min", "m"), ("m", "m"),
+        ("hours", "h"), ("hour", "h"), ("hrs", "h"), ("hr", "h"), ("h", "h"),
+    ]
 }

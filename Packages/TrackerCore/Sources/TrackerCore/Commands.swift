@@ -330,8 +330,8 @@ struct CommandReader {
         if let length = Durations.parseWithUnit(text) {
             return (length, 1)
         }
-        let units: Set<String> = ["m", "min", "mins", "minute", "minutes", "h", "hr", "hrs", "hour", "hours"]
-        if let unit = word(index + 1), units.contains(unit), text.allSatisfy({ $0.isASCIIDigit || $0 == "." || $0 == "," }),
+        if let unit = word(index + 1), Durations.unitWords.contains(where: { $0.word == unit }),
+           text.allSatisfy({ $0.isASCIIDigit || $0 == "." || $0 == "," }),
            let length = Durations.parseWithUnit(text + unit) {
             return (length, 2)
         }
@@ -376,7 +376,7 @@ struct CommandReader {
     func timePiece(at index: Int) -> (TimePiece, Int)? {
         guard let text = word(index) else { return nil }
         switch text {
-        case "from", "since", "at", "starting":
+        case _ where TimeWords.startWords.contains(text):
             if case let (span, count)? = range(at: index + 1, plainTo: true) {
                 return (TimePiece.range(span.0, span.1), count + 1)
             }
@@ -393,7 +393,7 @@ struct CommandReader {
                 return (TimePiece.start(time), count + 1)
             }
             return nil
-        case "until", "till", "til", "to":
+        case _ where TimeWords.endWords.contains(text):
             if word(index + 1) == "now" {
                 return (TimePiece.endNow, 2)
             }

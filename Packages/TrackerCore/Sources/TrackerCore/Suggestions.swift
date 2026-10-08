@@ -44,7 +44,7 @@ public enum LineSuggestions {
     ]
 
     /// Words a time of day follows.
-    static let timeWords: Set<String> = ["from", "since", "at", "starting", "until", "till", "til", "to"]
+    static let timeWords = TimeWords.startWords.union(TimeWords.endWords)
 
     /// The most suggestions offered at once.
     static let limit = 6
