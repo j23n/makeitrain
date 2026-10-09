@@ -339,7 +339,7 @@ struct StatementPanel: View {
                 Spacer()
                 SegmentPicker(
                     ReportRequest.Grouping.allCases.map { (value: $0, title: $0.rawValue.capitalized) },
-                    selection: Binding(get: { state.grouping }, set: { state.grouping = $0 })
+                    selection: Bindable(state).grouping
                 )
                 .scaleEffect(0.9)
             }
