@@ -339,8 +339,7 @@ struct PhoneCorrectionPanel: View {
                 }
                 Spacer()
                 Button("Skip") {
-                    week.selectedCorrection = preview.id
-                    week.skipSelected()
+                    week.skip(preview.id)
                 }
                 .foregroundStyle(Theme.text2)
             }
@@ -350,8 +349,7 @@ struct PhoneCorrectionPanel: View {
     }
 
     private func apply(_ fix: CorrectionFix) {
-        model.apply(fix, undoManager: undoManager)
-        week.reload()
+        week.apply(fix, undoManager: undoManager)
         if let next = week.selectedPreview {
             showDay(next.correction.day)
         }

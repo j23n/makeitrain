@@ -72,7 +72,7 @@ public final class WeekModel {
         reload()
     }
 
-    public func reload() {
+    private func reload() {
         loadedRevision = model.revision
         loadedSkips = model.preferences.skippedCorrections
         let widened = days.lowerBound.adding(days: -1)...days.upperBound
@@ -115,22 +115,33 @@ public final class WeekModel {
         selectedCorrection = previews[next].id
     }
 
-    /// Accepts the selected correction's suggestion.
-    public func acceptSelected(undoManager: UndoManager?) {
-        guard let fix = selectedPreview?.correction.suggestion else { return }
+    /// Applies a fix and works the days out again, so the selection moves
+    /// on from a correction it fixed.
+    public func apply(_ fix: CorrectionFix, undoManager: UndoManager?) {
         model.apply(fix, undoManager: undoManager)
         reload()
     }
 
-    /// Skips the selected correction on this device.
-    public func skipSelected() {
-        guard let id = selectedPreview?.id else { return }
+    /// Accepts the selected correction's suggestion.
+    public func acceptSelected(undoManager: UndoManager?) {
+        guard let fix = selectedPreview?.correction.suggestion else { return }
+        apply(fix, undoManager: undoManager)
+    }
+
+    /// Skips a correction on this device, and selects the one after it.
+    public func skip(_ id: String) {
         let index = previews.firstIndex { $0.id == id } ?? 0
         model.preferences.skip(id)
         reload()
         if !previews.isEmpty {
             selectedCorrection = previews[min(index, previews.count - 1)].id
         }
+    }
+
+    /// Skips the selected correction on this device.
+    public func skipSelected() {
+        guard let id = selectedPreview?.id else { return }
+        skip(id)
     }
 
     /// Accepts every suggestion, as one step to undo.

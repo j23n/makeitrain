@@ -144,8 +144,7 @@ struct CorrectionCard: View {
         FlowLayout(spacing: 8) {
             ForEach(Array(correction.fixes.enumerated()), id: \.offset) { index, fix in
                 Button {
-                    model.apply(fix, undoManager: undoManager)
-                    week.reload()
+                    week.apply(fix, undoManager: undoManager)
                 } label: {
                     HStack(spacing: 9) {
                         Text(CorrectionText.fixTitle(fix, in: correction, model: model))
@@ -161,8 +160,7 @@ struct CorrectionCard: View {
                 Menu("Choose a project…") {
                     ForEach(model.ledger.pickerProjects()) { project in
                         Button(model.ledger.projectTitle(project.id)) {
-                            model.apply(.assign(id: id, projectID: project.id), undoManager: undoManager)
-                            week.reload()
+                            week.apply(.assign(id: id, projectID: project.id), undoManager: undoManager)
                         }
                     }
                 }
@@ -171,8 +169,7 @@ struct CorrectionCard: View {
                 .disabled(model.isReadOnly)
             }
             Button {
-                week.selectedCorrection = preview.id
-                week.skipSelected()
+                week.skip(preview.id)
             } label: {
                 Text("Skip ⇥")
                     .font(.system(size: 12.5))
