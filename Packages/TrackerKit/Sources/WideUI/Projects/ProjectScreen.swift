@@ -472,7 +472,7 @@ struct ProjectSettingsPanel: View {
                             model.updateProject(project.id, actionName: "Change Client", undoManager: undoManager) { $0.clientID = clientID }
                         }
                     )) {
-                        ForEach(model.ledger.liveClients().filter { !$0.archived || $0.id == project.clientID }) { client in
+                        ForEach(model.ledger.clientChoices(forProject: project.id)) { client in
                             Text(client.name).tag(UUID?.some(client.id))
                         }
                         Divider()
@@ -538,9 +538,7 @@ struct ProjectSettingsPanel: View {
     }
 
     private func rename() {
-        let trimmed = name.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty, trimmed != project.name else { return }
-        model.updateProject(project.id, actionName: "Rename Project", undoManager: undoManager) { $0.name = trimmed }
+        model.renameProject(project.id, to: name, undoManager: undoManager)
     }
 
     private var repositories: some View {
@@ -658,10 +656,8 @@ struct ProjectSettingsPanel: View {
     }
 
     private var actions: some View {
-        let entries = model.resolved.filter { $0.entry.projectID == project.id }.count
-        let others = model.ledger.projects.values
-            .filter { !$0.isDeleted && $0.id != project.id }
-            .sorted { model.ledger.projectTitle($0.id).lowercased() < model.ledger.projectTitle($1.id).lowercased() }
+        let hasEntries = model.ledger.hasEntries(project: project.id)
+        let others = model.ledger.mergeTargets(forProject: project.id)
         return VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Button(project.archived ? "Unarchive" : "Archive") {
@@ -682,10 +678,10 @@ struct ProjectSettingsPanel: View {
                 Button("Delete…") {
                     confirmingDelete = true
                 }
-                .disabled(entries > 0)
+                .disabled(hasEntries)
             }
             .buttonStyle(ChoiceButtonStyle(compact: true))
-            if entries > 0 {
+            if hasEntries {
                 Text("A project with entries can't be deleted.")
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.text3)

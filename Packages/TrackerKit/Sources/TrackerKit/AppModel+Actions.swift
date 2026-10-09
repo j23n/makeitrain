@@ -131,6 +131,14 @@ extension AppModel {
         }
     }
 
+    /// Renames a project, without the spaces and line breaks around the
+    /// name. An empty name, or the one it has, changes nothing.
+    public func renameProject(_ id: UUID, to name: String, undoManager: UndoManager?) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed != ledger.projects[id]?.name else { return }
+        updateProject(id, actionName: "Rename Project", undoManager: undoManager) { $0.name = trimmed }
+    }
+
     /// Deletes a project. Throws `LedgerError.hasEntries` if it has entries;
     /// archive it instead.
     public func deleteProject(_ id: UUID, undoManager: UndoManager?) throws {

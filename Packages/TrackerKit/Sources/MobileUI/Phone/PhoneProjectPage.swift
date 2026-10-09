@@ -377,10 +377,8 @@ struct PhoneProjectSettings: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        let entries = model.resolved.filter { $0.entry.projectID == project.id }.count
-        let others = model.ledger.projects.values
-            .filter { !$0.isDeleted && $0.id != project.id }
-            .sorted { model.ledger.projectTitle($0.id).lowercased() < model.ledger.projectTitle($1.id).lowercased() }
+        let hasEntries = model.ledger.hasEntries(project: project.id)
+        let others = model.ledger.mergeTargets(forProject: project.id)
         NavigationStack {
             Form {
                 Section {
@@ -393,7 +391,7 @@ struct PhoneProjectSettings: View {
                         }
                     )) {
                         Text("No client").tag(UUID?.none)
-                        ForEach(model.ledger.liveClients().filter { !$0.archived || $0.id == project.clientID }) { client in
+                        ForEach(model.ledger.clientChoices(forProject: project.id)) { client in
                             Text(client.name).tag(UUID?.some(client.id))
                         }
                     }
@@ -439,9 +437,9 @@ struct PhoneProjectSettings: View {
                     Button("Delete…", role: .destructive) {
                         confirmingDelete = true
                     }
-                    .disabled(entries > 0)
+                    .disabled(hasEntries)
                 } footer: {
-                    if entries > 0 {
+                    if hasEntries {
                         Text("A project with entries can't be deleted.")
                     }
                 }
@@ -485,9 +483,7 @@ struct PhoneProjectSettings: View {
     }
 
     private func rename() {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, trimmed != project.name else { return }
-        model.updateProject(project.id, actionName: "Rename Project", undoManager: undoManager) { $0.name = trimmed }
+        model.renameProject(project.id, to: name, undoManager: undoManager)
     }
 }
 #endif
