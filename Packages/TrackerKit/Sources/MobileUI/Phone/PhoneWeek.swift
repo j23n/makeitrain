@@ -273,7 +273,7 @@ struct PhoneCorrectionPanel: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         HStack(spacing: 4) {
                             if let before = change.before {
-                                ChangedText(old: Format.span(before) == Format.span(after) ? nil : Format.span(before), new: Format.span(after), size: 14)
+                                ChangedText(old: Format.span(before), new: Format.span(after), size: 14)
                             } else {
                                 Text(Format.span(after))
                                     .fontWeight(.semibold)

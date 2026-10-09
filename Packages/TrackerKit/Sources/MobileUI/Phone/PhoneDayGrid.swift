@@ -14,13 +14,11 @@ struct PhoneDayGrid: View {
     let model: AppModel
     let week: WeekModel
     let day: LocalDate
-    var hourHeight: CGFloat = 40
     var gutter: CGFloat = 52
-    /// Whether the markers of corrections show.
-    var showsMarkers = true
     let onSelect: (ResolvedEntry) -> Void
-    var onCorrection: (CorrectionPreview) -> Void = { _ in }
+    let onCorrection: (CorrectionPreview) -> Void
 
+    private let hourHeight: CGFloat = 40
     private var zone: String { model.environment.timeZone() }
 
     var body: some View {
@@ -49,9 +47,7 @@ struct PhoneDayGrid: View {
                             ghosts(hours, width: width)
                             overlaps(hours, width: width)
                             longEntries(hours, width: width)
-                            if showsMarkers {
-                                markers(hours, width: width)
-                            }
+                            markers(hours, width: width)
                             nowLine(hours, width: width)
                         }
                         .offset(x: gutter)
@@ -194,7 +190,6 @@ struct PhoneDayGrid: View {
             .offset(x: 4, y: top)
             .onTapGesture {
                 if let preview = week.previews.first(where: { $0.number == addition.number }) {
-                    week.selectedCorrection = preview.id
                     onCorrection(preview)
                 }
             }
@@ -261,7 +256,6 @@ struct PhoneDayGrid: View {
                 .contentShape(Rectangle())
                 .offset(x: width - 30, y: max(markerTop(preview, hours) - 22, -12))
                 .onTapGesture {
-                    week.selectedCorrection = preview.id
                     onCorrection(preview)
                 }
                 .accessibilityLabel(Text("Correction \(preview.number)"))
