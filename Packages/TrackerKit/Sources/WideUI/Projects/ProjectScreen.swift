@@ -149,14 +149,8 @@ struct ProjectScreen: View {
         let running = model.running.flatMap { $0.entry.projectID == projectID ? $0 : nil }
         let longCorrection = longTimer(overview)
         return HStack(spacing: 1) {
-            figure("This week", Format.duration(overview.thisWeek), running.map { "\(Format.duration(model.duration(of: $0))) running" } ?? " ")
-            VStack(alignment: .leading, spacing: 4) {
-                Text("This month")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.text2)
-                Text(Format.duration(overview.thisMonth))
-                    .font(.system(size: 24, weight: .medium))
-                    .monospacedDigit()
+            FigureTile("This week", Format.duration(overview.thisWeek), running.map { "\(Format.duration(model.duration(of: $0))) running" } ?? " ")
+            FigureTile("This month", Format.duration(overview.thisMonth)) {
                 if let longCorrection {
                     HStack(spacing: 4) {
                         Text(longCorrection.text)
@@ -165,16 +159,13 @@ struct ProjectScreen: View {
                         }
                         .linkButton()
                     }
-                    .font(.system(size: 12))
                     .foregroundStyle(Theme.amberText)
+                    .lineLimit(nil)
                 } else {
-                    Text(" ").font(.system(size: 12))
+                    Text(" ")
                 }
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.card)
-            figure(
+            FigureTile(
                 "All time",
                 Format.duration(overview.total),
                 overview.firstDay.map { "since \(Format.longDay($0)) · \(overview.entryCount) \(overview.entryCount == 1 ? "entry" : "entries")" } ?? " "
@@ -190,24 +181,6 @@ struct ProjectScreen: View {
     private func longTimer(_ overview: ProjectOverview) -> (text: String, day: LocalDate)? {
         guard let timer = overview.longTimer else { return nil }
         return ("Includes a \(Format.duration(timer.length)) \(timer.overnight ? "overnight " : "")timer on \(Format.weekday(timer.day)) ·", timer.day)
-    }
-
-    private func figure(_ label: String, _ value: String, _ detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.text2)
-            Text(value)
-                .font(.system(size: 24, weight: .medium))
-                .monospacedDigit()
-            Text(detail)
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.text2)
-                .lineLimit(1)
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.card)
     }
 
     // MARK: Tags
