@@ -21,7 +21,37 @@ struct WeekScreen: View {
     let navigator: Navigator
     let anchor: LocalDate
     let span: WeekSpan
-    @State private var week: WeekModel
+    /// The days' entries and corrections, worked out as the screen appears
+    /// rather than in an initializer, which runs again whenever the view
+    /// around it redraws. The rest of the screen waits for them, so the
+    /// grid's first scroll and an entry "find" asked to select see them.
+    @State private var week: WeekModel?
+
+    static func range(_ anchor: LocalDate, _ span: WeekSpan, _ firstWeekday: Int) -> ClosedRange<LocalDate> {
+        span == .day ? anchor...anchor : ReportPeriod.week.range(containing: anchor, firstWeekday: firstWeekday)
+    }
+
+    var body: some View {
+        if let week {
+            WeekContent(model: model, navigator: navigator, anchor: anchor, span: span, week: week)
+        } else {
+            // onAppear runs before the first frame is drawn, so this is
+            // never seen.
+            Color.clear
+                .onAppear {
+                    week = WeekModel(model: model, days: Self.range(anchor, span, model.firstWeekday))
+                }
+        }
+    }
+}
+
+/// The week screen, once its days are worked out.
+private struct WeekContent: View {
+    let model: AppModel
+    let navigator: Navigator
+    let anchor: LocalDate
+    let span: WeekSpan
+    let week: WeekModel
     @FocusState private var focused: Bool
     /// Changes when Return should put the keyboard in the selected entry's
     /// line.
@@ -29,20 +59,8 @@ struct WeekScreen: View {
     @Environment(\.undoManager) private var undoManager
     @Environment(\.commandSidebarShown) private var commandSidebarShown
 
-    init(model: AppModel, navigator: Navigator, anchor: LocalDate, span: WeekSpan) {
-        self.model = model
-        self.navigator = navigator
-        self.anchor = anchor
-        self.span = span
-        _week = State(initialValue: WeekModel(model: model, days: Self.range(anchor, span, model.firstWeekday)))
-    }
-
-    static func range(_ anchor: LocalDate, _ span: WeekSpan, _ firstWeekday: Int) -> ClosedRange<LocalDate> {
-        span == .day ? anchor...anchor : ReportPeriod.week.range(containing: anchor, firstWeekday: firstWeekday)
-    }
-
     private var range: ClosedRange<LocalDate> {
-        Self.range(anchor, span, model.firstWeekday)
+        WeekScreen.range(anchor, span, model.firstWeekday)
     }
 
     /// The days shown: the week's, leaving out a weekend day with nothing
