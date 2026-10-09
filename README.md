@@ -7,7 +7,7 @@ A menu bar time tracker for the Mac, with an iPhone and iPad app. You start, swi
 You need Xcode 16 or later.
 
 1. Open `TimeTracker.xcodeproj`.
-2. Pick your team under Signing & Capabilities. The app uses the iCloud container `iCloud.com.j23n.TimeTracker`; change it in both entitlements files and in `Info.plist` if you use a different one.
+2. Pick your team under Signing & Capabilities. The app uses the iCloud container `iCloud.com.j23n.TimeTracker`; change it in both entitlements files, in `Info.plist` and in `AppEnvironment.live()` if you use a different one.
 3. Run the `TimeTracker` scheme with My Mac, an iPhone or an iPad as the destination. It's one target that builds the Mac app and the iPhone and iPad app, and on iOS the widget extension with the Live Activity and controls.
 
 ## Tests

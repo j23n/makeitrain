@@ -77,9 +77,9 @@ final class PhoneRouter {
 struct PhoneRoot: View {
     let model: AppModel
     /// Where the app is, with today's and the week's corrections. It's made
-    /// as the app appears rather than in an initializer, which runs again
-    /// whenever the view around it redraws. The tabs wait for it, so their
-    /// day grids' first scroll sees the data.
+    /// once, as the app appears, and the tabs wait for it: made in an
+    /// initializer, a new one would be built, and thrown away, whenever the
+    /// view around it redraws.
     @State private var router: PhoneRouter?
 
     var body: some View {
