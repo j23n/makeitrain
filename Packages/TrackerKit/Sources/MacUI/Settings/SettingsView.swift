@@ -343,7 +343,7 @@ struct DataSettings: View {
                         HStack(spacing: 8) {
                             BackUpButton(model: model)
                             Button("Show in Finder") {
-                                show(model.backupsFolder)
+                                show(model.environment.backupsFolder)
                             }
                         }
                         .buttonStyle(ChoiceButtonStyle(compact: true))

@@ -341,10 +341,7 @@ public final class AppModel {
         }
         await flush()
         let label = kind == .iCloud ? "before switching to iCloud" : "before switching to local storage"
-        let backups = Backups(root: environment.backupsFolder)
-        let snapshot = ledger
-        let name = "\(today) \(label)"
-        _ = try await Task.detached { try backups.write(snapshot, named: name) }.value
+        try await writeBackup(label)
         environment.defaults.set(kind.rawValue, forKey: Keys.storage)
         pending.formUnion(.all(in: ledger))
         await open(kind)
@@ -353,11 +350,6 @@ public final class AppModel {
     /// The folder the data is in right now.
     public var dataFolder: URL {
         store.folder.root
-    }
-
-    /// Where backups go.
-    public var backupsFolder: URL {
-        environment.backupsFolder
     }
 
     // MARK: - Backups

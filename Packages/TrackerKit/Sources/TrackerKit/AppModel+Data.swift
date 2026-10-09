@@ -66,7 +66,7 @@ extension AppModel {
 
     /// The newest backup kept on this device, if there's one.
     public var latestBackup: String? {
-        try? Backups(root: backupsFolder).names().last
+        try? Backups(root: environment.backupsFolder).names().last
     }
 
     /// Writes a backup now, named for today, as Settings' Back Up Now does.
@@ -77,7 +77,7 @@ extension AppModel {
     /// Writes a backup of all the data, named for today and `label`, such
     /// as "2026-09-23 by hand", off the main thread.
     func writeBackup(_ label: String) async throws {
-        let backups = Backups(root: backupsFolder)
+        let backups = Backups(root: environment.backupsFolder)
         let snapshot = ledger
         let name = "\(today) \(label)"
         _ = try await Task.detached { try backups.write(snapshot, named: name) }.value
