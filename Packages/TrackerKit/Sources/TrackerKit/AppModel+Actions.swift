@@ -27,11 +27,12 @@ extension AppModel {
         }
     }
 
-    /// Moves the running timer's start, such as back to when work began.
+    /// Moves the running timer's start, such as back to when work began,
+    /// as "from 9:00" on the command line does. Moving a start can't fail.
     public func setRunningStart(_ start: Timestamp, undoManager: UndoManager?) {
-        guard let running else { return }
-        edit("Change Start", undoManager: undoManager) { ledger, now in
-            ledger.updateEntry(running.id, now: now) { $0.start = min(start, now) }
+        let zone = environment.timeZone()
+        _ = try? edit("Change Start", undoManager: undoManager) { ledger, now in
+            try ledger.perform(.moveStart(to: start), timeZone: zone, now: now)
         }
     }
 
