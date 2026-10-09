@@ -269,15 +269,7 @@ struct ProjectScreen: View {
                                 .lineLimit(1)
                                 .frame(width: 110, alignment: .leading)
                         }
-                        GeometryReader { geometry in
-                            ZStack(alignment: .leading) {
-                                Capsule().fill(Theme.fill)
-                                Capsule()
-                                    .fill(ProjectTint(hex: project.color).bar)
-                                    .frame(width: geometry.size.width * CGFloat(tag.milliseconds) / CGFloat(max(highest, 1)))
-                            }
-                        }
-                        .frame(height: 5)
+                        ShareBar(tag.milliseconds, of: highest, color: ProjectTint(hex: project.color).bar, height: 5)
                         Text(Format.duration(tag.milliseconds))
                             .monospacedDigit()
                             .frame(width: 74, alignment: .trailing)

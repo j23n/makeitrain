@@ -259,15 +259,7 @@ struct PhoneProjectPage: View {
                             .foregroundStyle(tag.url == nil ? Theme.text : Theme.tag)
                             .lineLimit(1)
                             .frame(width: tag.number == nil ? 104 : 52, alignment: .leading)
-                        GeometryReader { geometry in
-                            ZStack(alignment: .leading) {
-                                Capsule().fill(Theme.fill)
-                                Capsule()
-                                    .fill(tint.bar)
-                                    .frame(width: geometry.size.width * CGFloat(tag.milliseconds) / CGFloat(max(highest, 1)))
-                            }
-                        }
-                        .frame(height: 5)
+                        ShareBar(tag.milliseconds, of: highest, color: tint.bar, height: 5)
                         Text(Format.duration(tag.milliseconds))
                             .monospacedDigit()
                             .frame(width: 78, alignment: .trailing)
