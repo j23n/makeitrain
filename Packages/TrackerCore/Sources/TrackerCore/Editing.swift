@@ -376,7 +376,7 @@ extension Ledger {
     @discardableResult
     public mutating func deleteProject(_ id: UUID, now: Timestamp) throws -> Changes {
         guard projects[id]?.isDeleted == false else { throw LedgerError.notFound }
-        guard !entries.values.contains(where: { !$0.isDeleted && $0.projectID == id }) else { throw LedgerError.hasEntries }
+        guard !hasEntries(project: id) else { throw LedgerError.hasEntries }
         return updateProject(id, now: now) { $0.deleted = now }
     }
 
