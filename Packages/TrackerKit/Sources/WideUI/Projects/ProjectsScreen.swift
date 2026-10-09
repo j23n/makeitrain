@@ -312,7 +312,7 @@ struct ProjectsScreen: View {
                     Text("\(row.entryCount) \(row.entryCount == 1 ? "entry" : "entries")")
                         .foregroundStyle(Theme.text3)
                 }
-                .frame(minWidth: 220, alignment: .leading)
+                .frame(minWidth: ProjectColumnWidth.name, alignment: .leading)
                 if let latest = row.latest {
                     Text(latest.entry.note.isEmpty ? Format.longDay(latest.entry.day) : "\(latest.entry.note), \(Format.weekday(latest.entry.day))")
                         .foregroundStyle(Theme.text2)
@@ -323,10 +323,10 @@ struct ProjectsScreen: View {
                     .linkButton()
                 }
                 Spacer()
-                time(row.thisWeek).frame(width: 84, alignment: .trailing)
-                time(row.thisMonth).frame(width: 100, alignment: .trailing)
-                Color.clear.frame(width: 156, height: 1)
-                time(row.total).frame(width: 104, alignment: .trailing)
+                time(row.thisWeek).frame(width: ProjectColumnWidth.week, alignment: .trailing)
+                time(row.thisMonth).frame(width: ProjectColumnWidth.month, alignment: .trailing)
+                Color.clear.frame(width: ProjectColumnWidth.spark, height: 1)
+                time(row.total).frame(width: ProjectColumnWidth.total, alignment: .trailing)
             }
             .padding(.horizontal, 16)
             .frame(height: 48)
@@ -419,6 +419,18 @@ struct ProjectsScreen: View {
     }
 }
 
+/// The widths of the projects table's columns, which the unassigned row
+/// lines up with: the first three take at least theirs and share the rest.
+enum ProjectColumnWidth {
+    static let name: CGFloat = 220
+    static let repositories: CGFloat = 150
+    static let calendar: CGFloat = 170
+    static let week: CGFloat = 84
+    static let month: CGFloat = 100
+    static let spark: CGFloat = 156
+    static let total: CGFloat = 104
+}
+
 /// A row of the projects table, with each column's width.
 struct ProjectTableRow<Name: View, Repos: View, Cal: View, Week: View, Month: View, Spark: View, Total: View>: View {
     let height: CGFloat
@@ -432,13 +444,13 @@ struct ProjectTableRow<Name: View, Repos: View, Cal: View, Week: View, Month: Vi
 
     var body: some View {
         HStack(spacing: 16) {
-            cell(name, alignment: .leading).frame(minWidth: 220, maxWidth: .infinity)
-            cell(repositories, alignment: .leading).frame(minWidth: 150, maxWidth: .infinity)
-            cell(calendar, alignment: .leading).frame(minWidth: 170, maxWidth: .infinity)
-            cell(week, alignment: .trailing).frame(width: 84)
-            cell(month, alignment: .trailing).frame(width: 100)
-            cell(spark, alignment: .leading).frame(width: 156)
-            cell(total, alignment: .trailing).frame(width: 104)
+            cell(name, alignment: .leading).frame(minWidth: ProjectColumnWidth.name, maxWidth: .infinity)
+            cell(repositories, alignment: .leading).frame(minWidth: ProjectColumnWidth.repositories, maxWidth: .infinity)
+            cell(calendar, alignment: .leading).frame(minWidth: ProjectColumnWidth.calendar, maxWidth: .infinity)
+            cell(week, alignment: .trailing).frame(width: ProjectColumnWidth.week)
+            cell(month, alignment: .trailing).frame(width: ProjectColumnWidth.month)
+            cell(spark, alignment: .leading).frame(width: ProjectColumnWidth.spark)
+            cell(total, alignment: .trailing).frame(width: ProjectColumnWidth.total)
         }
         .font(.system(size: 13))
         .padding(.horizontal, 16)
