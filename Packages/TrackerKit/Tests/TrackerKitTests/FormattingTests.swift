@@ -29,10 +29,6 @@ import TrackerCore
         #expect(spaced(Format.duration(100 * hour + 5 * minute)) == "100 h 5 m")
         // The hours and minutes stay together on one line.
         #expect(!Format.duration(42 * hour + 31 * minute).contains(" "))
-        let parts = Format.durationParts(42 * hour + 31 * minute)
-        #expect(parts.map { $0.number } == ["42", "31"])
-        #expect(parts.map { $0.unit } == ["h", "m"])
-        #expect(Format.durationParts(90 * minute).map { $0.unit } == [nil])
     }
 
     @Test func writesASpanToItsEndOrToNow() {

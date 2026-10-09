@@ -9,21 +9,12 @@ public enum Format {
     /// Seconds are dropped. The spaces don't break, so a duration stays on
     /// one line.
     public static func duration(_ milliseconds: Int64) -> String {
-        durationParts(milliseconds)
-            .map { part in part.unit.map { "\(part.number)\u{00A0}\($0)" } ?? part.number }
-            .joined(separator: "\u{00A0}")
-    }
-
-    /// The numbers of `duration(_:)` and their units: one number without a
-    /// unit under a day, such as ("1:05", nil), and from a day up the
-    /// hours and any minutes, such as ("574", "h") and ("46", "m").
-    static func durationParts(_ milliseconds: Int64) -> [(number: String, unit: String?)] {
         let minutes = max(0, milliseconds) / 60000
         let (hours, rest) = (minutes / 60, minutes % 60)
         guard hours >= 24 else {
-            return [("\(hours):\(rest < 10 ? "0" : "")\(rest)", nil)]
+            return "\(hours):\(rest < 10 ? "0" : "")\(rest)"
         }
-        return rest == 0 ? [("\(hours)", "h")] : [("\(hours)", "h"), ("\(rest)", "m")]
+        return rest == 0 ? "\(hours)\u{00A0}h" : "\(hours)\u{00A0}h\u{00A0}\(rest)\u{00A0}m"
     }
 
     /// The wall-clock time in a time zone, such as "09:15" or "9:15 AM",
