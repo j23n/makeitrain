@@ -55,6 +55,10 @@ public final class AppModel {
     public private(set) var lastError: String?
     /// When the data was last saved, on this device.
     public private(set) var lastSaved: Timestamp?
+    /// The name of the newest backup on this device, such as "2026-09-23 by
+    /// hand", or nil while there's none. It's read when the model starts
+    /// and again after each backup, so Settings shows a new one at once.
+    public private(set) var latestBackup: String?
     /// Something a window asked another to do, such as Settings asking the
     /// main window to import a file. The window that does it clears it.
     public var request: AppRequest?
@@ -146,6 +150,7 @@ public final class AppModel {
         }
         let task = Task {
             startClock()
+            readLatestBackup()
             await open(storage)
         }
         starting = task
@@ -360,9 +365,20 @@ public final class AppModel {
         lastBackup = day
         let backups = Backups(root: environment.backupsFolder)
         let snapshot = ledger
-        Task.detached(priority: .background) {
-            try? backups.writeDaily(snapshot, on: day)
+        Task {
+            let written = await Task.detached(priority: .background) {
+                (try? backups.writeDaily(snapshot, on: day)) != nil
+            }.value
+            if written {
+                readLatestBackup()
+            }
         }
+    }
+
+    /// Reads the newest backup's name from the backups folder, as after
+    /// writing one.
+    func readLatestBackup() {
+        latestBackup = try? Backups(root: environment.backupsFolder).names().last
     }
 
     // MARK: - Clock

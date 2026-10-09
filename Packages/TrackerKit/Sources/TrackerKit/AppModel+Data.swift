@@ -64,11 +64,6 @@ extension AppModel {
         return files
     }
 
-    /// The newest backup kept on this device, if there's one.
-    public var latestBackup: String? {
-        try? Backups(root: environment.backupsFolder).names().last
-    }
-
     /// Writes a backup now, named for today, as Settings' Back Up Now does.
     public func backUpNow() async throws {
         try await writeBackup("by hand")
@@ -81,6 +76,7 @@ extension AppModel {
         let snapshot = ledger
         let name = "\(today) \(label)"
         _ = try await Task.detached { try backups.write(snapshot, named: name) }.value
+        readLatestBackup()
     }
 
     /// Whether there's an entry to export: one that isn't running.

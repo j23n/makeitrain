@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import Testing
 import TrackerCore
 @testable import TrackerKit
@@ -92,6 +93,28 @@ func eventually(_ condition: () -> Bool) async {
     for _ in 0..<200 where !condition() {
         try? await Task.sleep(for: .milliseconds(10))
     }
+}
+
+/// Whether something an observer read has changed since.
+final class ChangeFlag: @unchecked Sendable {
+    private(set) var isSet = false
+
+    func set() {
+        isSet = true
+    }
+}
+
+/// Follows what `read` reads, as a view's body does, and says once any of
+/// it changes, when the view would redraw.
+@MainActor
+func watch(_ read: () -> Void) -> ChangeFlag {
+    let flag = ChangeFlag()
+    withObservationTracking {
+        read()
+    } onChange: {
+        flag.set()
+    }
+    return flag
 }
 
 extension AppModel {
@@ -307,6 +330,24 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
         #expect(Set(merged.entries.values.map(\.note)) == ["Local", "Remote"])
         #expect(try Folder(root: harness.localFolder).load().ledger == local)
         #expect(try Backups(root: harness.backupsFolder).names().contains { $0.hasSuffix("before switching to iCloud") })
+    }
+
+    @Test func showsTheNewestBackupOnceItsWritten() async throws {
+        let harness = Harness()
+        defer { harness.cleanUp() }
+        // One from earlier today, so there's no daily backup left to write.
+        try Backups(root: harness.backupsFolder).write(Ledger(), named: "2026-09-23 by hand")
+        let model = harness.model()
+        await model.start()
+        #expect(model.latestBackup == "2026-09-23 by hand")
+
+        // A day later, Back Up Now's backup shows as soon as it's written.
+        harness.clock.advance(seconds: 86400)
+        model.refreshClock()
+        let changed = watch { _ = model.latestBackup }
+        try await model.backUpNow()
+        #expect(model.latestBackup == "2026-09-24 by hand")
+        #expect(changed.isSet)
     }
 
     @Test func signingOutMakesTheDataReadOnlyUntilItsCopied() async throws {
