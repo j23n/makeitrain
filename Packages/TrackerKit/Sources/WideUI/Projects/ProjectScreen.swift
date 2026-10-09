@@ -428,8 +428,10 @@ struct ProjectSettingsPanel: View {
                     .labelsHidden()
                 }
                 field("Color") {
+                    let users = colorUsers
                     HStack(spacing: 8) {
                         ForEach(Palette.colors, id: \.self) { hex in
+                            let help = colorHelp(hex, users: users[hex] ?? [])
                             Button {
                                 model.updateProject(project.id, actionName: "Change Color", undoManager: undoManager) { $0.color = hex }
                             } label: {
@@ -443,8 +445,8 @@ struct ProjectSettingsPanel: View {
                                     }
                             }
                             .buttonStyle(.plain)
-                            .help(colorHelp(hex))
-                            .accessibilityLabel(Text(colorHelp(hex)))
+                            .help(help)
+                            .accessibilityLabel(Text(help))
                             .accessibilityAddTraits(project.color.uppercased() == hex ? .isSelected : [])
                         }
                     }
@@ -478,9 +480,15 @@ struct ProjectSettingsPanel: View {
         }
     }
 
-    private func colorHelp(_ hex: String) -> String {
-        let users = model.ledger.pickerProjects().filter { $0.id != project.id && $0.color.uppercased() == hex }.map(\.name)
-        return users.isEmpty ? Palette.name(of: hex) : "\(Palette.name(of: hex)), used by \(users.formatted(.list(type: .and)))"
+    /// The names of the other projects in pickers, by their color.
+    private var colorUsers: [String: [String]] {
+        Dictionary(grouping: model.ledger.pickerProjects().filter { $0.id != project.id }) { $0.color.uppercased() }
+            .mapValues { $0.map(\.name) }
+    }
+
+    /// A color's name, and the other projects that use it.
+    private func colorHelp(_ hex: String, users: [String]) -> String {
+        users.isEmpty ? Palette.name(of: hex) : "\(Palette.name(of: hex)), used by \(users.formatted(.list(type: .and)))"
     }
 
     private func rename() {
