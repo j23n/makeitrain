@@ -54,7 +54,6 @@ struct ProjectScreen: View {
                     load()
                 }
             }
-            .onChange(of: projectID) { load() }
             .confirmationDialog(
                 "Remove “\(removing?.name ?? "")” from all \(project.name) entries?",
                 isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
@@ -461,7 +460,6 @@ struct ProjectSettingsPanel: View {
         .background(Theme.panel)
         .overlay(alignment: .leading) { Rectangle().fill(Theme.line).frame(width: 1) }
         .onAppear { name = project.name }
-        .onChange(of: project.id) { name = project.name }
         .onChange(of: project.name) { name = project.name }
     }
 
