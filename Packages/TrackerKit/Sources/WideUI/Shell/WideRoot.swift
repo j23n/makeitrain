@@ -171,12 +171,6 @@ private struct LineRefresh: View {
     }
 }
 
-extension WideRoot where Trailing == EmptyView {
-    public init(model: AppModel, leadingInset: CGFloat = 0) {
-        self.init(model: model, leadingInset: leadingInset) { EmptyView() }
-    }
-}
-
 /// The bar along the top: Back and Forward, the zoom, and the command
 /// line with the running timer.
 struct TopBar<Trailing: View>: View {

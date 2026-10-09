@@ -39,7 +39,7 @@ extension View {
 struct SidebarTitle: View {
     let title: String
     var detail: String?
-    var close: (() -> Void)?
+    let close: () -> Void
 
     var body: some View {
         HStack(spacing: 8) {
@@ -53,19 +53,17 @@ struct SidebarTitle: View {
                     .foregroundStyle(Theme.text2)
             }
             Spacer(minLength: 8)
-            if let close {
-                Button(action: close) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(Theme.text2)
-                        .frame(width: 24, height: 24)
-                        .background(Circle().fill(Theme.fill))
-                        .contentShape(Circle())
-                }
-                .buttonStyle(.plain)
-                .help("Close")
-                .accessibilityLabel(Text("Close"))
+            Button(action: close) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Theme.text2)
+                    .frame(width: 24, height: 24)
+                    .background(Circle().fill(Theme.fill))
+                    .contentShape(Circle())
             }
+            .buttonStyle(.plain)
+            .help("Close")
+            .accessibilityLabel(Text("Close"))
         }
     }
 }

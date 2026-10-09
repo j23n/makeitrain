@@ -11,7 +11,7 @@ struct WeekCanvas: View {
     let week: WeekModel
     let days: [LocalDate]
     /// When a block is clicked, so the screen takes the keyboard back.
-    var onSelect: () -> Void = {}
+    let onSelect: () -> Void
 
     static let hourHeight: CGFloat = 56
     static let gutter: CGFloat = 52
@@ -144,7 +144,7 @@ struct HourGutter: View {
 }
 
 /// What a drag on a block is doing.
-struct BlockDrag: Equatable {
+struct BlockDrag {
     var id: UUID
     var kind: HourGrid.DragKind
     var translation: CGSize

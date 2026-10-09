@@ -4,10 +4,8 @@ import TrackerCore
 import TrackerKit
 
 /// How much time a screen shows, or the projects, as the top bar picks.
-enum Zoom: String, CaseIterable, Identifiable {
+enum Zoom: String, CaseIterable {
     case day, week, month, year, projects
-
-    var id: Self { self }
 
     /// The screen of this zoom around a day.
     func screen(today day: LocalDate) -> Screen {
