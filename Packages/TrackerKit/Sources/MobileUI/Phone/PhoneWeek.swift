@@ -39,7 +39,7 @@ struct PhoneWeek: View {
             } else {
                 PhoneCommandBar(
                     model: model,
-                    placeholder: model.running == nil ? "start a timer or log time" : "switch, stop or log time",
+                    placeholder: CommandText.placeholder(running: model.running),
                     open: { router.openCommandLine() }
                 )
             }
