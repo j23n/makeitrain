@@ -214,11 +214,11 @@ struct PhoneDayGrid: View {
     private func overlaps(_ hours: Range<Int>, width: CGFloat) -> some View {
         ForEach(week.previews.filter { $0.correction.day == day }) { preview in
             if case let .overlap(overlap) = preview.correction.kind,
-               let earlier = model.ledger.entries[overlap.earlier], let later = model.ledger.entries[overlap.later],
-               let earlierEnd = earlier.end ?? (earlier.id == model.running?.id ? model.now : nil) {
+               let span = model.ledger.doubleCountedSpan(overlap, running: model.running?.id, now: model.now),
+               let later = model.ledger.entries[overlap.later] {
                 let zone = later.timeZone
-                let top = y(later.start, zone: zone, hours)
-                let bottom = y(min(earlierEnd, later.end ?? model.now), zone: zone, hours)
+                let top = y(span.start, zone: zone, hours)
+                let bottom = y(span.end, zone: zone, hours)
                 Hatching()
                     .frame(width: width - 8, height: max(bottom - top, 3))
                     .overlay(alignment: .top) { Rectangle().fill(Theme.amber).frame(height: 1.5) }

@@ -411,16 +411,16 @@ struct DayColumn: View {
     }
 
     /// Time two entries both count, hatched, with a handle to drag the
-    /// seam between them.
+    /// seam between them where there's one to move.
     @ViewBuilder
     private func overlapBands(width: CGFloat) -> some View {
         ForEach(week.previews.filter { $0.correction.day == day }) { preview in
             if case let .overlap(overlap) = preview.correction.kind,
-               let earlier = model.ledger.entries[overlap.earlier], let later = model.ledger.entries[overlap.later],
-               let earlierEnd = earlier.end, later.end.map({ earlierEnd <= $0 }) ?? true {
+               let span = model.ledger.doubleCountedSpan(overlap, running: model.running?.id, now: model.now),
+               let earlier = model.ledger.entries[overlap.earlier], let later = model.ledger.entries[overlap.later] {
                 let zone = later.timeZone
-                let top = y(later.start, zone: zone)
-                let bottom = y(earlierEnd, zone: zone)
+                let top = y(span.start, zone: zone)
+                let bottom = y(span.end, zone: zone)
                 let offset = seamDrag?.id == preview.id ? seamDrag?.offset ?? 0 : 0
                 ZStack {
                     Hatching()
@@ -428,29 +428,31 @@ struct DayColumn: View {
                         .overlay(alignment: .top) { Rectangle().fill(Theme.amber).frame(height: 1.5) }
                         .overlay(alignment: .bottom) { Rectangle().fill(Theme.amber).frame(height: 1.5) }
                         .allowsHitTesting(false)
-                    Text("⇕ seam")
-                        .font(.system(size: 10.5, weight: .semibold))
-                        .foregroundStyle(Theme.markerText)
-                        .padding(.horizontal, 8)
-                        .frame(height: 21)
-                        .background(Capsule().fill(Theme.marker))
-                        .offset(y: offset)
-                        .resizeCursor()
-                        .gesture(
-                            DragGesture(minimumDistance: 1, coordinateSpace: .named(Self.space))
-                                .onChanged { value in
-                                    seamDrag = (preview.id, value.translation.height)
-                                }
-                                .onEnded { value in
-                                    seamDrag = nil
-                                    let seconds = Int64(value.translation.height / height * 3600) * 1000
-                                    let middle = later.start.adding(milliseconds: later.start.distance(to: earlierEnd) / 2)
-                                    let snapped = Timestamp(milliseconds: (middle.milliseconds + seconds + 150_000) / 300_000 * 300_000)
-                                    model.moveSeam(earlier: earlier.id, later: later.id, to: snapped, undoManager: undoManager)
-                                }
-                        )
-                        .help("Drag to move where \(model.ledger.title(of: earlier)) ends and \(model.ledger.title(of: later)) starts")
-                        .accessibilityLabel(Text("Drag the seam between \(model.ledger.title(of: earlier)) and \(model.ledger.title(of: later))"))
+                    if model.ledger.canMoveSeam(earlier: earlier.id, later: later.id) {
+                        Text("⇕ seam")
+                            .font(.system(size: 10.5, weight: .semibold))
+                            .foregroundStyle(Theme.markerText)
+                            .padding(.horizontal, 8)
+                            .frame(height: 21)
+                            .background(Capsule().fill(Theme.marker))
+                            .offset(y: offset)
+                            .resizeCursor()
+                            .gesture(
+                                DragGesture(minimumDistance: 1, coordinateSpace: .named(Self.space))
+                                    .onChanged { value in
+                                        seamDrag = (preview.id, value.translation.height)
+                                    }
+                                    .onEnded { value in
+                                        seamDrag = nil
+                                        let seconds = Int64(value.translation.height / height * 3600) * 1000
+                                        let middle = span.start.adding(milliseconds: span.duration / 2)
+                                        let seam = middle.adding(milliseconds: seconds).rounded(toMinutes: 5)
+                                        model.moveSeam(earlier: earlier.id, later: later.id, to: seam, undoManager: undoManager)
+                                    }
+                            )
+                            .help("Drag to move where \(model.ledger.title(of: earlier)) ends and \(model.ledger.title(of: later)) starts")
+                            .accessibilityLabel(Text("Drag the seam between \(model.ledger.title(of: earlier)) and \(model.ledger.title(of: later))"))
+                    }
                 }
                 .frame(width: width - 8, height: max(bottom - top, 3))
                 .offset(x: 4, y: top)
