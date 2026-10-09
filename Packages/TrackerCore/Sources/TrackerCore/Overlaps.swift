@@ -145,18 +145,12 @@ public enum Overlaps {
 }
 
 extension Ledger {
-    /// The time an overlap's two entries both count, as `Overlap.duration`
-    /// measures it: from the later one's start to the earlier of their
-    /// ends, the running timer's being `now`. Nil when either entry is
-    /// gone, or has no end and isn't `running`, the running timer's id, as
-    /// a timer overtaken by a later one.
-    public func doubleCountedSpan(_ overlap: Overlap, running: UUID?, now: Timestamp) -> TimeSpan? {
-        func end(_ entry: TimeEntry) -> Timestamp? {
-            entry.end ?? (entry.id == running ? now : nil)
+    /// The time an overlap's two entries both count: from the later one's
+    /// start, for as long as `Overlap.duration`, which measures it with the
+    /// entries' resolved ends. Nil when the later entry is gone.
+    public func doubleCountedSpan(_ overlap: Overlap) -> TimeSpan? {
+        entries[overlap.later].map { later in
+            TimeSpan(start: later.start, end: later.start.adding(milliseconds: overlap.duration))
         }
-        guard let earlier = entries[overlap.earlier], let later = entries[overlap.later],
-              let earlierEnd = end(earlier), let laterEnd = end(later)
-        else { return nil }
-        return TimeSpan(start: later.start, end: min(earlierEnd, laterEnd))
     }
 }

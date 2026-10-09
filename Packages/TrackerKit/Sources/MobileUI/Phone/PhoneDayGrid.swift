@@ -199,7 +199,7 @@ struct PhoneDayGrid: View {
     private func overlaps(_ hours: Range<Int>, width: CGFloat) -> some View {
         ForEach(week.previews.filter { $0.correction.day == day }) { preview in
             if case let .overlap(overlap) = preview.correction.kind,
-               let span = model.ledger.doubleCountedSpan(overlap, running: model.running?.id, now: model.now),
+               let span = model.ledger.doubleCountedSpan(overlap),
                let later = model.ledger.entries[overlap.later] {
                 let zone = later.timeZone
                 let top = y(span.start, zone: zone, hours)
