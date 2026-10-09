@@ -73,14 +73,7 @@ struct ProjectScreen: View {
     }
 
     private func load() {
-        overview = ProjectOverview(
-            project: projectID,
-            ledger: model.ledger,
-            resolved: model.resolved,
-            today: model.today,
-            firstWeekday: model.firstWeekday,
-            now: model.now
-        )
+        overview = ProjectOverview(project: projectID, model: model)
     }
 
     private func breadcrumb(_ project: Project) -> some View {

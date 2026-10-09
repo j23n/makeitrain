@@ -47,9 +47,15 @@ public struct ProjectOverview {
     /// The tags that refer to issues, by repository, the most time first.
     public var repositories: [Repository]
 
+    /// The overview of a project's entries as the model has them now.
+    @MainActor
+    public init(project projectID: UUID, model: AppModel) {
+        self.init(project: projectID, ledger: model.ledger, resolved: model.resolved, today: model.today, firstWeekday: model.firstWeekday, now: model.now)
+    }
+
     /// The overview of the entries of `projectID`. Weeks start on
     /// `firstWeekday`.
-    public init(project projectID: UUID, ledger: Ledger, resolved: [ResolvedEntry], today: LocalDate, firstWeekday: Int, now: Timestamp) {
+    init(project projectID: UUID, ledger: Ledger, resolved: [ResolvedEntry], today: LocalDate, firstWeekday: Int, now: Timestamp) {
         let week = ReportPeriod.week.range(containing: today, firstWeekday: firstWeekday)
         let month = ReportPeriod.month.range(containing: today, firstWeekday: firstWeekday)
 
