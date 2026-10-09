@@ -353,13 +353,10 @@ struct ProjectScreen: View {
         .disabled(model.isReadOnly)
     }
 
-    /// Renames the tag to the new name, spelled as the project's tag of that
-    /// name if it has one.
+    /// Renames the tag, or merges it into the project's tag of the new name.
     private func rename(_ tag: ProjectOverview.Tag, to name: String) {
-        defer { selectedTag = nil }
-        guard let cleaned = Tags.normalize([name]).first, cleaned != tag.name else { return }
-        let existing = (overview?.tagNames ?? []).first { Tags.same($0, cleaned) && !Tags.same($0, tag.name) }
-        model.renameTag(tag.name, to: existing ?? cleaned, inProject: projectID, undoManager: undoManager)
+        model.renameTag(tag.name, to: name, inProject: projectID, undoManager: undoManager)
+        selectedTag = nil
     }
 }
 

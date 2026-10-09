@@ -96,5 +96,16 @@ import TrackerCore
         model.removeTag("design", fromProject: brand, undoManager: nil)
         #expect(model.projectTags[brand] == nil)
         #expect(model.projectTags[website] == ["UX"])
+
+        // Renaming to another of the project's tags merges the two, in that
+        // tag's spelling, and an empty name changes nothing.
+        var third = entry(note: "Interviews", at: "2026-09-22T13:00:00+02:00")
+        third.projectID = website
+        third.tags = ["Research"]
+        model.addEntry(third, undoManager: nil)
+        model.renameTag("UX", to: " research", inProject: website, undoManager: nil)
+        #expect(model.projectTags[website] == ["Research"])
+        model.renameTag("Research", to: " ", inProject: website, undoManager: nil)
+        #expect(model.projectTags[website] == ["Research"])
     }
 }

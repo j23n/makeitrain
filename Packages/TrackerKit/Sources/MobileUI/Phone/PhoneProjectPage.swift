@@ -124,7 +124,9 @@ struct PhoneProjectPage: View {
             TextField("Name", text: $newName)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-            Button("Rename") { rename(tag) }
+            Button("Rename") {
+                model.renameTag(tag.name, to: newName, inProject: projectID, undoManager: undoManager)
+            }
             Button("Cancel", role: .cancel) {}
         } message: { tag in
             Text("Renames it on \(tag.count) \(tag.count == 1 ? "entry" : "entries"). Another tag's name merges the two.")
@@ -286,12 +288,6 @@ struct PhoneProjectPage: View {
         .padding(.vertical, 10)
         .background(RoundedRectangle(cornerRadius: 14).fill(Theme.panel))
         .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Theme.line))
-    }
-
-    private func rename(_ tag: ProjectOverview.Tag) {
-        guard let cleaned = Tags.normalize([newName]).first, cleaned != tag.name else { return }
-        let existing = (overview?.tagNames ?? []).first { Tags.same($0, cleaned) && !Tags.same($0, tag.name) }
-        model.renameTag(tag.name, to: existing ?? cleaned, inProject: projectID, undoManager: undoManager)
     }
 }
 

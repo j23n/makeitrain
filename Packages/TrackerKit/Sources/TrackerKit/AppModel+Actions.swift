@@ -146,16 +146,21 @@ extension AppModel {
     }
 
     /// Renames a tag on a project's entries, or on unassigned entries for
-    /// nil; renaming to a tag the project has already merges them.
+    /// nil. Renaming it to another of the project's tags merges the two, in
+    /// that tag's spelling. An empty name, or the one it has, changes nothing.
     public func renameTag(_ tag: String, to newName: String, inProject projectID: UUID?, undoManager: UndoManager?) {
-        edit(Tags.normalize([newName]).isEmpty ? "Remove Tag" : "Rename Tag", undoManager: undoManager) { ledger, now in
-            ledger.renameTag(tag, to: newName, inProject: projectID, now: now)
+        guard let cleaned = Tags.normalize([newName]).first, cleaned != tag else { return }
+        let existing = projectTags[projectID]?.first { Tags.same($0, cleaned) && !Tags.same($0, tag) }
+        edit("Rename Tag", undoManager: undoManager) { ledger, now in
+            ledger.renameTag(tag, to: existing ?? cleaned, inProject: projectID, now: now)
         }
     }
 
     /// Takes a tag off a project's entries, or off unassigned entries for nil.
     public func removeTag(_ tag: String, fromProject projectID: UUID?, undoManager: UndoManager?) {
-        renameTag(tag, to: "", inProject: projectID, undoManager: undoManager)
+        edit("Remove Tag", undoManager: undoManager) { ledger, now in
+            ledger.renameTag(tag, to: "", inProject: projectID, now: now)
+        }
     }
 
     // MARK: - GitHub
