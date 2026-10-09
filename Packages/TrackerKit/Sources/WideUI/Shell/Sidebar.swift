@@ -8,17 +8,10 @@ enum Sidebar {
     static let width: CGFloat = 380
 }
 
-private struct CommandSidebarShownKey: EnvironmentKey {
-    static let defaultValue = false
-}
-
 extension EnvironmentValues {
     /// Whether the sidebar shows the command line, so a screen leaves its
     /// own panel out meanwhile.
-    var commandSidebarShown: Bool {
-        get { self[CommandSidebarShownKey.self] }
-        set { self[CommandSidebarShownKey.self] = newValue }
-    }
+    @Entry var commandSidebarShown: Bool = false
 }
 
 extension View {
