@@ -150,7 +150,7 @@ struct WeekScreen: View {
             week.refresh()
         }
         .onChange(of: model.preferences.skippedCorrections) {
-            week.refresh(force: true)
+            week.refresh()
         }
         .onChange(of: navigator.entryToSelect, initial: true) { _, id in
             guard let id else { return }

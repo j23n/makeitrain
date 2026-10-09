@@ -129,8 +129,8 @@ struct PhoneRoot: View {
             countCorrections()
         }
         .onChange(of: model.preferences.skippedCorrections) {
-            router.today.refresh(force: true)
-            router.week.refresh(force: true)
+            router.today.refresh()
+            router.week.refresh()
             countCorrections()
         }
         .onChange(of: model.today) { _, today in

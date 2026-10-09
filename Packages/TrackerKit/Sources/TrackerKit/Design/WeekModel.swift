@@ -50,7 +50,7 @@ public final class WeekModel {
     public private(set) var entries: [LocalDate: [ResolvedEntry]] = [:]
 
     @ObservationIgnored private var loadedRevision = -1
-    @ObservationIgnored private var loadedSkips = -1
+    @ObservationIgnored private var loadedSkips: [String] = []
 
     public init(model: AppModel, days: ClosedRange<LocalDate>) {
         self.model = model
@@ -66,15 +66,15 @@ public final class WeekModel {
     }
 
     /// Works everything out again if the data or the skipped corrections
-    /// changed since last time, or always with `force`.
-    public func refresh(force: Bool = false) {
-        guard force || loadedRevision != model.revision || loadedSkips != model.preferences.skippedCorrections.count else { return }
+    /// changed since last time.
+    public func refresh() {
+        guard loadedRevision != model.revision || loadedSkips != model.preferences.skippedCorrections else { return }
         reload()
     }
 
     public func reload() {
         loadedRevision = model.revision
-        loadedSkips = model.preferences.skippedCorrections.count
+        loadedSkips = model.preferences.skippedCorrections
         let widened = days.lowerBound.adding(days: -1)...days.upperBound
         let matches = EntryFilter(range: widened).matcher(in: model.ledger)
         entries = Dictionary(grouping: model.resolved.filter(matches), by: { $0.entry.day })
@@ -94,9 +94,7 @@ public final class WeekModel {
         } else {
             correctedTotals = nil
         }
-        if let selected = selectedCorrection, !found.contains(where: { $0.id == selected }) {
-            selectedCorrection = found.first?.id
-        } else if selectedCorrection == nil {
+        if !found.contains(where: { $0.id == selectedCorrection }) {
             selectedCorrection = found.first?.id
         }
         if let entry = selectedEntry, model.ledger.entries[entry]?.isDeleted != false {
