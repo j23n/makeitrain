@@ -42,6 +42,9 @@ public struct ProjectOverview {
     public var firstDay: LocalDate?
     /// Whether the running timer is one of the entries.
     public var isRunning: Bool
+    /// The first of this month's entries that ran long, as corrections
+    /// find them: its day, its length, and whether it ran overnight.
+    public var longTimer: (day: LocalDate, length: Int64, overnight: Bool)?
     /// The tags that don't refer to issues, the most time first.
     public var tags: [Tag]
     /// The tags that refer to issues, by repository, the most time first.
@@ -65,6 +68,7 @@ public struct ProjectOverview {
         var entryCount = 0
         var firstDay: LocalDate?
         var isRunning = false
+        var longTimer: (day: LocalDate, length: Int64, overnight: Bool)?
         var spelling: [String: String] = [:]
         var tagCount: [String: Int] = [:]
         var tagTime: [String: Int64] = [:]
@@ -91,7 +95,14 @@ public struct ProjectOverview {
             entryCount += 1
             total += duration
             if week.contains(day) { thisWeek += duration }
-            if month.contains(day) { thisMonth += duration }
+            if month.contains(day) {
+                thisMonth += duration
+                // Entries are in order of start, so the first found is the
+                // first that ran long.
+                if longTimer == nil, let overnight = Corrections.ranLong(entry, now: now) {
+                    longTimer = (day: day, length: duration, overnight: overnight)
+                }
+            }
             firstDay = min(firstDay ?? day, day)
             isRunning = isRunning || entry.isRunning
             var seen: Set<String> = []
@@ -145,6 +156,7 @@ public struct ProjectOverview {
         self.entryCount = entryCount
         self.firstDay = firstDay
         self.isRunning = isRunning
+        self.longTimer = longTimer
     }
 
     /// Every tag's name, for telling whether a new name is another tag's.

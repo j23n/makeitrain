@@ -147,7 +147,7 @@ struct ProjectScreen: View {
 
     private func figures(_ overview: ProjectOverview) -> some View {
         let running = model.running.flatMap { $0.entry.projectID == projectID ? $0 : nil }
-        let longCorrection = monthCorrection
+        let longCorrection = longTimer(overview)
         return HStack(spacing: 1) {
             figure("This week", Format.duration(overview.thisWeek), running.map { "\(Format.duration(model.duration(of: $0))) running" } ?? " ")
             VStack(alignment: .leading, spacing: 4) {
@@ -187,15 +187,9 @@ struct ProjectScreen: View {
 
     /// A timer this month that ran long, as "Includes a 19:25 overnight
     /// timer on Thursday".
-    private var monthCorrection: (text: String, day: LocalDate)? {
-        let month = ReportPeriod.month.range(containing: model.today, firstWeekday: model.firstWeekday)
-        for correction in Corrections.find(on: month, ledger: model.ledger, resolved: model.resolved, timeZone: model.environment.timeZone(), now: model.now) {
-            if case let .ranLong(id, overnight) = correction.kind, let entry = model.ledger.entries[id], entry.projectID == projectID {
-                let length = Format.duration(entry.start.distance(to: entry.end ?? model.now))
-                return ("Includes a \(length) \(overnight ? "overnight " : "")timer on \(Format.weekday(entry.day)) ·", correction.day)
-            }
-        }
-        return nil
+    private func longTimer(_ overview: ProjectOverview) -> (text: String, day: LocalDate)? {
+        guard let timer = overview.longTimer else { return nil }
+        return ("Includes a \(Format.duration(timer.length)) \(timer.overnight ? "overnight " : "")timer on \(Format.weekday(timer.day)) ·", timer.day)
     }
 
     private func figure(_ label: String, _ value: String, _ detail: String) -> some View {

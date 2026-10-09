@@ -186,7 +186,7 @@ struct PhoneProjectPage: View {
     private func figures(_ overview: ProjectOverview) -> some View {
         HStack(spacing: 1) {
             figure("This week", overview.thisWeek, marked: false)
-            figure("This month", overview.thisMonth, marked: ranLongThisMonth)
+            figure("This month", overview.thisMonth, marked: overview.longTimer != nil)
             figure("All time", overview.total, marked: false)
         }
         .background(Theme.line)
@@ -215,18 +215,6 @@ struct PhoneProjectPage: View {
         .padding(.vertical, 9)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.panel)
-    }
-
-    /// Whether a timer of the project ran long this month.
-    private var ranLongThisMonth: Bool {
-        let month = ReportPeriod.month.range(containing: model.today, firstWeekday: model.firstWeekday)
-        return Corrections.find(on: month, ledger: model.ledger, resolved: model.resolved, timeZone: model.environment.timeZone(), now: model.now)
-            .contains { correction in
-                if case let .ranLong(id, _) = correction.kind {
-                    return model.ledger.entries[id]?.projectID == projectID
-                }
-                return false
-            }
     }
 
     // MARK: Tags

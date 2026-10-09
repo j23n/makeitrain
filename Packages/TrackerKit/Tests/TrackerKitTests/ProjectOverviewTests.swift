@@ -60,6 +60,27 @@ import TrackerCore
         #expect(result.entryCount == 4)
         #expect(result.firstDay == LocalDate(year: 2026, month: 7, day: 1))
         #expect(result.isRunning)
+        #expect(result.longTimer?.day == nil)
+    }
+
+    @Test func findsThisMonthsFirstTimerThatRanLong() {
+        let result = overview([
+            // Last month's, and another project's, don't count.
+            entry(website, "08-31T08:00", "08-31T21:00"),
+            entry(app, "09-02T08:00", "09-02T21:00"),
+            entry(website, "09-10T08:00", "09-10T21:30"),
+            // Past midnight into the morning.
+            entry(website, "09-17T20:00", "09-18T06:00"),
+        ], of: website)
+
+        #expect(result.longTimer?.day == LocalDate(year: 2026, month: 9, day: 10))
+        #expect(result.longTimer?.length == 13 * hour + hour / 2)
+        #expect(result.longTimer?.overnight == false)
+
+        let overnight = overview([entry(website, "09-17T20:00", "09-18T06:00")], of: website)
+        #expect(overnight.longTimer?.day == LocalDate(year: 2026, month: 9, day: 17))
+        #expect(overnight.longTimer?.length == 10 * hour)
+        #expect(overnight.longTimer?.overnight == true)
     }
 
     @Test func groupsTheTagsThatReferToIssuesByRepository() {
