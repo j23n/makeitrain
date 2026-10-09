@@ -134,7 +134,6 @@ struct MonthHeatGrid: View {
     let month: LocalDate
     @Binding var cursor: LocalDate
     let open: (LocalDate) -> Void
-    @State private var dragStart: LocalDate?
 
     var body: some View {
         let weeks = MonthGrid.weeks(of: month, firstWeekday: model.firstWeekday)
