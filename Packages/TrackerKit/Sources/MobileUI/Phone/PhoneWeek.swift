@@ -15,13 +15,7 @@ struct PhoneWeek: View {
     private var week: WeekModel { router.week }
 
     private var days: [LocalDate] {
-        var days: [LocalDate] = []
-        var day = week.days.lowerBound
-        while day <= week.days.upperBound {
-            days.append(day)
-            day = day.adding(days: 1)
-        }
-        return days
+        week.days.days
     }
 
     var body: some View {

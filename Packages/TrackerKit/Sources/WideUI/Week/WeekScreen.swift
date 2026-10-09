@@ -48,12 +48,7 @@ struct WeekScreen: View {
     /// The days shown: the week's, leaving out a weekend day with nothing
     /// on it.
     private var shownDays: [LocalDate] {
-        var days: [LocalDate] = []
-        var day = range.lowerBound
-        while day <= range.upperBound {
-            days.append(day)
-            day = day.adding(days: 1)
-        }
+        let days = range.days
         guard span == .week else { return days }
         let corrected = Set(week.corrections.map(\.day))
         return days.filter { day in
