@@ -167,9 +167,8 @@ struct EntryLineGuide: View {
 
     /// "13:30–16:30, 3:00", or "from 13:30" while it runs.
     private func times(_ parts: EntryLineParts) -> String {
-        let start = Format.time(parts.start, zone: parts.zone)
-        guard let end = parts.end else { return "from \(start)" }
-        return "\(start)–\(Format.time(end, zone: parts.zone)), \(Format.duration(parts.start.distance(to: end)))"
+        guard let end = parts.end else { return "from \(Format.time(parts.start, zone: parts.zone))" }
+        return "\(Format.span(parts.start, end, zone: parts.zone)), \(Format.duration(parts.start.distance(to: end)))"
     }
 }
 
