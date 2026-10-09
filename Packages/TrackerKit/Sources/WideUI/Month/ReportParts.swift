@@ -35,7 +35,6 @@ struct ReportPage<Content: View>: View {
                 }
                 if !commandSidebarShown {
                     StatementPanel(model: model, state: state, navigator: navigator)
-                        .frame(width: 400)
                 }
             }
         }
@@ -297,11 +296,7 @@ struct StatementPanel: View {
             }
             .padding(22)
         }
-        .frame(maxHeight: .infinity, alignment: .top)
-        .background(Theme.panel)
-        .overlay(alignment: .leading) {
-            Rectangle().fill(Theme.line).frame(width: 1)
-        }
+        .sidebarColumn(width: 400)
     }
 
     private var subtitle: String {

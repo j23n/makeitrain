@@ -95,7 +95,6 @@ struct WeekScreen: View {
                 .transition(.move(edge: .trailing))
             case .corrections?:
                 CorrectionsPanel(model: model, week: week)
-                    .frame(width: Sidebar.width)
                     .transition(.move(edge: .trailing))
             case nil:
                 EmptyView()

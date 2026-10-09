@@ -22,10 +22,10 @@ extension EnvironmentValues {
 }
 
 extension View {
-    /// Lays a view out as the sidebar: its width, the panel's background
-    /// and a line along its left.
-    func sidebarColumn() -> some View {
-        frame(width: Sidebar.width)
+    /// Lays a view out as the sidebar, or another column at the side as
+    /// wide as `width`: the panel's background and a line along its left.
+    func sidebarColumn(width: CGFloat = Sidebar.width) -> some View {
+        frame(width: width)
             .frame(maxHeight: .infinity, alignment: .top)
             .background(Theme.panel)
             .overlay(alignment: .leading) {

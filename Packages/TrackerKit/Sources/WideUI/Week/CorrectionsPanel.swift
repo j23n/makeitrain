@@ -49,11 +49,7 @@ struct CorrectionsPanel: View {
             }
         }
         .padding(20)
-        .frame(maxHeight: .infinity, alignment: .top)
-        .background(Theme.panel)
-        .overlay(alignment: .leading) {
-            Rectangle().fill(Theme.line).frame(width: 1)
-        }
+        .sidebarColumn()
     }
 
     private var footer: some View {
