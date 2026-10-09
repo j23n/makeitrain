@@ -4,7 +4,8 @@ import TrackerCore
 /// Each project's time this week, this month, in each of the last twelve
 /// weeks and in all, as the projects list shows them. Nil stands for the
 /// entries without a project. The running timer counts as far as it has
-/// run.
+/// run. Screens take it from `AppModel.projectStats`, which keeps it until
+/// the data or the time changes.
 public struct ProjectStats {
     public struct Row {
         public var thisWeek: Int64 = 0
@@ -23,7 +24,7 @@ public struct ProjectStats {
     /// totals, and the time in all from the entries, without working out
     /// their days.
     @MainActor
-    public init(model: AppModel) {
+    init(model: AppModel) {
         let now = model.now
         for entry in model.resolved {
             var row = rows[entry.entry.projectID] ?? Row()

@@ -33,7 +33,7 @@ struct PhoneProjects: View {
 
     private var list: some View {
         let tree = ProjectTree(ledger: model.ledger)
-        let figures = ProjectStats(model: model)
+        let figures = model.projectStats
         return ScrollView {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 2) {
@@ -291,7 +291,7 @@ struct PhoneArchivedProjects: View {
 
     var body: some View {
         let projects = ProjectTree(ledger: model.ledger).allArchivedProjects
-        let stats = ProjectStats(model: model)
+        let stats = model.projectStats
         List {
             ForEach(projects) { project in
                 NavigationLink(value: PhoneProjectRoute.project(project.id)) {

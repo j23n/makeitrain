@@ -91,10 +91,20 @@ public final class AppModel {
     /// Opening the storage at launch, which later callers of `start()`
     /// wait for.
     @ObservationIgnored private var starting: Task<Void, Never>?
+    /// `projectStats` as last worked out, and what for.
+    @ObservationIgnored private var projectStatsCache: (key: ProjectStatsKey, stats: ProjectStats)?
 
     private enum Keys {
         static let storage = "storage"
         static let firstWeekday = "firstWeekday"
+    }
+
+    /// What `projectStats` depends on: the data, the time now, and where
+    /// weeks start.
+    private struct ProjectStatsKey: Equatable {
+        var revision: Int
+        var now: Timestamp
+        var firstWeekday: Int
     }
 
     public init(environment: AppEnvironment) {
@@ -136,6 +146,20 @@ public final class AppModel {
     /// Milliseconds an entry has run, up to now for a running one.
     public func duration(of entry: ResolvedEntry) -> Int64 {
         entry.duration(now: now)
+    }
+
+    /// Each project's time this week, this month, over the last twelve
+    /// weeks and in all, as the projects lists show it. It's worked out when
+    /// first read after the data or the time changed, and not again when a
+    /// list redraws for a keystroke in its filter or a new selection.
+    public var projectStats: ProjectStats {
+        let key = ProjectStatsKey(revision: revision, now: now, firstWeekday: firstWeekday)
+        if let projectStatsCache, projectStatsCache.key == key {
+            return projectStatsCache.stats
+        }
+        let stats = ProjectStats(model: self)
+        projectStatsCache = (key, stats)
+        return stats
     }
 
     // MARK: - Loading and saving

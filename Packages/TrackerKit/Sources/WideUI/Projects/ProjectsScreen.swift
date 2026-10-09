@@ -17,7 +17,7 @@ struct ProjectsScreen: View {
 
     var body: some View {
         let tree = ProjectTree(ledger: model.ledger)
-        let stats = ProjectStats(model: model)
+        let stats = model.projectStats
         VStack(alignment: .leading, spacing: 14) {
             header(tree)
             ScrollView {
