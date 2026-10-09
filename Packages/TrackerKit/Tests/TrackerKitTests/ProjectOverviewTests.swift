@@ -38,7 +38,7 @@ import TrackerCore
         return TimeEntry(projectID: project, start: startTime, end: endTime, timeZone: "Europe/Berlin", tags: tags, updated: startTime)
     }
 
-    func overview(_ entries: [TimeEntry], of project: UUID?) -> ProjectOverview {
+    func overview(_ entries: [TimeEntry], of project: UUID) -> ProjectOverview {
         var ledger = ledger
         for entry in entries { ledger.merge(entry) }
         return ProjectOverview(project: project, ledger: ledger, resolved: ledger.resolvedEntries(), today: today, firstWeekday: 2, now: now)
@@ -75,7 +75,6 @@ import TrackerCore
         #expect(result.tags.map(\.name) == ["Design"])
         #expect(result.tags.map(\.count) == [2])
         #expect(result.tags.map(\.milliseconds) == [2 * hour + hour / 2])
-        #expect(result.untagged == hour)
 
         #expect(result.repositories.map(\.title) == ["acme/web", "acme/api"])
         #expect(result.repositories[0].issues.map(\.name) == ["#12", "web#30"])
@@ -84,21 +83,7 @@ import TrackerCore
         // An entry with two of a repository's issues counts once for it.
         #expect(result.repositories[0].milliseconds == 3 * hour)
         #expect(result.repositories[1].issues.first?.url?.absoluteString == "https://github.com/acme/api/issues/7")
-        #expect(result.tag("api#7")?.number == 7)
-        #expect(result.tag("design")?.name == "Design")
         #expect(Set(result.tagNames) == ["Design", "#12", "web#30", "api#7"])
-    }
-
-    @Test func listsTheUnassignedEntriesTags() {
-        let result = overview([
-            entry(nil, "09-22T13:00", "09-22T14:00", tags: ["#5", "email"]),
-            entry(website, "09-22T09:00", "09-22T12:00", tags: ["email"]),
-        ], of: nil)
-
-        // Without a project, "#5" has no repository to refer to.
-        #expect(result.tags.map(\.name) == ["#5", "email"])
-        #expect(result.repositories.isEmpty)
-        #expect(result.total == hour)
     }
 }
 
@@ -127,7 +112,5 @@ import TrackerCore
         #expect(tree.archivedClients.first?.projects.map(\.name) == ["Brand"])
         // By title: "Acme › Admin", "Initech › Orphan", "Old".
         #expect(tree.archivedProjects.map(\.name) == ["Admin", "Orphan", "Old"])
-        #expect(!tree.isEmpty)
-        #expect(ProjectTree(ledger: Ledger()).isEmpty)
     }
 }

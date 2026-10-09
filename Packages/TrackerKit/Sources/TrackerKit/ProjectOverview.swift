@@ -6,7 +6,6 @@ import TrackerCore
 /// A project's time and tags, for its page: its time this week, this month
 /// and in all, and its tags with their time, the ones that refer to issues
 /// grouped by repository. The running timer counts as far as it has run.
-/// Nil stands for the entries without a project.
 public struct ProjectOverview {
     /// A tag with how many of the entries have it, and their time.
     public struct Tag: Identifiable, Hashable {
@@ -45,14 +44,12 @@ public struct ProjectOverview {
     public var isRunning: Bool
     /// The tags that don't refer to issues, the most time first.
     public var tags: [Tag]
-    /// The time of the entries without tags.
-    public var untagged: Int64
     /// The tags that refer to issues, by repository, the most time first.
     public var repositories: [Repository]
 
-    /// The overview of the entries of `projectID`, nil standing for the
-    /// unassigned ones. Weeks start on `firstWeekday`.
-    public init(project projectID: UUID?, ledger: Ledger, resolved: [ResolvedEntry], today: LocalDate, firstWeekday: Int, now: Timestamp) {
+    /// The overview of the entries of `projectID`. Weeks start on
+    /// `firstWeekday`.
+    public init(project projectID: UUID, ledger: Ledger, resolved: [ResolvedEntry], today: LocalDate, firstWeekday: Int, now: Timestamp) {
         let week = ReportPeriod.week.range(containing: today, firstWeekday: firstWeekday)
         let month = ReportPeriod.month.range(containing: today, firstWeekday: firstWeekday)
 
@@ -65,7 +62,6 @@ public struct ProjectOverview {
         var spelling: [String: String] = [:]
         var tagCount: [String: Int] = [:]
         var tagTime: [String: Int64] = [:]
-        var untagged: Int64 = 0
         var repositoryTime: [String: Int64] = [:]
 
         // What each tag refers to, worked out once for each.
@@ -98,9 +94,6 @@ public struct ProjectOverview {
             if month.contains(day) { thisMonth += duration }
             firstDay = min(firstDay ?? day, day)
             isRunning = isRunning || entry.isRunning
-            if entry.entry.tags.isEmpty {
-                untagged += duration
-            }
             var seen: Set<String> = []
             var entryRepositories: Set<String> = []
             for tag in entry.entry.tags {
@@ -152,12 +145,6 @@ public struct ProjectOverview {
         self.entryCount = entryCount
         self.firstDay = firstDay
         self.isRunning = isRunning
-        self.untagged = untagged
-    }
-
-    /// One of the tags, plain or referring to an issue, by its id.
-    public func tag(_ id: String) -> Tag? {
-        tags.first { $0.id == id } ?? repositories.lazy.compactMap { $0.issues.first { $0.id == id } }.first
     }
 
     /// Every tag's name, for telling whether a new name is another tag's.
@@ -211,10 +198,5 @@ public struct ProjectTree {
                 return client.isDeleted || (project.archived && !client.archived)
             }
             .sorted { ledger.projectTitle($0.id).lowercased() < ledger.projectTitle($1.id).lowercased() }
-    }
-
-    /// Whether there are no clients or projects at all.
-    public var isEmpty: Bool {
-        clients.isEmpty && unfiled.isEmpty && archivedClients.isEmpty && archivedProjects.isEmpty
     }
 }
