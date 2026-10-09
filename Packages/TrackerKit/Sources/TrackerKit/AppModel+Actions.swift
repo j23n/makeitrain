@@ -126,8 +126,7 @@ extension AppModel {
         updateProject(id, actionName: "Rename Project", undoManager: undoManager) { $0.name = trimmed }
     }
 
-    /// Deletes a project. Throws `LedgerError.hasEntries` if it has entries;
-    /// archive it instead.
+    /// Deletes a project. Throws if it has entries; archive it instead.
     public func deleteProject(_ id: UUID, undoManager: UndoManager?) throws {
         try edit("Delete Project", undoManager: undoManager) { ledger, now in
             try ledger.deleteProject(id, now: now)

@@ -56,13 +56,13 @@ public enum CSVImport {
     }
 
     /// Why a file can't be imported at all.
-    public enum Failure: LocalizedError, Hashable, Sendable {
+    enum Failure: LocalizedError, Hashable, Sendable {
         /// The file has no rows under its heading.
         case noRows
         /// No heading says when entries start, such as "start" or "date".
         case noStartColumn
 
-        public var errorDescription: String? {
+        var errorDescription: String? {
             switch self {
             case .noRows:
                 "The file has no rows to import."

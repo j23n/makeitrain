@@ -22,7 +22,7 @@ public struct Changes: Hashable, Sendable {
     }
 }
 
-public enum LedgerError: Error, Hashable, Sendable {
+enum LedgerError: Error, Hashable, Sendable {
     /// The client or project still has entries. Archive or merge it instead.
     case hasEntries
     /// There's no such record, or it's deleted.
