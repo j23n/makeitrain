@@ -257,17 +257,13 @@ struct DayColumn: View {
 
     // MARK: Blocks
 
-    private func frame(of block: DayBlock, width: CGFloat) -> CGRect {
+    /// Where a block goes in a column `width` wide, from `start` to `end`
+    /// seconds, moved sideways while it's dragged.
+    private func frame(of block: DayBlock, start: Int, end: Int, width: CGFloat) -> CGRect {
         let columnWidth = (width - 8) / CGFloat(max(block.columns, 1))
-        var start = block.startSecond
-        var end = block.endSecond
         var dx: CGFloat = 0
-        if let drag, drag.id == block.id {
-            let delta = Int(drag.translation.height / height * 3600)
-            (start, end) = HourGrid.adjusted(block, kind: drag.kind, by: delta)
-            if drag.kind == .move {
-                dx = drag.translation.width
-            }
+        if let drag, drag.id == block.id, drag.kind == .move {
+            dx = drag.translation.width
         }
         let top = y(start)
         let bottom = y(end)
@@ -280,65 +276,60 @@ struct DayColumn: View {
     }
 
     private func blockView(_ block: DayBlock, width: CGFloat) -> some View {
-        let rect = frame(of: block, width: width)
+        let (start, end) = dragTimes(block)
+        let rect = frame(of: block, start: start, end: end, width: width)
         let entry = block.entry
         let selected = week.selectedEntry == entry.id
         let change = week.suggestedChange(of: entry.id)
         return EntryBlock(
             model: model,
             entry: entry,
-            startSecond: dragTimes(block).0,
-            endSecond: dragTimes(block).1,
+            startSecond: start,
+            endSecond: end,
             height: rect.height,
             selected: selected,
             change: change.map { ($0.before, $0.after) },
             overnight: week.ranLongNote(for: entry)
         )
         .frame(width: rect.width, height: rect.height)
-        .overlay(alignment: .top) { edgeHandle(block, kind: .start) }
-        .overlay(alignment: .bottom) { edgeHandle(block, kind: .end) }
+        .overlay(alignment: .top) { edgeHandle(block, kind: .start, width: width) }
+        .overlay(alignment: .bottom) { edgeHandle(block, kind: .end, width: width) }
         .offset(x: rect.minX, y: rect.minY)
         .zIndex(drag?.id == block.id ? 2 : (selected ? 1 : 0))
         .onTapGesture {
             week.selectedEntry = entry.id
             onSelect()
         }
-        .gesture(moveGesture(block, width: width))
+        .gesture(dragGesture(block, kind: .move, width: width))
         .contextMenu { EntryMenu(model: model, entry: entry) }
     }
 
+    /// A block's start and end, or where a drag on it puts them.
     private func dragTimes(_ block: DayBlock) -> (Int, Int) {
         guard let drag, drag.id == block.id else { return (block.startSecond, block.endSecond) }
         return HourGrid.adjusted(block, kind: drag.kind, by: Int(drag.translation.height / height * 3600))
     }
 
-    private func moveGesture(_ block: DayBlock, width: CGFloat) -> some Gesture {
-        DragGesture(minimumDistance: 4, coordinateSpace: .named(Self.space))
+    /// Dragging a block to move it, or its top or bottom edge to change its
+    /// start or end.
+    private func dragGesture(_ block: DayBlock, kind: HourGrid.DragKind, width: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: kind == .move ? 4 : 1, coordinateSpace: .named(Self.space))
             .onChanged { value in
                 guard !model.isReadOnly else { return }
-                drag = BlockDrag(id: block.id, kind: .move, translation: value.translation)
+                drag = BlockDrag(id: block.id, kind: kind, translation: value.translation)
             }
             .onEnded { value in
-                finishDrag(block, kind: .move, translation: value.translation, width: width)
+                finishDrag(block, kind: kind, translation: value.translation, width: width)
             }
     }
 
     /// A thin strip along a block's top or bottom that drags its start or end.
-    private func edgeHandle(_ block: DayBlock, kind: HourGrid.DragKind) -> some View {
+    private func edgeHandle(_ block: DayBlock, kind: HourGrid.DragKind, width: CGFloat) -> some View {
         Color.clear
             .frame(height: 6)
             .contentShape(Rectangle())
             .resizeCursor()
-            .gesture(
-                DragGesture(minimumDistance: 1, coordinateSpace: .named(Self.space))
-                    .onChanged { value in
-                        guard !model.isReadOnly else { return }
-                        drag = BlockDrag(id: block.id, kind: kind, translation: CGSize(width: 0, height: value.translation.height))
-                    }
-                    .onEnded { value in
-                        finishDrag(block, kind: kind, translation: CGSize(width: 0, height: value.translation.height), width: 0)
-                    }
-            )
+            .gesture(dragGesture(block, kind: kind, width: width))
     }
 
     /// Applies a drag: a move goes to the day whose column it ends over,
@@ -348,7 +339,7 @@ struct DayColumn: View {
         guard !model.isReadOnly else { return }
         let (start, end) = HourGrid.adjusted(block, kind: kind, by: Int(translation.height / height * 3600))
         var shift = 0
-        if kind == .move, width > 0 {
+        if kind == .move {
             let steps = HourGrid.dayShift(translation.width, dayWidth: width, from: index, days: days.count)
             shift = days[index + steps].daysSince1970 - day.daysSince1970
         }
