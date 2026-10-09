@@ -35,6 +35,16 @@ import TrackerCore
         #expect(Format.durationParts(90 * minute).map { $0.unit } == [nil])
     }
 
+    @Test func writesASpanToItsEndOrToNow() {
+        let zone = "Europe/Berlin"
+        let start = DateTimeFormat.parse("2026-09-23T12:30:00+02:00")!
+        let end = DateTimeFormat.parse("2026-09-23T12:55:00+02:00")!
+        #expect(Format.span(start, end, zone: zone) == "\(Format.time(start, zone: zone))–\(Format.time(end, zone: zone))")
+        #expect(Format.span(start, nil, zone: zone) == "\(Format.time(start, zone: zone))–now")
+        let entry = TimeEntry(start: start, end: end, timeZone: "America/New_York", updated: start)
+        #expect(Format.span(entry) == Format.span(start, end, zone: "America/New_York"))
+    }
+
     @Test func readsBackWhatItWrites() {
         let hour = 60 * minute
         for duration in [5 * minute, 7 * hour + 45 * minute, 24 * hour, 574 * hour + 46 * minute] {

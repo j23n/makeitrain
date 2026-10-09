@@ -32,6 +32,17 @@ public enum Format {
         time.date.formatted(Date.FormatStyle(date: .omitted, time: .shortened, timeZone: Zones.zone(zone)))
     }
 
+    /// From a start to an end in a time zone, such as "12:30–12:55", or to
+    /// "now" without an end.
+    public static func span(_ start: Timestamp, _ end: Timestamp?, zone: String) -> String {
+        "\(time(start, zone: zone))–\(end.map { time($0, zone: zone) } ?? "now")"
+    }
+
+    /// An entry's start and end in its own time zone, such as "12:30–12:55".
+    public static func span(_ entry: TimeEntry) -> String {
+        span(entry.start, entry.end, zone: entry.timeZone)
+    }
+
     /// A day, such as "Wed, Sep 23".
     public static func day(_ day: LocalDate) -> String {
         noon(of: day).formatted(Date.FormatStyle(timeZone: utc).weekday(.abbreviated).month(.abbreviated).day())

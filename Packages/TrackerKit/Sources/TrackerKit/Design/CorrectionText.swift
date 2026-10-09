@@ -33,28 +33,28 @@ public enum CorrectionText {
                 return "Two entries overlap"
             }
             if earlier.start == later.start {
-                return "\(name(earlier, ledger)) and \(name(later, ledger)) start together"
+                return "\(ledger.title(of: earlier)) and \(ledger.title(of: later)) start together"
             }
             if let earlierEnd = earlier.end, later.end.map({ earlierEnd > $0 }) ?? false {
-                return "\(name(later, ledger)) is inside \(name(earlier, ledger))"
+                return "\(ledger.title(of: later)) is inside \(ledger.title(of: earlier))"
             }
-            return "\(name(earlier, ledger)) runs \(words(overlap.duration)) into \(name(later, ledger))"
+            return "\(ledger.title(of: earlier)) runs \(words(overlap.duration)) into \(ledger.title(of: later))"
         case let .ranLong(id, overnight):
             guard let entry = ledger.entries[id] else { return "An entry ran long" }
             let zone = entry.timeZone
             guard let end = entry.end else {
-                return "\(name(entry, ledger)) has been running since \(Format.weekday(entry.day)) \(Format.time(entry.start, zone: zone))"
+                return "\(ledger.title(of: entry)) has been running since \(Format.weekday(entry.day)) \(Format.time(entry.start, zone: zone))"
             }
             if overnight {
                 let endDay = end.local(in: zone).date
-                return "\(name(entry, ledger)) ran until \(Format.weekday(endDay)) \(Format.time(end, zone: zone))"
+                return "\(ledger.title(of: entry)) ran until \(Format.weekday(endDay)) \(Format.time(end, zone: zone))"
             }
-            return "\(name(entry, ledger)) ran \(Format.duration(entry.start.distance(to: end)))"
+            return "\(ledger.title(of: entry)) ran \(Format.duration(entry.start.distance(to: end)))"
         case let .noProject(id):
             guard let entry = ledger.entries[id] else { return "An entry has no project" }
-            return "\(entry.note.isEmpty ? "An entry" : entry.note), \(span(entry))"
+            return "\(entry.note.isEmpty ? "An entry" : entry.note), \(Format.span(entry))"
         case let .notLogged(entry):
-            return "\(entry.note.isEmpty ? "An event" : entry.note), \(span(entry))"
+            return "\(entry.note.isEmpty ? "An event" : entry.note), \(Format.span(entry))"
         }
     }
 
@@ -91,10 +91,10 @@ public enum CorrectionText {
                    let earlierEnd = entry.end, later.end.map({ earlierEnd > $0 }) ?? false {
                     return "End at \(Format.time(end, zone: entry.timeZone))"
                 }
-                return "End \(name(entry, ledger)) at \(Format.time(end, zone: entry.timeZone))"
+                return "End \(ledger.title(of: entry)) at \(Format.time(end, zone: entry.timeZone))"
             case let .trimLater(id, start):
                 guard let entry = ledger.entries[id] else { return "Start it later" }
-                return "Start \(name(entry, ledger)) at \(Format.time(start, zone: entry.timeZone))"
+                return "Start \(ledger.title(of: entry)) at \(Format.time(start, zone: entry.timeZone))"
             }
         case let .end(id, time):
             let zone = ledger.entries[id]?.timeZone ?? model.environment.timeZone()
@@ -110,17 +110,6 @@ public enum CorrectionText {
     public static func number(_ count: Int) -> String {
         let words = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
         return count < words.count ? words[count] : "\(count)"
-    }
-
-    /// An entry's note, or its project's name.
-    static func name(_ entry: TimeEntry, _ ledger: Ledger) -> String {
-        entry.note.isEmpty ? ledger.projectTitle(entry.projectID) : entry.note
-    }
-
-    /// "12:30–12:55".
-    static func span(_ entry: TimeEntry) -> String {
-        let zone = entry.timeZone
-        return "\(Format.time(entry.start, zone: zone))–\(entry.end.map { Format.time($0, zone: zone) } ?? "now")"
     }
 
     /// "20 minutes" under an hour, and "1:05" from an hour.

@@ -657,8 +657,7 @@ struct CommandChanges: View {
                 .compactMap { id in ledger.entries[id] }
                 .first { entry in !preview.diff.entries.contains { $0.after.id == entry.id } }
             if let other {
-                let title = other.note.isEmpty ? ledger.projectTitle(other.projectID) : other.note
-                result.append(Text("Overlaps \(title), \(Format.time(other.start, zone: other.timeZone))–\(other.end.map { Format.time($0, zone: other.timeZone) } ?? "now"), by \(Format.duration(overlap.duration)).")
+                result.append(Text("Overlaps \(ledger.title(of: other)), \(Format.span(other)), by \(Format.duration(overlap.duration)).")
                     .foregroundColor(Theme.amberText))
             }
         }

@@ -197,18 +197,18 @@ struct ChangeTable: View {
                     Text(change.isNew ? "+" : "~")
                         .fontWeight(.semibold)
                         .foregroundStyle(Theme.amberText)
-                    Text(after.note.isEmpty ? model.ledger.projectTitle(after.projectID) : after.note)
+                    Text(model.ledger.title(of: after))
                         .font(.system(size: 12.5))
                         .lineLimit(1)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     if let before = change.before {
-                        Text(span(before))
+                        Text(Format.span(before))
                             .strikethrough(true, color: Theme.amber)
                             .foregroundStyle(Theme.text3)
                     } else {
                         Text("—").foregroundStyle(Theme.text3)
                     }
-                    Text(span(after))
+                    Text(Format.span(after))
                         .fontWeight(.semibold)
                         .foregroundStyle(Theme.amberText)
                 }
@@ -219,10 +219,5 @@ struct ChangeTable: View {
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 8).fill(Theme.field))
         .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Theme.line))
-    }
-
-    private func span(_ entry: TimeEntry) -> String {
-        let zone = entry.timeZone
-        return "\(Format.time(entry.start, zone: zone))–\(entry.end.map { Format.time($0, zone: zone) } ?? "now")"
     }
 }

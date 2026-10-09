@@ -150,7 +150,7 @@ struct PhoneDayGrid: View {
             let zone = entry.timeZone
             let top = y(entry.start, zone: zone, hours)
             let bottom = y(entry.end ?? model.now, zone: zone, hours)
-            let times = "\(Format.time(entry.start, zone: zone))–\(entry.end.map { Format.time($0, zone: zone) } ?? "now")"
+            let times = Format.span(entry)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 5) {
                     if addition.isEvent {
@@ -158,7 +158,7 @@ struct PhoneDayGrid: View {
                             .font(.system(size: 10))
                         Text(times + calendarName(entry))
                     } else {
-                        Text(entry.note.isEmpty ? model.ledger.projectTitle(entry.projectID) : entry.note)
+                        Text(model.ledger.title(of: entry))
                         Text(times)
                             .fontWeight(.semibold)
                             .foregroundStyle(Theme.amberText)
@@ -172,7 +172,7 @@ struct PhoneDayGrid: View {
                 .monospacedDigit()
                 .foregroundStyle(Theme.text3)
                 if addition.isEvent {
-                    Text(entry.note.isEmpty ? model.ledger.projectTitle(entry.projectID) : entry.note)
+                    Text(model.ledger.title(of: entry))
                         .font(.system(size: 12.5))
                         .foregroundStyle(Theme.text4)
                 }
@@ -354,7 +354,7 @@ struct PhoneEntryBlock: View {
     }
 
     private var title: String {
-        entry.entry.note.isEmpty ? model.ledger.projectTitle(entry.entry.projectID) : entry.entry.note
+        model.ledger.title(of: entry.entry)
     }
 
     private var project: String? {
@@ -437,7 +437,7 @@ struct PhoneEntryBlock: View {
                     size: 11.5
                 )
             } else {
-                Text("\(Format.time(entry.start, zone: zone))–\(entry.end.map { Format.time($0, zone: zone) } ?? "now")")
+                Text(Format.span(entry.start, entry.end, zone: zone))
             }
         }
         .font(.system(size: 11.5))

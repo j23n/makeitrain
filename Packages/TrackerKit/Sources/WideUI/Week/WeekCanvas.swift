@@ -233,7 +233,7 @@ struct DayColumn: View {
                 Text("–\(Format.time(end, zone: zone))")
                     .font(.system(size: 10.5))
                     .monospacedDigit()
-                Text("\(Format.weekday(entry.entry.day))'s \(title(of: entry.entry))")
+                Text("\(Format.weekday(entry.entry.day))'s \(model.ledger.title(of: entry.entry))")
                     .lineLimit(1)
             }
             .font(.system(size: 11.5))
@@ -366,7 +366,7 @@ struct DayColumn: View {
             let zone = entry.timeZone
             let top = y(entry.start, zone: zone)
             let bottom = y(entry.end ?? model.now, zone: zone)
-            let times = "\(Format.time(entry.start, zone: zone))–\(entry.end.map { Format.time($0, zone: zone) } ?? "now")"
+            let times = Format.span(entry)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 5) {
                     if addition.isEvent {
@@ -386,7 +386,7 @@ struct DayColumn: View {
                 }
                 .font(.system(size: 10.5))
                 .monospacedDigit()
-                Text(entry.note.isEmpty ? model.ledger.projectTitle(entry.projectID) : entry.note)
+                Text(model.ledger.title(of: entry))
                     .font(.system(size: 11.5, weight: addition.isEvent ? .regular : .semibold))
                     .foregroundStyle(Theme.text4)
                     .lineLimit(1)
@@ -449,8 +449,8 @@ struct DayColumn: View {
                                     model.moveSeam(earlier: earlier.id, later: later.id, to: snapped, undoManager: undoManager)
                                 }
                         )
-                        .help("Drag to move where \(title(of: earlier)) ends and \(title(of: later)) starts")
-                        .accessibilityLabel(Text("Drag the seam between \(title(of: earlier)) and \(title(of: later))"))
+                        .help("Drag to move where \(model.ledger.title(of: earlier)) ends and \(model.ledger.title(of: later)) starts")
+                        .accessibilityLabel(Text("Drag the seam between \(model.ledger.title(of: earlier)) and \(model.ledger.title(of: later))"))
                 }
                 .frame(width: width - 8, height: max(bottom - top, 3))
                 .offset(x: 4, y: top)
@@ -542,10 +542,6 @@ struct DayColumn: View {
             .zIndex(5)
         }
     }
-
-    private func title(of entry: TimeEntry) -> String {
-        entry.note.isEmpty ? model.ledger.projectTitle(entry.projectID) : entry.note
-    }
 }
 
 /// One entry on the grid: its times, title and tags in its project's tint,
@@ -597,8 +593,7 @@ struct EntryBlock: View {
     }
 
     private var title: String {
-        if !entry.entry.note.isEmpty { return entry.entry.note }
-        return model.ledger.projectTitle(entry.entry.projectID)
+        model.ledger.title(of: entry.entry)
     }
 
     @ViewBuilder

@@ -249,7 +249,7 @@ struct PhoneCommandSheet: View {
                     HStack(spacing: 10) {
                         TintDot(model.ledger.tint(ofProject: entry.entry.projectID), size: 8)
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(entry.entry.note.isEmpty ? model.ledger.projectTitle(entry.entry.projectID) : entry.entry.note)
+                            Text(model.ledger.title(of: entry.entry))
                                 .lineLimit(1)
                             Text("\(Format.day(entry.entry.day)) · \(Format.time(entry.start, zone: entry.entry.timeZone))")
                                 .font(.system(size: 12))

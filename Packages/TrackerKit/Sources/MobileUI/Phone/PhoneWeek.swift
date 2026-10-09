@@ -266,7 +266,7 @@ struct PhoneCorrectionPanel: View {
                 if !after.isDeleted {
                     GridRow {
                         HStack(spacing: 7) {
-                            Text(after.note.isEmpty ? model.ledger.projectTitle(after.projectID) : after.note)
+                            Text(model.ledger.title(of: after))
                                 .lineLimit(1)
                             if change.isNew {
                                 Text("new")
@@ -279,9 +279,9 @@ struct PhoneCorrectionPanel: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         HStack(spacing: 4) {
                             if let before = change.before {
-                                ChangedText(old: span(before) == span(after) ? nil : span(before), new: span(after), size: 14)
+                                ChangedText(old: Format.span(before) == Format.span(after) ? nil : Format.span(before), new: Format.span(after), size: 14)
                             } else {
-                                Text(span(after))
+                                Text(Format.span(after))
                                     .fontWeight(.semibold)
                                     .foregroundStyle(Theme.amberText)
                             }
@@ -295,11 +295,6 @@ struct PhoneCorrectionPanel: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
         .background(RoundedRectangle(cornerRadius: 12).fill(Theme.field))
-    }
-
-    private func span(_ entry: TimeEntry) -> String {
-        let zone = entry.timeZone
-        return "\(Format.time(entry.start, zone: zone))–\(entry.end.map { Format.time($0, zone: zone) } ?? "now")"
     }
 
     private var fixes: some View {

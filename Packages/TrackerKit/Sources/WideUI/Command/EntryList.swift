@@ -58,7 +58,6 @@ public struct EntryList: View {
     private func times(_ entry: ResolvedEntry) -> String {
         let zone = entry.entry.timeZone
         let day = entry.entry.day == model.today ? "" : Format.monthDay(entry.entry.day) + " "
-        let end = entry.end.map { Format.time($0, zone: zone) } ?? "now"
-        return day + Format.time(entry.start, zone: zone) + "–" + end
+        return day + Format.span(entry.start, entry.end, zone: zone)
     }
 }
