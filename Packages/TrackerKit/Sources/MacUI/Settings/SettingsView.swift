@@ -272,7 +272,7 @@ struct CheatSheet: View {
                             ForEach(group.rows) { row in
                                 HStack(alignment: .firstTextBaseline, spacing: 14) {
                                     Text(row.example)
-                                        .font(Theme.commandFont(size: 12.5))
+                                        .font(.system(size: 12.5, design: .monospaced))
                                         .foregroundStyle(Theme.text)
                                         .frame(width: 250, alignment: .leading)
                                     Text(row.meaning)

@@ -141,8 +141,6 @@ public enum Theme {
     public static let link = Color(light: RGBA(0x2F55C8), dark: RGBA(0x9DB5FF))
     /// Tags, and issue references in particular.
     public static let tag = Color(light: RGBA(0x2F55C8), dark: RGBA(0xC3D1FF))
-    /// A switch that's on.
-    public static let on = Color(light: RGBA(0x355BD6), dark: RGBA(0x5B7FEB))
     public static let ok = Color(light: RGBA(0x1F7A4D), dark: RGBA(0x7FD1A3))
 
     /// The running timer and the line at the current time.
@@ -171,15 +169,6 @@ public enum Theme {
     public static let ghost = Color(light: RGBA(0x14171D, alpha: 0.35), dark: RGBA(0xE9ECF2, alpha: 0.45))
     /// The outline of the selected block.
     public static let selection = Color(light: RGBA(0x355BD6), dark: RGBA(0xE9ECF2))
-
-    // Type.
-    /// The command line's text: the one monospaced place.
-    public static func commandFont(size: CGFloat = 15) -> Font {
-        .system(size: size, design: .monospaced)
-    }
-
-    /// A small heading over a group, in sentence case.
-    public static let heading = Font.subheadline.weight(.semibold)
 }
 
 /// The colors drawn for a project's color: lighter on dark backgrounds, and
