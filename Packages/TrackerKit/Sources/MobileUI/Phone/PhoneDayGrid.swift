@@ -177,16 +177,7 @@ struct PhoneDayGrid: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
             .frame(width: width - 8, height: max(bottom - top, 22), alignment: .topLeading)
-            .background {
-                if !addition.isEvent {
-                    RoundedRectangle(cornerRadius: 9).fill(model.ledger.tint(ofProject: entry.projectID).fill)
-                }
-            }
-            .overlay(
-                RoundedRectangle(cornerRadius: 9)
-                    .strokeBorder(addition.isEvent ? Theme.ghost : Theme.amber, style: StrokeStyle(lineWidth: addition.isEvent ? 1 : 1.5, dash: [4, 3]))
-            )
-            .clipped()
+            .suggestedAdditionChrome(isEvent: addition.isEvent, tint: model.ledger.tint(ofProject: entry.projectID), cornerRadius: 9)
             .offset(x: 4, y: top)
             .onTapGesture {
                 if let preview = week.previews.first(where: { $0.number == addition.number }) {
@@ -315,10 +306,7 @@ struct PhoneEntryBlock: View {
             .padding(.horizontal, 10)
             .padding(.vertical, height < 34 ? 0 : 5)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: height < 34 ? .leading : .topLeading)
-            .background(shape.fill(fill))
-            .overlay(border)
-            .clipShape(shape)
-            .contentShape(shape)
+            .entryBlockChrome(shape, tint: tint, unassigned: unassigned, selected: selected, running: entry.isRunning, changed: change != nil)
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
     }
@@ -327,24 +315,6 @@ struct PhoneEntryBlock: View {
     private var shape: UnevenRoundedRectangle {
         let bottom: CGFloat = entry.isRunning ? 0 : 9
         return UnevenRoundedRectangle(topLeadingRadius: 9, bottomLeadingRadius: bottom, bottomTrailingRadius: bottom, topTrailingRadius: 9)
-    }
-
-    private var fill: Color {
-        if unassigned { return Theme.fill }
-        return selected || entry.isRunning ? tint.strongFill : tint.fill
-    }
-
-    @ViewBuilder
-    private var border: some View {
-        if selected {
-            shape.strokeBorder(Theme.selection, lineWidth: 2)
-        } else if change != nil {
-            shape.strokeBorder(Theme.amber, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
-        } else if unassigned {
-            shape.strokeBorder(Theme.ghost, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-        } else {
-            shape.strokeBorder(tint.ink, lineWidth: 1)
-        }
     }
 
     private var title: String {
@@ -421,15 +391,7 @@ struct PhoneEntryBlock: View {
     private var times: some View {
         HStack(spacing: 3) {
             if let change {
-                let startChanged = change.before.start != change.after.start
-                let endChanged = change.before.end != change.after.end
-                ChangedText(old: startChanged ? Format.time(change.before.start, zone: zone) : nil, new: Format.time(change.after.start, zone: zone), size: 11.5)
-                Text("–")
-                ChangedText(
-                    old: endChanged ? change.before.end.map { Format.time($0, zone: zone) } ?? "now" : nil,
-                    new: change.after.end.map { Format.time($0, zone: zone) } ?? "now",
-                    size: 11.5
-                )
+                ChangedSpan(before: change.before, after: change.after, zone: zone, size: 11.5)
             } else {
                 Text(Format.span(entry.start, entry.end, zone: zone))
             }

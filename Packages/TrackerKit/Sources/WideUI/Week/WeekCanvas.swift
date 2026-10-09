@@ -384,16 +384,7 @@ struct DayColumn: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .frame(width: width - 8, height: max(bottom - top, 22), alignment: .topLeading)
-            .background {
-                if !addition.isEvent {
-                    RoundedRectangle(cornerRadius: 7).fill(model.ledger.tint(ofProject: entry.projectID).fill)
-                }
-            }
-            .overlay(
-                RoundedRectangle(cornerRadius: 7)
-                    .strokeBorder(addition.isEvent ? Theme.ghost : Theme.amber, style: StrokeStyle(lineWidth: addition.isEvent ? 1 : 1.5, dash: [4, 3]))
-            )
-            .clipped()
+            .suggestedAdditionChrome(isEvent: addition.isEvent, tint: model.ledger.tint(ofProject: entry.projectID), cornerRadius: 7)
             .offset(x: 4, y: top)
             .accessibilityElement(children: .combine)
             .accessibilityLabel(Text("Suggested: \(entry.note), \(times)"))
@@ -557,30 +548,9 @@ struct EntryBlock: View {
             .padding(.horizontal, 8)
             .padding(.vertical, height < 34 ? 0 : 5)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: height < 34 ? .leading : .topLeading)
-            .background(RoundedRectangle(cornerRadius: 7).fill(fill))
-            .overlay(border)
-            .clipShape(RoundedRectangle(cornerRadius: 7))
-            .contentShape(RoundedRectangle(cornerRadius: 7))
+            .entryBlockChrome(RoundedRectangle(cornerRadius: 7), tint: tint, unassigned: unassigned, selected: selected, running: entry.isRunning, changed: change != nil)
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(selected ? .isSelected : [])
-    }
-
-    private var fill: Color {
-        if unassigned { return Theme.fill }
-        return selected || entry.isRunning ? tint.strongFill : tint.fill
-    }
-
-    @ViewBuilder
-    private var border: some View {
-        if selected {
-            RoundedRectangle(cornerRadius: 7).strokeBorder(Theme.selection, lineWidth: 2)
-        } else if change != nil {
-            RoundedRectangle(cornerRadius: 7).strokeBorder(Theme.amber, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
-        } else if unassigned {
-            RoundedRectangle(cornerRadius: 7).strokeBorder(Theme.ghost, style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
-        } else {
-            RoundedRectangle(cornerRadius: 7).strokeBorder(tint.ink, lineWidth: 1)
-        }
     }
 
     private var title: String {
@@ -632,15 +602,7 @@ struct EntryBlock: View {
     private var times: some View {
         HStack(spacing: 3) {
             if let change {
-                let startChanged = change.before.start != change.after.start
-                let endChanged = change.before.end != change.after.end
-                ChangedText(old: startChanged ? Format.time(change.before.start, zone: zone) : nil, new: Format.time(change.after.start, zone: zone), size: 10.5)
-                Text("–")
-                ChangedText(
-                    old: endChanged ? change.before.end.map { Format.time($0, zone: zone) } ?? "now" : nil,
-                    new: change.after.end.map { Format.time($0, zone: zone) } ?? "now",
-                    size: 10.5
-                )
+                ChangedSpan(before: change.before, after: change.after, zone: zone, size: 10.5)
             } else {
                 Text(Format.time(secondOfDay: startSecond) + "–" + (entry.isRunning ? "now" : Format.time(secondOfDay: min(endSecond, 86399))))
             }
