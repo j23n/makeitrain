@@ -180,7 +180,7 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
         #expect(model.resolved.first?.end == workshop.end)
     }
 
-    @Test func duplicatesEntriesAndUndoesTheCopies() async throws {
+    @Test func duplicatesAnEntryAndUndoesTheCopy() async throws {
         let harness = Harness()
         defer { harness.cleanUp() }
         let model = harness.model()
@@ -191,11 +191,10 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
         let workshop = entry(note: "Workshop", at: "2026-09-22T09:00:00+02:00")
         model.addEntry(workshop, undoManager: nil)
         undo.beginUndoGrouping()
-        let copies = model.duplicateEntries([workshop.id], undoManager: undo)
+        let copy = try #require(model.duplicateEntry(workshop.id, undoManager: undo))
         undo.endUndoGrouping()
         #expect(undo.undoActionName == "Duplicate Entry")
-        #expect(copies.count == 1)
-        #expect(model.resolved.map(\.id) == [workshop.id] + copies)
+        #expect(model.resolved.map(\.id) == [workshop.id, copy])
         #expect(model.resolved.last?.start == workshop.end)
 
         undo.undo()

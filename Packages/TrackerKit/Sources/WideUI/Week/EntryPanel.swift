@@ -135,7 +135,7 @@ struct EntryPanel: View {
                     model.continueEntry(entry, undoManager: undoManager)
                 }
                 row("Duplicate", systemImage: "plus.square.on.square") {
-                    if let copy = model.duplicateEntries([entry.id], undoManager: undoManager).first {
+                    if let copy = model.duplicateEntry(entry.id, undoManager: undoManager) {
                         select(copy)
                     }
                 }
@@ -146,7 +146,7 @@ struct EntryPanel: View {
                 }
             }
             row("Delete", systemImage: "trash", destructive: true) {
-                model.deleteEntries([entry.id], undoManager: undoManager)
+                model.deleteEntry(entry.id, undoManager: undoManager)
                 close()
             }
         }

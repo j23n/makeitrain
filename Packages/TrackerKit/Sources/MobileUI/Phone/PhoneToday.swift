@@ -278,7 +278,7 @@ struct PhoneEntrySheet: View {
                     dismiss()
                 }
                 row("Duplicate", systemImage: "plus.square.on.square") {
-                    model.duplicateEntries([entry.id], undoManager: undoManager)
+                    model.duplicateEntry(entry.id, undoManager: undoManager)
                     dismiss()
                 }
             }
@@ -289,7 +289,7 @@ struct PhoneEntrySheet: View {
                 }
             }
             row("Delete", systemImage: "trash", destructive: true) {
-                model.deleteEntries([entry.id], undoManager: undoManager)
+                model.deleteEntry(entry.id, undoManager: undoManager)
                 dismiss()
             }
         }

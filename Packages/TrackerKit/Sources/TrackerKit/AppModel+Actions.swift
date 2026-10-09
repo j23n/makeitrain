@@ -44,41 +44,28 @@ extension AppModel {
         }
     }
 
-    /// Applies the same change to several entries as one undoable step.
-    public func updateEntries(
-        _ ids: some Collection<UUID>,
-        actionName: String = "Edit Entry",
-        undoManager: UndoManager?,
-        _ change: (inout TimeEntry) -> Void
-    ) {
+    /// Changes an entry, as one step to undo with the name `actionName`.
+    public func updateEntry(_ id: UUID, actionName: String, undoManager: UndoManager?, _ change: (inout TimeEntry) -> Void) {
         edit(actionName, undoManager: undoManager) { ledger, now in
-            var changes = Changes()
-            for id in ids {
-                changes.formUnion(ledger.updateEntry(id, now: now, change))
-            }
-            return changes
+            ledger.updateEntry(id, now: now, change)
         }
     }
 
-    public func deleteEntries(_ ids: some Collection<UUID>, undoManager: UndoManager?) {
-        edit(ids.count == 1 ? "Delete Entry" : "Delete Entries", undoManager: undoManager) { ledger, now in
-            var changes = Changes()
-            for id in ids {
-                changes.formUnion(ledger.deleteEntry(id, now: now))
-            }
-            return changes
+    public func deleteEntry(_ id: UUID, undoManager: UndoManager?) {
+        edit("Delete Entry", undoManager: undoManager) { ledger, now in
+            ledger.deleteEntry(id, now: now)
         }
     }
 
-    /// Copies entries to right after them, keeping their order, and returns
-    /// the copies' ids. The running timer isn't copied.
+    /// Copies an entry to right after it, and returns the copy's id, or nil
+    /// for the running timer, which isn't copied.
     @discardableResult
-    public func duplicateEntries(_ ids: some Collection<UUID>, undoManager: UndoManager?) -> [UUID] {
-        let copies = Dictionary(ids.map { ($0, UUID()) }, uniquingKeysWith: { first, _ in first })
-        edit(copies.count == 1 ? "Duplicate Entry" : "Duplicate Entries", undoManager: undoManager) { ledger, now in
-            ledger.duplicate(copies, now: now)
+    public func duplicateEntry(_ id: UUID, undoManager: UndoManager?) -> UUID? {
+        let copy = UUID()
+        edit("Duplicate Entry", undoManager: undoManager) { ledger, now in
+            ledger.duplicate([id: copy], now: now)
         }
-        return ids.compactMap { copies[$0] }.filter { ledger.entries[$0] != nil }
+        return ledger.entries[copy] == nil ? nil : copy
     }
 
     /// Splits an entry in two at `time`, which has to fall inside it.

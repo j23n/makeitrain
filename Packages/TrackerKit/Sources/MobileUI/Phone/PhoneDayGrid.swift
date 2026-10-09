@@ -466,12 +466,12 @@ struct PhoneEntryMenu: View {
         Menu("Project") {
             ForEach(model.ledger.pickerProjects()) { project in
                 Button(model.ledger.projectTitle(project.id)) {
-                    model.updateEntries([entry.id], actionName: "Set Project", undoManager: undoManager) { $0.projectID = project.id }
+                    model.updateEntry(entry.id, actionName: "Set Project", undoManager: undoManager) { $0.projectID = project.id }
                 }
             }
             Divider()
             Button("Unassigned") {
-                model.updateEntries([entry.id], actionName: "Set Project", undoManager: undoManager) { $0.projectID = nil }
+                model.updateEntry(entry.id, actionName: "Set Project", undoManager: undoManager) { $0.projectID = nil }
             }
         }
         if EntrySplit.time(for: entry, now: model.now) != nil {
@@ -481,12 +481,12 @@ struct PhoneEntryMenu: View {
         }
         if !entry.isRunning {
             Button("Duplicate", systemImage: "plus.square.on.square") {
-                model.duplicateEntries([entry.id], undoManager: undoManager)
+                model.duplicateEntry(entry.id, undoManager: undoManager)
             }
         }
         Divider()
         Button("Delete", systemImage: "trash", role: .destructive) {
-            model.deleteEntries([entry.id], undoManager: undoManager)
+            model.deleteEntry(entry.id, undoManager: undoManager)
         }
     }
 }

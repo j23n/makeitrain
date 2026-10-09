@@ -83,7 +83,7 @@ extension AppModel {
         case .move:
             guard startSecond != block.startSecond || dayShift != 0 else { return }
             let shift = resolved.start.distance(to: time(startSecond, on: day.adding(days: dayShift)))
-            updateEntries([block.id], actionName: "Move Entry", undoManager: undoManager) { entry in
+            updateEntry(block.id, actionName: "Move Entry", undoManager: undoManager) { entry in
                 entry.start = entry.start.adding(milliseconds: shift)
                 entry.end = entry.end.map { $0.adding(milliseconds: shift) }
             }
@@ -92,13 +92,13 @@ extension AppModel {
             if resolved.isRunning {
                 setRunningStart(time(startSecond, on: day), undoManager: undoManager)
             } else {
-                updateEntries([block.id], actionName: "Change Start", undoManager: undoManager) {
+                updateEntry(block.id, actionName: "Change Start", undoManager: undoManager) {
                     $0.start = time(startSecond, on: day)
                 }
             }
         case .end:
             guard endSecond != block.endSecond else { return }
-            updateEntries([block.id], actionName: "Change End", undoManager: undoManager) {
+            updateEntry(block.id, actionName: "Change End", undoManager: undoManager) {
                 $0.end = time(endSecond, on: day)
             }
         }
