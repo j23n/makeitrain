@@ -46,7 +46,7 @@ The privacy manifests say the same: no tracking, no tracking domains and no coll
 ## Left to do
 
 1. Pick a team for both targets under Signing & Capabilities, and check that the app shows iCloud for both platforms and the App Sandbox for macOS.
-2. Register the App ID and the iCloud container `iCloud.com.j23n.TimeTracker` in the developer account, and turn on iCloud Documents for the App ID. If the container name changes, change it in both entitlements files, `App/Info.plist` and `AppEnvironment.live(containerIdentifier:)`.
+2. Register the App ID and the iCloud container `iCloud.com.j23n.TimeTracker` in the developer account, and turn on iCloud Documents for the App ID. If the container name changes, change it in both entitlements files, `App/Info.plist` and `AppEnvironment.live()`.
 3. Register the extension's App ID, `com.j23n.TimeTracker.Widgets`, too. Then create the app in App Store Connect with the Mac and iOS platforms, and fill in the description, keywords, support URL and privacy policy URL. A short privacy policy can say what the Privacy section above says.
 4. Take screenshots: the menu bar popover with a line typed, the week with its corrections, the month with its statement and a project's page on the Mac; Today, the week's corrections, the month and the command line on iPhone; the week and the month on iPad; and the Live Activity on the Lock Screen.
 5. Test iCloud on two devices before the first release. [Sync](sync.md) has a checklist.
