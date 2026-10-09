@@ -12,7 +12,6 @@ struct ProjectsScreen: View {
     @State private var filter = ""
     @State private var showsArchived = false
     @State private var selection: UUID?
-    @State private var stats: ProjectStats?
     @FocusState private var focused: Bool
     @Environment(\.undoManager) private var undoManager
 
@@ -20,7 +19,7 @@ struct ProjectsScreen: View {
 
     var body: some View {
         let tree = self.tree
-        let stats = self.stats ?? ProjectStats(model: model)
+        let stats = ProjectStats(model: model)
         VStack(alignment: .leading, spacing: 14) {
             header(tree)
             ScrollView {
@@ -81,11 +80,7 @@ struct ProjectsScreen: View {
             return .handled
         }
         .onAppear {
-            self.stats = ProjectStats(model: model)
             focused = true
-        }
-        .onChange(of: model.revision) {
-            self.stats = ProjectStats(model: model)
         }
     }
 

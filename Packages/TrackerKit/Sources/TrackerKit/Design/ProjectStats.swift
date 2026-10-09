@@ -2,11 +2,11 @@ import Foundation
 import TrackerCore
 
 /// Each project's time this week, this month, in each of the last twelve
-/// weeks and in all, as the projects list shows them, worked out in one
-/// go. Nil stands for the entries without a project. The running timer
-/// counts as far as it has run.
+/// weeks and in all, as the projects list shows them. Nil stands for the
+/// entries without a project. The running timer counts as far as it has
+/// run.
 public struct ProjectStats {
-    public struct Row: Hashable {
+    public struct Row {
         public var thisWeek: Int64 = 0
         public var thisMonth: Int64 = 0
         /// The last twelve weeks, this week last.
@@ -17,37 +17,39 @@ public struct ProjectStats {
         public var latest: ResolvedEntry?
     }
 
-    public var rows: [UUID?: Row] = [:]
+    private var rows: [UUID?: Row] = [:]
 
+    /// The figures as the model has them now: each day's from its daily
+    /// totals, and the time in all from the entries, without working out
+    /// their days.
     @MainActor
     public init(model: AppModel) {
-        let today = model.today
-        let firstWeekday = model.firstWeekday
-        let week = ReportPeriod.week.range(containing: today, firstWeekday: firstWeekday)
-        let month = ReportPeriod.month.range(containing: today, firstWeekday: firstWeekday)
-        let firstWeek = week.lowerBound.adding(days: -7 * 11)
         let now = model.now
         for entry in model.resolved {
-            let projectID = entry.entry.projectID
-            let duration = entry.duration(now: now)
-            let day = entry.entry.day
-            var row = rows[projectID] ?? Row()
-            row.total += duration
+            var row = rows[entry.entry.projectID] ?? Row()
+            row.total += entry.duration(now: now)
             row.entryCount += 1
             row.latest = entry
-            if week.contains(day) {
-                row.thisWeek += duration
-            }
-            if month.contains(day) {
-                row.thisMonth += duration
-            }
-            if day >= firstWeek, day <= week.upperBound {
-                let index = (day.daysSince1970 - firstWeek.daysSince1970) / 7
-                if (0..<12).contains(index) {
-                    row.weeks[index] += duration
+            rows[entry.entry.projectID] = row
+        }
+        let today = model.today
+        let week = ReportPeriod.week.range(containing: today, firstWeekday: model.firstWeekday)
+        let month = ReportPeriod.month.range(containing: today, firstWeekday: model.firstWeekday)
+        let firstWeek = week.lowerBound.adding(days: -7 * 11)
+        for day in (min(firstWeek, month.lowerBound)...max(week.upperBound, month.upperBound)).days {
+            for (projectID, time) in model.dayTotals.projects(on: day, now: now) {
+                var row = rows[projectID] ?? Row()
+                if week.contains(day) {
+                    row.thisWeek += time
                 }
+                if month.contains(day) {
+                    row.thisMonth += time
+                }
+                if day >= firstWeek, day <= week.upperBound {
+                    row.weeks[(day.daysSince1970 - firstWeek.daysSince1970) / 7] += time
+                }
+                rows[projectID] = row
             }
-            rows[projectID] = row
         }
     }
 
@@ -55,7 +57,8 @@ public struct ProjectStats {
         rows[projectID] ?? Row()
     }
 
-    /// The sum of some projects' rows, for a client's.
+    /// Some projects' time this week, this month and in all, added up for
+    /// their client's row.
     public func sum(_ projectIDs: [UUID]) -> Row {
         var result = Row()
         for id in projectIDs {
@@ -63,10 +66,6 @@ public struct ProjectStats {
             result.thisWeek += row.thisWeek
             result.thisMonth += row.thisMonth
             result.total += row.total
-            result.entryCount += row.entryCount
-            for index in 0..<12 {
-                result.weeks[index] += row.weeks[index]
-            }
         }
         return result
     }

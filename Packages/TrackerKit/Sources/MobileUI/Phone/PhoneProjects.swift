@@ -11,7 +11,6 @@ struct PhoneProjects: View {
     let model: AppModel
     let router: PhoneRouter
     @State private var filter = ""
-    @State private var stats: ProjectStats?
 
     var body: some View {
         NavigationStack(path: Binding(get: { router.projectsPath }, set: { router.projectsPath = $0 })) {
@@ -23,24 +22,18 @@ struct PhoneProjects: View {
                     case let .project(id):
                         PhoneProjectPage(model: model, router: router, projectID: id)
                     case .archived:
-                        PhoneArchivedProjects(model: model, stats: stats ?? ProjectStats(model: model))
+                        PhoneArchivedProjects(model: model)
                     }
                 }
         }
         .safeAreaInset(edge: .bottom) {
             PhoneCommandBar(model: model, placeholder: "new project, or switch", open: { router.openCommandLine() })
         }
-        .onAppear {
-            stats = ProjectStats(model: model)
-        }
-        .onChange(of: model.revision) {
-            stats = ProjectStats(model: model)
-        }
     }
 
     private var list: some View {
         let tree = ProjectTree(ledger: model.ledger)
-        let figures = stats ?? ProjectStats(model: model)
+        let figures = ProjectStats(model: model)
         return ScrollView {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 2) {
@@ -312,11 +305,11 @@ struct PhoneSparkline: View {
 /// The archived projects, and the projects of archived clients.
 struct PhoneArchivedProjects: View {
     let model: AppModel
-    let stats: ProjectStats
     @Environment(\.undoManager) private var undoManager
 
     var body: some View {
         let projects = ProjectTree(ledger: model.ledger).allArchivedProjects
+        let stats = ProjectStats(model: model)
         List {
             ForEach(projects) { project in
                 NavigationLink(value: PhoneProjectRoute.project(project.id)) {
