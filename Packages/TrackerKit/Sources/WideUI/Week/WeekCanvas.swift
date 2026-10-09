@@ -684,9 +684,9 @@ struct EntryMenu: View {
                 model.updateEntries([entry.id], actionName: "Set Project", undoManager: undoManager) { $0.projectID = nil }
             }
         }
-        if EntrySplit.range(of: entry, now: model.now) != nil {
+        if EntrySplit.time(for: entry, now: model.now) != nil {
             Button("Split in the Middle") {
-                model.splitEntry(entry.id, at: Timestamp(EntrySplit.suggestedTime(for: entry, now: model.now)), undoManager: undoManager)
+                model.splitInMiddle(entry, undoManager: undoManager)
             }
         }
         if !entry.isRunning {

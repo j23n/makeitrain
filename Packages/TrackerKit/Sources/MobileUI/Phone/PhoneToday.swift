@@ -274,7 +274,7 @@ struct PhoneEntrySheet: View {
                 }
             } else {
                 row("Continue it now", systemImage: "play.fill") {
-                    model.startTimer(EntryDraft(entry.entry), undoManager: undoManager)
+                    model.continueEntry(entry, undoManager: undoManager)
                     dismiss()
                 }
                 row("Duplicate", systemImage: "plus.square.on.square") {
@@ -282,9 +282,9 @@ struct PhoneEntrySheet: View {
                     dismiss()
                 }
             }
-            if EntrySplit.range(of: entry, now: model.now) != nil {
+            if EntrySplit.time(for: entry, now: model.now) != nil {
                 row("Split in the middle", systemImage: "scissors") {
-                    model.splitEntry(entry.id, at: Timestamp(EntrySplit.suggestedTime(for: entry, now: model.now)), undoManager: undoManager)
+                    model.splitInMiddle(entry, undoManager: undoManager)
                     dismiss()
                 }
             }

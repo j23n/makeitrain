@@ -15,22 +15,23 @@ import TrackerKit
         return Ledger(entries: [entry]).resolvedEntries()[0]
     }
 
-    func time(_ text: String) -> Date {
-        DateTimeFormat.parse("2026-09-23T\(text):00+02:00")!.date
+    func time(_ text: String) -> Timestamp {
+        DateTimeFormat.parse("2026-09-23T\(text):00+02:00")!
     }
 
     @Test func suggestsTheMiddleOnFiveMinutes() {
-        #expect(EntrySplit.suggestedTime(for: entry("13:00", "17:00"), now: now) == time("15:00"))
-        #expect(EntrySplit.suggestedTime(for: entry("13:00", "14:10"), now: now) == time("13:35"))
+        #expect(EntrySplit.time(for: entry("13:00", "17:00"), now: now) == time("15:00"))
+        #expect(EntrySplit.time(for: entry("13:00", "14:10"), now: now) == time("13:35"))
         // The running timer counts as ending now.
-        #expect(EntrySplit.suggestedTime(for: entry("14:45", nil), now: now) == time("15:15"))
+        #expect(EntrySplit.time(for: entry("14:45", nil), now: now) == time("15:15"))
         // No five minutes inside it: the middle, on a minute.
-        #expect(EntrySplit.suggestedTime(for: entry("09:01", "09:04"), now: now) == time("09:03"))
+        #expect(EntrySplit.time(for: entry("09:01", "09:04"), now: now) == time("09:03"))
     }
 
     @Test func splitsOnlyInsideTheEntry() {
-        #expect(EntrySplit.range(of: entry("09:00", "10:00"), now: now) == time("09:01")...time("09:59"))
-        #expect(EntrySplit.range(of: entry("09:00", "09:01"), now: now) == nil)
-        #expect(EntrySplit.range(of: entry("15:39", nil), now: now) == nil)
+        // At least a minute from either end.
+        #expect(EntrySplit.time(for: entry("09:00", "09:02"), now: now) == time("09:01"))
+        #expect(EntrySplit.time(for: entry("09:00", "09:01"), now: now) == nil)
+        #expect(EntrySplit.time(for: entry("15:39", nil), now: now) == nil)
     }
 }

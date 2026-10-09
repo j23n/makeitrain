@@ -15,6 +15,11 @@ extension AppModel {
         }
     }
 
+    /// Starts a timer for what an entry was for: its project, tags and note.
+    public func continueEntry(_ entry: ResolvedEntry, undoManager: UndoManager?) {
+        startTimer(EntryDraft(entry.entry), undoManager: undoManager)
+    }
+
     /// Stops the running timer, now or at an earlier time.
     public func stopTimer(at time: Timestamp? = nil, undoManager: UndoManager?) {
         edit("Stop Timer", undoManager: undoManager) { ledger, now in
@@ -81,6 +86,13 @@ extension AppModel {
         edit("Split Entry", undoManager: undoManager) { ledger, now in
             ledger.split(id, at: time, now: now)
         }
+    }
+
+    /// Splits an entry in two in its middle, as `EntrySplit` finds it. An
+    /// entry too short to split stays as it is.
+    public func splitInMiddle(_ entry: ResolvedEntry, undoManager: UndoManager?) {
+        guard let time = EntrySplit.time(for: entry, now: now) else { return }
+        splitEntry(entry.id, at: time, undoManager: undoManager)
     }
 
     // MARK: - Import
