@@ -71,16 +71,10 @@ public struct ProjectOverview {
             if let known = issues[key] {
                 return known
             }
-            guard !plain.contains(key),
-                  let url = ledger.issueURL(forTag: tag, projectID: projectID),
-                  let number = GitHub.Reference(tag: tag)?.number,
-                  // The issue's address is its repository's, then "/issues/123".
-                  let repository = GitHub.Repository(url.deletingLastPathComponent().deletingLastPathComponent().absoluteString)
-            else {
+            guard !plain.contains(key), let found = ledger.issue(forTag: tag, projectID: projectID) else {
                 plain.insert(key)
                 return nil
             }
-            let found = (repository: repository, number: number, url: url)
             issues[key] = found
             return found
         }
@@ -178,10 +172,7 @@ public struct ProjectTree {
     public init(ledger: Ledger) {
         let projects = ledger.projects.values
             .filter { !$0.isDeleted }
-            .sorted { a, b in
-                let (nameA, nameB) = (a.name.lowercased(), b.name.lowercased())
-                return nameA != nameB ? nameA < nameB : a.id.uuidString < b.id.uuidString
-            }
+            .sorted(by: Project.fileOrder)
         let live = ledger.liveClients()
         clients = live.filter { !$0.archived }.map { client in
             Branch(client: client, projects: projects.filter { $0.clientID == client.id && !$0.archived })
