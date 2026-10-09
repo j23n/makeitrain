@@ -193,8 +193,9 @@ struct PhoneProjects: View {
                         .lineLimit(1)
                 }
                 Spacer(minLength: 4)
-                PhoneSparkline(values: row.weeks, tint: ProjectTint(hex: project.color))
+                Sparkline(values: row.weeks, tint: ProjectTint(hex: project.color), height: 20, spacing: 2, cornerRadius: 1)
                     .frame(width: 50, height: 20)
+                    .accessibilityHidden(true)
                 Text(row.thisWeek > 0 ? Format.duration(row.thisWeek) : "—")
                     .font(.system(size: 13))
                     .monospacedDigit()
@@ -280,25 +281,6 @@ struct PhoneProjects: View {
         return projects.filter { project in
             ProjectSearch.matches(filter, project: project.name, client: model.ledger.client(forProject: project.id)?.name ?? "")
         }
-    }
-}
-
-/// Twelve weeks as small bars, this week last.
-struct PhoneSparkline: View {
-    let values: [Int64]
-    let tint: ProjectTint
-
-    var body: some View {
-        let highest = max(values.max() ?? 0, 40 * 3_600_000)
-        HStack(alignment: .bottom, spacing: 2) {
-            ForEach(values.indices, id: \.self) { index in
-                UnevenRoundedRectangle(topLeadingRadius: 1, topTrailingRadius: 1)
-                    .fill(values[index] > 0 ? tint.bar : Theme.emptyBar)
-                    .frame(height: values[index] > 0 ? max(2, CGFloat(values[index]) / CGFloat(highest) * 20) : 1)
-            }
-        }
-        .frame(maxHeight: .infinity, alignment: .bottom)
-        .accessibilityHidden(true)
     }
 }
 

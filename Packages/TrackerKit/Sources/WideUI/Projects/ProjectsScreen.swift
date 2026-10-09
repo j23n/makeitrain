@@ -459,23 +459,3 @@ struct ProjectTableRow<Name: View, Repos: View, Cal: View, Week: View, Month: Vi
         }
     }
 }
-
-/// Twelve weeks as small bars, this week last.
-struct Sparkline: View {
-    let values: [Int64]
-    let tint: ProjectTint
-
-    var body: some View {
-        let highest = max(values.max() ?? 0, 40 * 3_600_000)
-        HStack(alignment: .bottom, spacing: 3) {
-            ForEach(values.indices, id: \.self) { index in
-                UnevenRoundedRectangle(topLeadingRadius: 2, topTrailingRadius: 2)
-                    .fill(values[index] > 0 ? tint.bar : Theme.emptyBar)
-                    .frame(height: values[index] > 0 ? max(2, CGFloat(values[index]) / CGFloat(highest) * 26) : 1)
-            }
-        }
-        .frame(height: 26, alignment: .bottom)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Last 12 weeks: \(values.map { Format.duration($0) }.joined(separator: ", "))"))
-    }
-}

@@ -369,7 +369,8 @@ struct WeekDays: View {
     let openMonth: () -> Void
 
     var body: some View {
-        let thisWeek = ReportPeriod.week.range(containing: model.today, firstWeekday: model.firstWeekday)
+        let today = model.today
+        let thisWeek = ReportPeriod.week.range(containing: today, firstWeekday: model.firstWeekday)
         let first = thisWeek.lowerBound.adding(days: -77)
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -406,31 +407,13 @@ struct WeekDays: View {
                     ForEach(0..<7, id: \.self) { offset in
                         let day = days[offset]
                         let time = times[offset]
-                        ZStack(alignment: .bottom) {
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(day > model.today ? Color.clear : (day.weekday == 1 || day.weekday == 7 ? Theme.weekendCell : Theme.cell))
-                                .overlay {
-                                    if day > model.today {
-                                        RoundedRectangle(cornerRadius: 4).strokeBorder(Theme.strongLine, style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
-                                    } else if day == model.today {
-                                        RoundedRectangle(cornerRadius: 4).strokeBorder(Theme.accent, lineWidth: 1.5)
-                                    }
-                                }
-                            if time > 0 {
-                                RoundedRectangle(cornerRadius: 2)
-                                    .fill(time > Corrections.longest ? Theme.amber : tint.bar)
-                                    .frame(height: max(2, CGFloat(min(time, 37_800_000)) / 37_800_000 * 20))
-                                    .padding(.horizontal, 5)
-                                    .padding(.bottom, 3)
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 26)
-                        .help("\(Format.longDay(day)), \(time > 0 ? Format.duration(time) : "no time")")
+                        ProjectDayCell(day: day, time: time, today: today, tint: tint, barHeight: 20, sideInset: 5, bottomInset: 3)
+                            .frame(height: 26)
+                            .help("\(Format.longDay(day)), \(time > 0 ? Format.duration(time) : "no time")")
                     }
                     Text(total > 0 ? Format.duration(total) : "—")
                         .monospacedDigit()
-                        .foregroundStyle(total > 50 * 3_600_000 ? Theme.amberText : (total > 0 ? Theme.text : Theme.text3))
+                        .foregroundStyle(total > ChartScale.longWeek ? Theme.amberText : (total > 0 ? Theme.text : Theme.text3))
                         .frame(width: 72, alignment: .trailing)
                 }
                 .font(.system(size: 11.5))

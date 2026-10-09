@@ -300,7 +300,8 @@ struct PhoneProjectWeeks: View {
     let openMonth: () -> Void
 
     var body: some View {
-        let thisWeek = ReportPeriod.week.range(containing: model.today, firstWeekday: model.firstWeekday)
+        let today = model.today
+        let thisWeek = ReportPeriod.week.range(containing: today, firstWeekday: model.firstWeekday)
         let first = thisWeek.lowerBound.adding(days: -77)
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
@@ -323,11 +324,11 @@ struct PhoneProjectWeeks: View {
                             .lineLimit(1)
                             .frame(width: 44, alignment: .leading)
                         ForEach(0..<7, id: \.self) { offset in
-                            cell(days[offset], time: times[offset])
+                            ProjectDayCell(day: days[offset], time: times[offset], today: today, tint: tint, barHeight: 13, sideInset: 2, bottomInset: 2)
                         }
                         Text(total > 0 ? Format.duration(total) : "—")
                             .monospacedDigit()
-                            .foregroundStyle(total > 50 * 3_600_000 ? Theme.amberText : (total > 0 ? Theme.text : Theme.text3))
+                            .foregroundStyle(total > ChartScale.longWeek ? Theme.amberText : (total > 0 ? Theme.text : Theme.text3))
                             .lineLimit(1)
                             .frame(width: 64, alignment: .trailing)
                     }
@@ -338,28 +339,6 @@ struct PhoneProjectWeeks: View {
                 }
             }
         }
-    }
-
-    private func cell(_ day: LocalDate, time: Int64) -> some View {
-        ZStack(alignment: .bottom) {
-            RoundedRectangle(cornerRadius: 4)
-                .fill(day > model.today ? Color.clear : (day.weekday == 1 || day.weekday == 7 ? Theme.weekendCell : Theme.cell))
-                .overlay {
-                    if day > model.today {
-                        RoundedRectangle(cornerRadius: 4).strokeBorder(Theme.strongLine, style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
-                    } else if day == model.today {
-                        RoundedRectangle(cornerRadius: 4).strokeBorder(Theme.accent, lineWidth: 1.5)
-                    }
-                }
-            if time > 0 {
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(time > Corrections.longest ? Theme.amber : tint.bar)
-                    .frame(height: max(2, CGFloat(min(time, 37_800_000)) / 37_800_000 * 13))
-                    .padding(.horizontal, 2)
-                    .padding(.bottom, 2)
-            }
-        }
-        .frame(maxWidth: .infinity)
     }
 }
 
