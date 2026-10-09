@@ -465,7 +465,6 @@ struct DayColumn: View {
                 ZStack(alignment: .topTrailing) {
                     Hatching()
                         .frame(height: max(bottom - line, 0))
-                        .offset(y: 0)
                         .frame(maxHeight: .infinity, alignment: .top)
                     Rectangle()
                         .fill(Theme.amber)

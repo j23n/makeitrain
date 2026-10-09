@@ -12,19 +12,17 @@ struct CorrectionsPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Text("Corrections")
-                        .font(.system(size: 14, weight: .semibold))
-                    if !week.previews.isEmpty {
-                        Text("\(week.previews.count)")
-                            .font(.system(size: 11, weight: .semibold))
-                            .monospacedDigit()
-                            .foregroundStyle(Theme.markerText)
-                            .padding(.horizontal, 7)
-                            .frame(height: 18)
-                            .background(Capsule().fill(Theme.marker))
-                    }
+            HStack(spacing: 8) {
+                Text("Corrections")
+                    .font(.system(size: 14, weight: .semibold))
+                if !week.previews.isEmpty {
+                    Text("\(week.previews.count)")
+                        .font(.system(size: 11, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.markerText)
+                        .padding(.horizontal, 7)
+                        .frame(height: 18)
+                        .background(Capsule().fill(Theme.marker))
                 }
             }
             if !week.previews.isEmpty {
