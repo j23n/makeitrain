@@ -3,6 +3,7 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 import UIKit
+import WideUI
 
 /// One day on an hour grid, as Today and the Week tab show it: the
 /// entries as blocks in their projects' colors, and what the corrections
@@ -136,7 +137,7 @@ struct PhoneDayGrid: View {
             onSelect(entry)
         }
         .contextMenu {
-            PhoneEntryMenu(model: model, entry: entry)
+            EntryMenu(model: model, entry: entry, touch: true)
         }
     }
 
@@ -444,50 +445,6 @@ struct PhoneEntryBlock: View {
         .monospacedDigit()
         .foregroundStyle(Theme.text4)
         .lineLimit(1)
-    }
-}
-
-/// What an entry's menu offers, on a long press.
-struct PhoneEntryMenu: View {
-    let model: AppModel
-    let entry: ResolvedEntry
-    @Environment(\.undoManager) private var undoManager
-
-    var body: some View {
-        if entry.isRunning {
-            Button("Stop", systemImage: "stop.fill") {
-                model.stopTimer(undoManager: undoManager)
-            }
-        } else {
-            Button("Continue", systemImage: "play.fill") {
-                model.continueEntry(entry, undoManager: undoManager)
-            }
-        }
-        Menu("Project") {
-            ForEach(model.ledger.pickerProjects()) { project in
-                Button(model.ledger.projectTitle(project.id)) {
-                    model.updateEntry(entry.id, actionName: "Set Project", undoManager: undoManager) { $0.projectID = project.id }
-                }
-            }
-            Divider()
-            Button("Unassigned") {
-                model.updateEntry(entry.id, actionName: "Set Project", undoManager: undoManager) { $0.projectID = nil }
-            }
-        }
-        if EntrySplit.time(for: entry, now: model.now) != nil {
-            Button("Split in the Middle", systemImage: "scissors") {
-                model.splitInMiddle(entry, undoManager: undoManager)
-            }
-        }
-        if !entry.isRunning {
-            Button("Duplicate", systemImage: "plus.square.on.square") {
-                model.duplicateEntry(entry.id, undoManager: undoManager)
-            }
-        }
-        Divider()
-        Button("Delete", systemImage: "trash", role: .destructive) {
-            model.deleteEntry(entry.id, undoManager: undoManager)
-        }
     }
 }
 #endif

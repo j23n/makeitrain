@@ -661,19 +661,28 @@ struct EntryBlock: View {
     }
 }
 
-/// What a block's context menu offers.
-struct EntryMenu: View {
+/// What an entry's context menu offers, on the week and on the iPhone's
+/// day: stopping or continuing it, its project, splitting, duplicating and
+/// deleting it. With `touch`, as on the iPhone, the items have icons.
+public struct EntryMenu: View {
     let model: AppModel
     let entry: ResolvedEntry
+    let touch: Bool
     @Environment(\.undoManager) private var undoManager
 
-    var body: some View {
+    public init(model: AppModel, entry: ResolvedEntry, touch: Bool = false) {
+        self.model = model
+        self.entry = entry
+        self.touch = touch
+    }
+
+    public var body: some View {
         if entry.isRunning {
-            Button("Stop") {
+            item("Stop", "stop.fill") {
                 model.stopTimer(undoManager: undoManager)
             }
         } else {
-            Button("Continue") {
+            item("Continue", "play.fill") {
                 model.continueEntry(entry, undoManager: undoManager)
             }
         }
@@ -689,18 +698,28 @@ struct EntryMenu: View {
             }
         }
         if EntrySplit.time(for: entry, now: model.now) != nil {
-            Button("Split in the Middle") {
+            item("Split in the Middle", "scissors") {
                 model.splitInMiddle(entry, undoManager: undoManager)
             }
         }
         if !entry.isRunning {
-            Button("Duplicate") {
+            item("Duplicate", "plus.square.on.square") {
                 model.duplicateEntry(entry.id, undoManager: undoManager)
             }
         }
         Divider()
-        Button("Delete", role: .destructive) {
+        item("Delete", "trash", role: .destructive) {
             model.deleteEntry(entry.id, undoManager: undoManager)
+        }
+    }
+
+    /// An item, with its icon on a touch screen.
+    @ViewBuilder
+    private func item(_ title: LocalizedStringKey, _ systemImage: String, role: ButtonRole? = nil, action: @escaping () -> Void) -> some View {
+        if touch {
+            Button(title, systemImage: systemImage, role: role, action: action)
+        } else {
+            Button(title, role: role, action: action)
         }
     }
 }
