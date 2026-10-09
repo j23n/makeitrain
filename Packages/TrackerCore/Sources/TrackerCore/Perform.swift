@@ -159,15 +159,30 @@ public struct CommandPreview: Hashable, Sendable {
         newOverlaps = Self.introduced(by: diff, before: context.ledger, after: after, now: context.now)
     }
 
-    /// The overlaps in `after` that involve entries `diff` changed or added
-    /// and weren't in `before`.
+    /// The overlaps in `after` between an entry `diff` changed or added and
+    /// any other entry, with the running timer ending at `now`, leaving out
+    /// the pairs that overlapped in `before` already. They're listed as
+    /// `Overlaps.analyze` lists them, by the later entry's start. Each pair
+    /// is tested on its own: `analyze` pairs an entry only with the earlier
+    /// one that ends last, which a timer left running for days always is.
     private static func introduced(by diff: LedgerDiff, before: Ledger, after: Ledger, now: Timestamp) -> [Overlap] {
         let touched = Set(diff.entries.map(\.after.id))
         guard !touched.isEmpty else { return [] }
-        let earlier = Set(Overlaps.analyze(before.resolvedEntries(), now: now).map { [$0.earlier, $0.later] })
-        return Overlaps.analyze(after.resolvedEntries(), now: now).filter { overlap in
-            (touched.contains(overlap.earlier) || touched.contains(overlap.later)) && !earlier.contains([overlap.earlier, overlap.later])
+        let resolved = after.resolvedEntries()
+        let was = Dictionary(uniqueKeysWithValues: before.resolvedEntries().map { ($0.id, $0) })
+        var found: [(later: Int, earlier: Int, overlap: Overlap)] = []
+        for (index, entry) in resolved.enumerated() where touched.contains(entry.id) {
+            for (otherIndex, other) in resolved.enumerated() where otherIndex != index {
+                // Two entries that both changed are paired once.
+                if otherIndex < index, touched.contains(other.id) { continue }
+                guard let overlap = Overlaps.overlap(entry, other, now: now) else { continue }
+                if let entryWas = was[entry.id], let otherWas = was[other.id], Overlaps.overlap(entryWas, otherWas, now: now) != nil {
+                    continue
+                }
+                found.append((max(index, otherIndex), min(index, otherIndex), overlap))
+            }
         }
+        return found.sorted { ($0.later, $0.earlier) < ($1.later, $1.earlier) }.map(\.overlap)
     }
 }
 

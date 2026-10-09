@@ -60,18 +60,27 @@ public enum Overlaps {
         var latest: Span?
         for span in spans {
             if let latest, span.entry.start < latest.end {
-                overlaps.append(Overlap(
-                    earlier: latest.entry.id,
-                    later: span.entry.id,
-                    duration: span.entry.start.distance(to: min(span.end, latest.end)),
-                    fixes: fixes(earlier: latest, later: span)
-                ))
+                overlaps.append(overlap(earlier: latest, later: span))
             }
             if latest.map({ span.end > $0.end }) ?? true {
                 latest = span
             }
         }
         return overlaps
+    }
+
+    /// How two entries overlap, if they do, as `analyze` reports a pair:
+    /// the earlier one starts first, and a running entry counts as ending
+    /// at `now`. Unlike `analyze`, which pairs an entry only with the
+    /// earlier one that ends last, it tests any two.
+    static func overlap(_ a: ResolvedEntry, _ b: ResolvedEntry, now: Timestamp) -> Overlap? {
+        let (first, second) = TimeEntry.fileOrder(a.entry, b.entry) ? (a, b) : (b, a)
+        let earlier = Span(entry: first, end: first.end ?? now)
+        let later = Span(entry: second, end: second.end ?? now)
+        guard earlier.end > earlier.entry.start, later.end > later.entry.start, later.entry.start < earlier.end else {
+            return nil
+        }
+        return overlap(earlier: earlier, later: later)
     }
 
     /// Time counted more than once when durations are added up: their sum
@@ -97,6 +106,16 @@ public enum Overlaps {
     private struct Span {
         var entry: ResolvedEntry
         var end: Timestamp
+    }
+
+    /// Two spans that overlap, the earlier starting first.
+    private static func overlap(earlier: Span, later: Span) -> Overlap {
+        Overlap(
+            earlier: earlier.entry.id,
+            later: later.entry.id,
+            duration: later.entry.start.distance(to: min(later.end, earlier.end)),
+            fixes: fixes(earlier: earlier, later: later)
+        )
     }
 
     private static func fixes(earlier: Span, later: Span) -> [OverlapFix] {

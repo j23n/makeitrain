@@ -47,7 +47,7 @@ import Testing
         #expect(preview.newOverlaps.first?.duration == Int64(30 * 60000))
     }
 
-    @Test func previewsTheOverlapsWithATimerLeftRunning() {
+    @Test func previewsTheOverlapsWithATimerLeftRunning() throws {
         // Running since Saturday, it overlaps what's logged today.
         let forgotten = F.entry(107, F.harbor, "2026-10-03", "17:00", nil, note: "Release")
         let context = F.context(F.ledger([forgotten]), now: "18:00")
@@ -55,6 +55,24 @@ import Testing
         let preview = CommandPreview(command, in: context)
         #expect(preview.newOverlaps.map(\.earlier) == [uuid(107)])
         #expect(preview.newOverlaps.first?.duration == Int64(60 * 60000))
+
+        // An entry it overlaps too still counts: Planning, 08:00–09:00.
+        let review = Command.log(EntryDraft(projectID: F.harbor, note: "Review"), start: F.at("08:30"), end: F.at("09:30"))
+        let both = CommandPreview(review, in: context)
+        let added = try #require(both.diff.entries.first { $0.isNew }?.after.id)
+        #expect(both.newOverlaps.map(\.earlier) == [uuid(107), uuid(105)])
+        #expect(both.newOverlaps.map(\.later) == [added, added])
+        #expect(both.newOverlaps.map(\.duration) == [3_600_000, 1_800_000])
+    }
+
+    @Test func previewsOnlyOverlapsThatArentThereAlready() {
+        // Moving the timer's start into Planning, 08:00–09:00, makes one.
+        let context = F.context(F.ledger([F.runningBookings]), now: "10:40")
+        #expect(CommandPreview(.moveStart(to: F.at("08:30")), in: context).newOverlaps.map(\.earlier) == [uuid(105)])
+        // Moving it further into Planning makes none that isn't there.
+        let inPlanning = F.entry(103, F.bookings, "2026-10-05", "08:45", nil, tags: ["#227"], note: "Export to PDF")
+        let overlapping = F.context(F.ledger([inPlanning]), now: "10:40")
+        #expect(CommandPreview(.moveStart(to: F.at("08:30")), in: overlapping).newOverlaps.isEmpty)
     }
 
     @Test func movesTheRunningTimersStart() throws {
