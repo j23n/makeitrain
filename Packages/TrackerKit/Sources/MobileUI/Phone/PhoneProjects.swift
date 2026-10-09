@@ -9,11 +9,11 @@ import UIKit
 /// a project and the archived ones. A project opens its page.
 struct PhoneProjects: View {
     let model: AppModel
-    let router: PhoneRouter
+    @Bindable var router: PhoneRouter
     @State private var filter = ""
 
     var body: some View {
-        NavigationStack(path: Binding(get: { router.projectsPath }, set: { router.projectsPath = $0 })) {
+        NavigationStack(path: $router.projectsPath) {
             list
                 .navigationTitle("Projects")
                 .toolbar(.hidden, for: .navigationBar)
