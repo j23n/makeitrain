@@ -50,6 +50,26 @@ import Testing
         #expect(ledger.liveClients().map(\.name) == ["Acme", "Old Client"])
     }
 
+    @Test func offersAProjectsClientsAndProjectsToMergeInto() {
+        // An archived client is offered only to its own projects.
+        #expect(ledger.clientChoices(forProject: uuid(10)).map(\.name) == ["Acme"])
+        #expect(ledger.clientChoices(forProject: uuid(12)).map(\.name) == ["Acme", "Old Client"])
+        // Every other project that isn't deleted, archived ones too, by
+        // title: "Acme › App", "Internal", "Old Client › Legacy".
+        #expect(ledger.mergeTargets(forProject: uuid(10)).map(\.id) == [uuid(13), uuid(11), uuid(12)])
+    }
+
+    @Test func tellsWhetherAProjectHasEntries() {
+        var ledger = ledger
+        ledger.merge(F.entry(1, uuid(10), "2026-09-22", "09:00", "10:00"))
+        var deleted = F.entry(2, uuid(11), "2026-09-22", "10:00", "11:00")
+        deleted.deleted = now
+        ledger.merge(deleted)
+        #expect(ledger.hasEntries(project: uuid(10)))
+        #expect(!ledger.hasEntries(project: uuid(11)))
+        #expect(!ledger.hasEntries(project: uuid(12)))
+    }
+
     @Test func listsTagsOnceWithTheLatestSpelling() {
         var ledger = ledger
         ledger.merge(F.entry(1, nil, "2026-09-20", "09:00", "10:00", tags: ["design", "Call"]))

@@ -53,6 +53,27 @@ extension Ledger {
         clients.values.filter { !$0.isDeleted }.sorted(by: Client.fileOrder)
     }
 
+    /// The clients a project can be moved to: those that aren't archived,
+    /// and its own client if it is, sorted by name.
+    public func clientChoices(forProject projectID: UUID) -> [Client] {
+        let current = projects[projectID]?.clientID
+        return liveClients().filter { !$0.archived || $0.id == current }
+    }
+
+    /// The projects a project can be merged into: every other one that
+    /// isn't deleted, archived ones too, sorted by title.
+    public func mergeTargets(forProject projectID: UUID) -> [Project] {
+        projects.values
+            .filter { !$0.isDeleted && $0.id != projectID }
+            .sorted { projectTitle($0.id).lowercased() < projectTitle($1.id).lowercased() }
+    }
+
+    /// Whether a project has entries that aren't deleted, which keep it
+    /// from being deleted.
+    public func hasEntries(project projectID: UUID) -> Bool {
+        entries.values.contains { !$0.isDeleted && $0.projectID == projectID }
+    }
+
     /// Every tag on an entry that isn't deleted, once each, ignoring case,
     /// sorted. The spelling used most recently wins.
     public func allTags() -> [String] {
