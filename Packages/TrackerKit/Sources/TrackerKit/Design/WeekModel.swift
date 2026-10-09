@@ -179,6 +179,19 @@ public final class WeekModel {
         return nil
     }
 
+    /// What an entry's block says when it ran long, such as "ran overnight
+    /// · 19:25", "ran 13:10" or "running 12:40"; nil when it didn't.
+    public func ranLongNote(for entry: ResolvedEntry) -> String? {
+        for preview in previews {
+            if case let .ranLong(id, overnight) = preview.correction.kind, id == entry.id {
+                let length = Format.duration(model.duration(of: entry))
+                if entry.isRunning { return "running \(length)" }
+                return overnight ? "ran overnight · \(length)" : "ran \(length)"
+            }
+        }
+        return nil
+    }
+
     /// Entries suggestions would add, with their numbers: logged events and
     /// the parts of split entries.
     public var suggestedAdditions: [SuggestedAddition] {

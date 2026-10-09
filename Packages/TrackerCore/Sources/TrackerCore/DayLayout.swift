@@ -71,6 +71,40 @@ public enum DayLayout {
         }
         return blocks
     }
+
+    /// The hours a day's grid shows: 7:00 to 19:00, widened to its blocks,
+    /// to the entries suggestions would add, and to the hour it is now,
+    /// when that's given.
+    public static func hours(blocks: some Sequence<DayBlock>, additions: some Sequence<TimeEntry>, nowHour: Int?) -> Range<Int> {
+        var first = 7
+        var last = 19
+        for block in blocks {
+            first = min(first, block.startSecond / 3600)
+            last = max(last, Int((Double(block.endSecond) / 3600).rounded(.up)))
+        }
+        for entry in additions {
+            let zone = entry.timeZone
+            first = min(first, entry.start.local(in: zone).hour)
+            if let end = entry.end {
+                last = max(last, end.local(in: zone).hour + 1)
+            }
+        }
+        if let nowHour {
+            first = min(first, nowHour)
+            last = max(last, nowHour + 1)
+        }
+        return max(0, first)..<min(24, max(last, first + 1))
+    }
+
+    /// Where a time falls on a day's grid, in seconds after midnight in
+    /// `zone`: 0 for a time before the day, and 86 400 for one after it.
+    public static func second(of time: Timestamp, on day: LocalDate, zone: String) -> Int {
+        let local = time.local(in: zone)
+        if local.date == day {
+            return local.millisecondOfDay / 1000
+        }
+        return local.date < day ? 0 : 86400
+    }
 }
 
 extension Timestamp {

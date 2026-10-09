@@ -18,7 +18,11 @@ struct WeekCanvas: View {
 
     var body: some View {
         let layouts = days.map { DayLayout.blocks(on: $0, entries: week.entries(on: $0), now: model.now) }
-        let hours = hourRange(layouts)
+        let hours = DayLayout.hours(
+            blocks: layouts.joined(),
+            additions: week.suggestedAdditions.map(\.entry),
+            nowHour: days.contains(model.today) ? model.now.local(in: model.environment.timeZone()).hour : nil
+        )
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 Color.clear.frame(width: Self.gutter, height: 1)
@@ -68,30 +72,6 @@ struct WeekCanvas: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(Theme.canvas))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.line))
-    }
-
-    /// The hours shown: 7:00 to 19:00, widened to any entry, ghost or the
-    /// current time.
-    private func hourRange(_ layouts: [[DayBlock]]) -> Range<Int> {
-        var first = 7
-        var last = 19
-        for block in layouts.joined() {
-            first = min(first, block.startSecond / 3600)
-            last = max(last, Int((Double(block.endSecond) / 3600).rounded(.up)))
-        }
-        for addition in week.suggestedAdditions {
-            let zone = addition.entry.timeZone
-            first = min(first, addition.entry.start.local(in: zone).hour)
-            if let end = addition.entry.end {
-                last = max(last, end.local(in: zone).hour + 1)
-            }
-        }
-        if days.contains(model.today) {
-            let hour = model.now.local(in: model.environment.timeZone()).hour
-            first = min(first, hour)
-            last = max(last, hour + 1)
-        }
-        return max(0, first)..<min(24, max(last, first + 1))
     }
 
     /// The hour of the first entry, to scroll to.
@@ -197,9 +177,7 @@ struct DayColumn: View {
     }
 
     private func y(_ time: Timestamp, zone: String) -> CGFloat {
-        let local = time.local(in: zone)
-        let second = local.date == day ? local.millisecondOfDay / 1000 : (local.date < day ? 0 : 86400)
-        return y(second)
+        y(DayLayout.second(of: time, on: day, zone: zone))
     }
 
     var body: some View {
@@ -314,7 +292,7 @@ struct DayColumn: View {
             height: rect.height,
             selected: selected,
             change: change.map { ($0.before, $0.after) },
-            overnight: overnightNote(entry)
+            overnight: week.ranLongNote(for: entry)
         )
         .frame(width: rect.width, height: rect.height)
         .overlay(alignment: .top) { edgeHandle(block, kind: .start) }
@@ -547,18 +525,6 @@ struct DayColumn: View {
         case let .notLogged(entry):
             return y(entry.start, zone: entry.timeZone)
         }
-    }
-
-    /// "ran overnight · 19:25" on a block that did.
-    private func overnightNote(_ entry: ResolvedEntry) -> String? {
-        for preview in week.previews {
-            if case let .ranLong(id, overnight) = preview.correction.kind, id == entry.id {
-                let length = Format.duration(model.duration(of: entry))
-                if entry.isRunning { return "running \(length)" }
-                return overnight ? "ran overnight · \(length)" : "ran \(length)"
-            }
-        }
-        return nil
     }
 
     /// The red line at the current time, on today.

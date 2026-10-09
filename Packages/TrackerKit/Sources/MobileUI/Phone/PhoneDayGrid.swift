@@ -24,7 +24,11 @@ struct PhoneDayGrid: View {
 
     var body: some View {
         let blocks = DayLayout.blocks(on: day, entries: week.entries(on: day), now: model.now)
-        let hours = hourRange(blocks)
+        let hours = DayLayout.hours(
+            blocks: blocks,
+            additions: week.suggestedAdditions.map(\.entry).filter { $0.day == day },
+            nowHour: day == model.today ? model.now.local(in: zone).hour : nil
+        )
         ScrollViewReader { proxy in
             ScrollView(.vertical) {
                 ZStack(alignment: .topLeading) {
@@ -64,37 +68,12 @@ struct PhoneDayGrid: View {
         }
     }
 
-    /// 7:00 to 19:00, widened to any entry, suggestion or the current time.
-    private func hourRange(_ blocks: [DayBlock]) -> Range<Int> {
-        var first = 7
-        var last = 19
-        for block in blocks {
-            first = min(first, block.startSecond / 3600)
-            last = max(last, Int((Double(block.endSecond) / 3600).rounded(.up)))
-        }
-        for addition in week.suggestedAdditions where addition.entry.day == day {
-            let zone = addition.entry.timeZone
-            first = min(first, addition.entry.start.local(in: zone).hour)
-            if let end = addition.entry.end {
-                last = max(last, end.local(in: zone).hour + 1)
-            }
-        }
-        if day == model.today {
-            let hour = model.now.local(in: zone).hour
-            first = min(first, hour)
-            last = max(last, hour + 1)
-        }
-        return max(0, first)..<min(24, max(last, first + 1))
-    }
-
     private func y(_ second: Int, _ hours: Range<Int>) -> CGFloat {
         (CGFloat(second) / 3600 - CGFloat(hours.lowerBound)) * hourHeight
     }
 
     private func y(_ time: Timestamp, zone: String, _ hours: Range<Int>) -> CGFloat {
-        let local = time.local(in: zone)
-        let second = local.date == day ? local.millisecondOfDay / 1000 : (local.date < day ? 0 : 86400)
-        return y(second, hours)
+        y(DayLayout.second(of: time, on: day, zone: zone), hours)
     }
 
     // MARK: Grid
@@ -148,7 +127,7 @@ struct PhoneDayGrid: View {
             height: height,
             selected: week.selectedEntry == entry.id,
             change: change.map { ($0.before, $0.after) },
-            overnight: overnightNote(entry)
+            overnight: week.ranLongNote(for: entry)
         )
         .frame(width: columnWidth - (block.columns > 1 ? 2 : 0), height: height)
         .offset(x: 4 + CGFloat(block.column) * columnWidth, y: top)
@@ -159,18 +138,6 @@ struct PhoneDayGrid: View {
         .contextMenu {
             PhoneEntryMenu(model: model, entry: entry)
         }
-    }
-
-    /// "ran overnight · 19:25" on a block that did.
-    private func overnightNote(_ entry: ResolvedEntry) -> String? {
-        for preview in week.previews {
-            if case let .ranLong(id, overnight) = preview.correction.kind, id == entry.id {
-                let length = Format.duration(model.duration(of: entry))
-                if entry.isRunning { return "running \(length)" }
-                return overnight ? "ran overnight · \(length)" : "ran \(length)"
-            }
-        }
-        return nil
     }
 
     // MARK: Corrections

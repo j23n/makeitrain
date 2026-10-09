@@ -54,6 +54,29 @@ import Testing
         #expect(result.first?.endSecond == 11 * 3600 + 900)
     }
 
+    @Test func showsSevenToSevenWidenedToEntriesAdditionsAndNow() {
+        let none: [TimeEntry] = []
+        #expect(DayLayout.hours(blocks: blocks([]), additions: none, nowHour: nil) == 7..<19)
+        let early = blocks([entry(1, "2026-09-23T06:30:00+02:00", "2026-09-23T08:00:00+02:00")])
+        #expect(DayLayout.hours(blocks: early, additions: none, nowHour: nil) == 6..<19)
+        // An end past the hour shows that hour in full.
+        let late = blocks([entry(2, "2026-09-23T18:00:00+02:00", "2026-09-23T20:10:00+02:00")])
+        #expect(DayLayout.hours(blocks: late, additions: none, nowHour: nil) == 7..<21)
+        let addition = entry(3, "2026-09-23T05:15:00+02:00", "2026-09-23T21:30:00+02:00")
+        #expect(DayLayout.hours(blocks: blocks([]), additions: [addition], nowHour: nil) == 5..<22)
+        #expect(DayLayout.hours(blocks: blocks([]), additions: none, nowHour: 22) == 7..<23)
+        // An entry past midnight shows the day to its end.
+        let overnight = blocks([entry(4, "2026-09-23T23:00:00+02:00", "2026-09-24T01:00:00+02:00")])
+        #expect(DayLayout.hours(blocks: overnight, additions: none, nowHour: 0) == 0..<24)
+    }
+
+    @Test func placesTimesOnTheDayAndOthersAtItsEnds() {
+        #expect(DayLayout.second(of: t("2026-09-23T09:30:00+02:00"), on: day, zone: "Europe/Berlin") == 9 * 3600 + 1800)
+        #expect(DayLayout.second(of: t("2026-09-23T09:30:00+02:00"), on: day, zone: "America/New_York") == 3 * 3600 + 1800)
+        #expect(DayLayout.second(of: t("2026-09-22T23:00:00+02:00"), on: day, zone: "Europe/Berlin") == 0)
+        #expect(DayLayout.second(of: t("2026-09-24T00:30:00+02:00"), on: day, zone: "Europe/Berlin") == 86400)
+    }
+
     @Test func convertsWallClockTimesToInstants() {
         #expect(Timestamp(date: day, secondOfDay: 9 * 3600, zone: "Europe/Berlin") == t("2026-09-23T09:00:00+02:00"))
         #expect(Timestamp(date: day, secondOfDay: 9 * 3600, zone: "America/New_York") == t("2026-09-23T09:00:00-04:00"))
