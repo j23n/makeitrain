@@ -227,7 +227,7 @@ struct ProjectScreen: View {
             .font(.system(size: 12.5))
             ForEach(shown) { tag in
                 if selectedTag == tag.id {
-                    renameRow(tag, project: project)
+                    renameRow(tag)
                 } else {
                     HStack(spacing: 10) {
                         if let url = tag.url {
@@ -274,7 +274,7 @@ struct ProjectScreen: View {
 
     /// The selected tag with a field for its new name, which merges it into
     /// another of the project's tags when it's that tag's name.
-    private func renameRow(_ tag: ProjectOverview.Tag, project: Project) -> some View {
+    private func renameRow(_ tag: ProjectOverview.Tag) -> some View {
         let others = (overview?.tagNames ?? []).filter { !Tags.same($0, tag.name) }
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
