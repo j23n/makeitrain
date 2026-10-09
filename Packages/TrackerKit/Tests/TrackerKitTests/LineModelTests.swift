@@ -7,10 +7,8 @@ import TrackerCore
 /// suggestions, going through earlier lines, and applying a line.
 @Suite @MainActor struct LineModelTests {
     @Test func takesASuggestionInTheMiddleOfTheLine() async throws {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
         model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
         let line = CommandLineModel(model: model)
 
@@ -25,10 +23,8 @@ import TrackerCore
     }
 
     @Test func aLineBroughtBackHasNoSuggestionsUntilItsChanged() async throws {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
         model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
         model.preferences.remember("web")
         let line = CommandLineModel(model: model)
@@ -47,10 +43,8 @@ import TrackerCore
     }
 
     @Test func tabUpAndDownGoThroughTheSuggestionsFirst() async throws {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
         model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
         model.addProject(named: "Webinar", client: nil, color: Palette.colors[1], undoManager: nil)
         model.preferences.remember("web review")
@@ -81,10 +75,8 @@ import TrackerCore
     }
 
     @Test func offersLinesRunLatelyThenWordsToAdd() async throws {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
         model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
         model.preferences.remember("web review")
         let line = CommandLineModel(model: model)
@@ -105,10 +97,8 @@ import TrackerCore
     }
 
     @Test func readsAnEntrysLineAndAppliesIt() async throws {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
         let website = model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
         let workshop = entry(note: "Workshop", at: "2026-09-22T09:00:00+02:00")
         model.addEntry(workshop, undoManager: nil)
@@ -129,10 +119,8 @@ import TrackerCore
     }
 
     @Test func anEntrysLineTakesSuggestionsWithTabUpAndDown() async throws {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
         model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
         model.addProject(named: "Webinar", client: nil, color: Palette.colors[1], undoManager: nil)
         let workshop = entry(note: "Workshop", at: "2026-09-22T09:00:00+02:00")
@@ -156,10 +144,8 @@ import TrackerCore
     }
 
     @Test func aLineWithoutTimesKeepsTheEntrys() async throws {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
         let website = model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
         let workshop = entry(note: "Workshop", at: "2026-09-22T09:00:00+02:00")
         model.addEntry(workshop, undoManager: nil)
@@ -177,10 +163,8 @@ import TrackerCore
     }
 
     @Test func refusesALineThatEndsBeforeItStarts() async throws {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
         let workshop = entry(note: "Workshop", at: "2026-09-22T09:00:00+02:00")
         model.addEntry(workshop, undoManager: nil)
         let line = EntryLineModel(model: model)
@@ -201,10 +185,8 @@ import TrackerCore
     }
 
     @Test func readsAnEntrysLineInTheZoneItWasRecordedIn() async throws {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
         // 10:00 to 12:00 in New York, which was 16:00 to 18:00 in Berlin,
         // where the device is.
         let start = DateTimeFormat.parse("2026-09-22T10:00:00-04:00")!

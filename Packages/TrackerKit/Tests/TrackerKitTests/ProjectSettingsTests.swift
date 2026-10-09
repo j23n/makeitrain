@@ -5,10 +5,8 @@ import TrackerCore
 
 @Suite @MainActor struct ProjectSettingsTests {
     @Test func addsAndOrdersRepositories() async throws {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
         let undo = UndoManager()
         undo.groupsByEvent = false
         let project = model.addProject(named: "Website", client: nil, color: "#4F7CAC", undoManager: nil)
@@ -74,10 +72,8 @@ import TrackerCore
     }
 
     @Test func renamesATagInOneProject() async throws {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
         let website = model.addProject(named: "Website", client: nil, color: "#4F7CAC", undoManager: nil)
         let brand = model.addProject(named: "Brand", client: nil, color: "#9BBB59", undoManager: nil)
         var first = entry(note: "Hero", at: "2026-09-22T09:00:00+02:00")

@@ -90,10 +90,8 @@ import TrackerCore
     }
 
     @Test func movingABlockToAnotherDayKeepsItsLength() async {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
         let review = entry(note: "Review", at: "2026-09-21T09:00:00+02:00")
         model.addEntry(review, undoManager: nil)
         let block = DayLayout.blocks(on: monday, entries: model.resolved, now: model.now)[0]
@@ -105,10 +103,8 @@ import TrackerCore
     }
 
     @Test func draggingAnEdgeChangesOnlyThatTime() async {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
         let review = entry(note: "Review", at: "2026-09-21T09:00:00+02:00")
         model.addEntry(review, undoManager: nil)
         var block = DayLayout.blocks(on: monday, entries: model.resolved, now: model.now)[0]
@@ -122,10 +118,8 @@ import TrackerCore
     }
 
     @Test func draggingTheRunningTimersStartMovesItBack() async {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
         model.startTimer(EntryDraft(note: "Running"), undoManager: nil)
         let today = model.today
         let block = DayLayout.blocks(on: today, entries: model.resolved, now: model.now)[0]

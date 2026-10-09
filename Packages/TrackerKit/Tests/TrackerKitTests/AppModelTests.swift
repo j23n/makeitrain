@@ -75,6 +75,15 @@ struct Harness {
     func cleanUp() {
         try? FileManager.default.removeItem(at: root)
     }
+
+    /// A harness with a model that has opened its empty data folder, as
+    /// most tests start.
+    static func started() async -> (Harness, AppModel) {
+        let harness = Harness()
+        let model = harness.model()
+        await model.start()
+        return (harness, model)
+    }
 }
 
 /// Waits for work the model does in tasks of its own.
@@ -126,10 +135,8 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
     }
 
     @Test func savesEdits() async throws {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
 
         model.startTimer(EntryDraft(note: "Wireframes"), undoManager: nil)
         #expect(model.running?.entry.note == "Wireframes")
@@ -142,10 +149,8 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
     }
 
     @Test func undoesAndRedoes() async throws {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
         let undo = UndoManager()
         undo.groupsByEvent = false
 
@@ -165,10 +170,8 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
     }
 
     @Test func splitsAnEntryAndUndoesTheSplit() async throws {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
         let undo = UndoManager()
         undo.groupsByEvent = false
 
@@ -188,10 +191,8 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
     }
 
     @Test func duplicatesAnEntryAndUndoesTheCopy() async throws {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
         let undo = UndoManager()
         undo.groupsByEvent = false
 
@@ -209,10 +210,8 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
     }
 
     @Test func importsACSVFileAsOneStep() async throws {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
         let undo = UndoManager()
         undo.groupsByEvent = false
 
@@ -239,10 +238,8 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
     }
 
     @Test func keepsProjectTagsUpToDate() async throws {
-        let harness = Harness()
+        let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        let model = harness.model()
-        await model.start()
         var meeting = entry(note: "Meeting", at: "2026-09-23T08:30:00+02:00")
         meeting.tags = ["client-call"]
         model.addEntry(meeting, undoManager: nil)
