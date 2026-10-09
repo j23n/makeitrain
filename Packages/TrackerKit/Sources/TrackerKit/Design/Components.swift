@@ -84,13 +84,11 @@ public struct TintDot: View {
 public struct ProjectName: View {
     let ledger: Ledger
     let projectID: UUID?
-    let showsClient: Bool
     let weight: Font.Weight
 
-    public init(ledger: Ledger, projectID: UUID?, showsClient: Bool = false, weight: Font.Weight = .regular) {
+    public init(ledger: Ledger, projectID: UUID?, weight: Font.Weight = .regular) {
         self.ledger = ledger
         self.projectID = projectID
-        self.showsClient = showsClient
         self.weight = weight
     }
 
@@ -106,7 +104,7 @@ public struct ProjectName: View {
 
     private var title: String {
         guard let projectID else { return "Unassigned" }
-        return showsClient ? ledger.projectTitle(projectID) : ledger.projects[projectID]?.name ?? "Unknown project"
+        return ledger.projects[projectID]?.name ?? "Unknown project"
     }
 }
 
