@@ -672,6 +672,10 @@ struct EntryMenu: View {
             Button("Stop") {
                 model.stopTimer(undoManager: undoManager)
             }
+        } else {
+            Button("Continue") {
+                model.continueEntry(entry, undoManager: undoManager)
+            }
         }
         Menu("Project") {
             ForEach(model.ledger.pickerProjects()) { project in
