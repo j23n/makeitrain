@@ -133,5 +133,6 @@ import TrackerCore
         #expect(tree.archivedClients.first?.projects.map(\.name) == ["Brand"])
         // By title: "Acme › Admin", "Initech › Orphan", "Old".
         #expect(tree.archivedProjects.map(\.name) == ["Admin", "Orphan", "Old"])
+        #expect(tree.allArchivedProjects.map(\.name) == ["Admin", "Orphan", "Old", "Brand"])
     }
 }

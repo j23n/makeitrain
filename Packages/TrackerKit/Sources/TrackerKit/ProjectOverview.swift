@@ -208,4 +208,10 @@ public struct ProjectTree {
             }
             .sorted { ledger.projectTitle($0.id).lowercased() < ledger.projectTitle($1.id).lowercased() }
     }
+
+    /// Every project listed as archived: the archived projects, then the
+    /// projects of the archived clients.
+    public var allArchivedProjects: [Project] {
+        archivedProjects + archivedClients.flatMap(\.projects)
+    }
 }

@@ -89,7 +89,7 @@ struct PhoneProjects: View {
                         }
                     }
                 }
-                let archived = tree.archivedProjects.count + tree.archivedClients.reduce(0) { $0 + $1.projects.count }
+                let archived = tree.allArchivedProjects.count
                 if archived > 0, filter.isEmpty {
                     Button {
                         router.projectsPath.append(.archived)
@@ -316,8 +316,7 @@ struct PhoneArchivedProjects: View {
     @Environment(\.undoManager) private var undoManager
 
     var body: some View {
-        let tree = ProjectTree(ledger: model.ledger)
-        let projects = tree.archivedProjects + tree.archivedClients.flatMap(\.projects)
+        let projects = ProjectTree(ledger: model.ledger).allArchivedProjects
         List {
             ForEach(projects) { project in
                 NavigationLink(value: PhoneProjectRoute.project(project.id)) {

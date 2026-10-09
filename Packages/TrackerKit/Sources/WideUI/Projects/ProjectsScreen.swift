@@ -343,7 +343,7 @@ struct ProjectsScreen: View {
 
     @ViewBuilder
     private func archivedSection(_ tree: ProjectTree, stats: ProjectStats) -> some View {
-        let archived = tree.archivedProjects + tree.archivedClients.flatMap(\.projects)
+        let archived = tree.allArchivedProjects
         if !archived.isEmpty {
             VStack(spacing: 0) {
                 Button {
