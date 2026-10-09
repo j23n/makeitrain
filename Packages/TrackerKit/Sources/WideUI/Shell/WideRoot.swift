@@ -42,7 +42,7 @@ public struct WideRoot<Trailing: View>: View {
                 cancel: cancel
             )
             HStack(spacing: 0) {
-                content
+                ScreenView(model: model, navigator: navigator)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .environment(\.commandSidebarShown, showsCommandSidebar)
                 if showsCommandSidebar {
@@ -74,6 +74,7 @@ public struct WideRoot<Trailing: View>: View {
             .opacity(0)
             .accessibilityHidden(true)
         }
+        .background(LineRefresh(model: model, line: line))
         .onAppear {
             if let zoom = Zoom(rawValue: savedZoom), zoom != navigator.screen.zoom {
                 navigator.replace(zoom.screen(today: model.today))
@@ -81,9 +82,6 @@ public struct WideRoot<Trailing: View>: View {
         }
         .onChange(of: navigator.screen.zoom) { _, zoom in
             savedZoom = zoom.rawValue
-        }
-        .onChange(of: model.revision) {
-            line.refresh()
         }
         .onChange(of: model.request, initial: true) { _, request in
             handle(request)
@@ -123,8 +121,24 @@ public struct WideRoot<Trailing: View>: View {
         commandFocused = false
     }
 
-    @ViewBuilder
-    private var content: some View {
+    /// Does what another part of the app asked for, such as the projects'
+    /// New. Importing and exporting are left to the window around it.
+    private func handle(_ request: AppRequest?) {
+        guard case let .command(text)? = request else { return }
+        line.text = text
+        focusRequest += 1
+        model.request = nil
+    }
+}
+
+/// The screen the window shows. It's a view of its own, so the window's
+/// redraws, as for the command line, leave it alone instead of building
+/// the screen and its model again.
+private struct ScreenView: View {
+    let model: AppModel
+    let navigator: Navigator
+
+    var body: some View {
         switch navigator.screen {
         case let .day(day):
             WeekScreen(model: model, navigator: navigator, anchor: day, span: .day)
@@ -141,14 +155,19 @@ public struct WideRoot<Trailing: View>: View {
                 .id(id)
         }
     }
+}
 
-    /// Does what another part of the app asked for, such as the projects'
-    /// New. Importing and exporting are left to the window around it.
-    private func handle(_ request: AppRequest?) {
-        guard case let .command(text)? = request else { return }
-        line.text = text
-        focusRequest += 1
-        model.request = nil
+/// Reads the command line again when the data changes. It's a view of its
+/// own, so a change doesn't redraw the whole window.
+private struct LineRefresh: View {
+    let model: AppModel
+    let line: CommandLineModel
+
+    var body: some View {
+        Color.clear
+            .onChange(of: model.revision) {
+                line.refresh()
+            }
     }
 }
 

@@ -69,9 +69,7 @@ struct MobileRoot: View {
         .onChange(of: model.preferences.appearance, initial: true) { _, appearance in
             apply(appearance)
         }
-        .onChange(of: LiveActivities.state(of: model), initial: true) { _, state in
-            LiveActivities.shared.show(state)
-        }
+        .background(LiveActivitySync(model: model))
     }
 
     /// Sets every window's appearance, sheets included, which a color
@@ -88,6 +86,20 @@ struct MobileRoot: View {
                 window.overrideUserInterfaceStyle = style
             }
         }
+    }
+}
+
+/// Keeps the Live Activity in step with the running timer. It's a view of
+/// its own, so a change to the data doesn't redraw the root, which would
+/// build the iPhone's screens again.
+private struct LiveActivitySync: View {
+    let model: AppModel
+
+    var body: some View {
+        Color.clear
+            .onChange(of: LiveActivities.state(of: model), initial: true) { _, state in
+                LiveActivities.shared.show(state)
+            }
     }
 }
 
