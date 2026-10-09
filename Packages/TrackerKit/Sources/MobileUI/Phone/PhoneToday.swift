@@ -14,25 +14,7 @@ struct PhoneToday: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            PhoneHeader(title: "Today", subtitle: subtitle) {
-                if !router.today.corrections.isEmpty {
-                    Button {
-                        router.showWeek(model.today, correction: router.today.corrections.first?.id, firstWeekday: model.firstWeekday)
-                    } label: {
-                        HStack(spacing: 7) {
-                            Circle().fill(Theme.amber).frame(width: 7, height: 7)
-                            Text("\(router.today.corrections.count) to correct")
-                        }
-                        .font(.system(size: 13.5, weight: .semibold))
-                        .foregroundStyle(Theme.amberText)
-                        .padding(.horizontal, 13)
-                        .frame(height: 36)
-                        .background(Capsule().fill(Theme.amberFill))
-                        .overlay(Capsule().strokeBorder(Theme.amberLine))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
+            header
             if router.today.entries(on: model.today).isEmpty, router.today.suggestedAdditions.isEmpty {
                 PhoneEmptyDay()
             } else {
@@ -57,41 +39,50 @@ struct PhoneToday: View {
         }
     }
 
+    /// The large title with what's logged so far under it, and beside it
+    /// how many corrections there are, which goes to them.
+    private var header: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Today")
+                    .font(.system(size: 30, weight: .bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                subtitle
+                    .font(.system(size: 14))
+                    .foregroundStyle(Theme.text2)
+                    .monospacedDigit()
+            }
+            Spacer(minLength: 8)
+            if !router.today.corrections.isEmpty {
+                Button {
+                    router.showWeek(model.today, correction: router.today.corrections.first?.id, firstWeekday: model.firstWeekday)
+                } label: {
+                    HStack(spacing: 7) {
+                        Circle().fill(Theme.amber).frame(width: 7, height: 7)
+                        Text("\(router.today.corrections.count) to correct")
+                    }
+                    .font(.system(size: 13.5, weight: .semibold))
+                    .foregroundStyle(Theme.amberText)
+                    .padding(.horizontal, 13)
+                    .frame(height: 36)
+                    .background(Capsule().fill(Theme.amberFill))
+                    .overlay(Capsule().strokeBorder(Theme.amberLine))
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 2)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 10)
+    }
+
     /// "Monday 5 October · 3:00 so far".
     private var subtitle: Text {
         let total = model.dayTotals.total(on: model.today, now: model.now)
         return Text("\(Format.fullDay(model.today)) · ")
             + Text(Format.duration(total)).foregroundColor(Theme.text)
             + Text(" so far")
-    }
-}
-
-/// A screen's large title, with a line under it and buttons beside it.
-struct PhoneHeader<Trailing: View>: View {
-    let title: String
-    var subtitle: Text?
-    @ViewBuilder var trailing: Trailing
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.system(size: 30, weight: .bold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                if let subtitle {
-                    subtitle
-                        .font(.system(size: 14))
-                        .foregroundStyle(Theme.text2)
-                        .monospacedDigit()
-                }
-            }
-            Spacer(minLength: 8)
-            trailing
-                .padding(.top, 2)
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 10)
     }
 }
 
