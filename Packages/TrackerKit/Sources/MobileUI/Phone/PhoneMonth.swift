@@ -13,9 +13,9 @@ struct PhoneMonth: View {
     let model: AppModel
     let router: PhoneRouter
     @State private var showsAll = false
-    @State private var csv: CSVDocument?
+    @State private var csv: ExportDocument?
     @State private var savingCSV = false
-    @State private var pdf: PDFDocumentFile?
+    @State private var pdf: ExportDocument?
     @State private var savingPDF = false
 
     private var state: ReportState { router.month }
@@ -72,11 +72,11 @@ struct PhoneMonth: View {
             stepButton("chevron.right", "Next", 1)
             Menu {
                 Button("Save CSV…", systemImage: "tablecells") {
-                    csv = CSVDocument(data: CSVExport.data(for: report.entries, ledger: model.ledger))
+                    csv = ExportDocument(data: CSVExport.data(for: report.entries, ledger: model.ledger))
                     savingCSV = true
                 }
                 Button("Save PDF…", systemImage: "doc.richtext") {
-                    pdf = PDFDocumentFile(data: StatementPDF.data(for: report, ledger: model.ledger, title: state.title, now: model.now))
+                    pdf = ExportDocument(data: StatementPDF.data(for: report, ledger: model.ledger, title: state.title, now: model.now))
                     savingPDF = true
                 }
             } label: {

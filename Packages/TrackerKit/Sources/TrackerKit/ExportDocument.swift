@@ -1,9 +1,10 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// A CSV file for the save dialog.
-public struct CSVDocument: FileDocument {
-    public static var readableContentTypes: [UTType] { [.commaSeparatedText] }
+/// A CSV or PDF file for the save dialog. Each exporter says which type
+/// it saves.
+public struct ExportDocument: FileDocument {
+    public static var readableContentTypes: [UTType] { [.commaSeparatedText, .pdf] }
 
     public var data: Data
 

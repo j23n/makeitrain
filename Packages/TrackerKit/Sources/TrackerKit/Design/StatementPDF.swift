@@ -1,7 +1,6 @@
 import CoreGraphics
 import SwiftUI
 import TrackerCore
-import UniformTypeIdentifiers
 
 /// A report as a PDF statement to send: who and when, the total, the time
 /// by project and by tag, and every entry, on A4 pages in print colors.
@@ -190,24 +189,5 @@ struct StatementPage: View {
                 }
             }
         }
-    }
-}
-
-/// A PDF file for the save dialog.
-public struct PDFDocumentFile: FileDocument {
-    public static var readableContentTypes: [UTType] { [.pdf] }
-
-    public var data: Data
-
-    public init(data: Data) {
-        self.data = data
-    }
-
-    public init(configuration: ReadConfiguration) throws {
-        data = configuration.file.regularFileContents ?? Data()
-    }
-
-    public func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
-        FileWrapper(regularFileWithContents: data)
     }
 }

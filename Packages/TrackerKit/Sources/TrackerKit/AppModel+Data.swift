@@ -90,9 +90,9 @@ extension AppModel {
 
     /// Every finished entry as a CSV file, with the columns of a report's
     /// export, and the file's name; nil when there's none yet.
-    public func finishedEntriesCSV() -> (document: CSVDocument, fileName: String)? {
+    public func finishedEntriesCSV() -> (document: ExportDocument, fileName: String)? {
         let entries = resolved.filter { !$0.isRunning }
         guard let fileName = CSVExport.fileName(for: entries) else { return nil }
-        return (document: CSVDocument(data: CSVExport.data(for: entries, ledger: ledger)), fileName: fileName)
+        return (document: ExportDocument(data: CSVExport.data(for: entries, ledger: ledger)), fileName: fileName)
     }
 }

@@ -272,9 +272,9 @@ struct StatementPanel: View {
     let state: ReportState
     let navigator: Navigator
     @State private var showsAll = false
-    @State private var csv: CSVDocument?
+    @State private var csv: ExportDocument?
     @State private var savingCSV = false
-    @State private var pdf: PDFDocumentFile?
+    @State private var pdf: ExportDocument?
     @State private var savingPDF = false
 
     private var report: Report { state.report }
@@ -443,7 +443,7 @@ struct StatementPanel: View {
     private var buttons: some View {
         HStack(spacing: 8) {
             Button {
-                csv = CSVDocument(data: CSVExport.data(for: report.entries, ledger: model.ledger))
+                csv = ExportDocument(data: CSVExport.data(for: report.entries, ledger: model.ledger))
                 savingCSV = true
             } label: {
                 HStack {
@@ -458,7 +458,7 @@ struct StatementPanel: View {
             .disabled(report.entries.isEmpty)
             .fileExporter(isPresented: $savingCSV, document: csv, contentType: .commaSeparatedText, defaultFilename: state.csvFileName) { _ in }
             Button {
-                pdf = PDFDocumentFile(data: StatementPDF.data(for: report, ledger: model.ledger, title: state.title, now: model.now))
+                pdf = ExportDocument(data: StatementPDF.data(for: report, ledger: model.ledger, title: state.title, now: model.now))
                 savingPDF = true
             } label: {
                 HStack {

@@ -14,7 +14,7 @@ struct MainWindow: View {
     @State private var importing = false
     @State private var importingEvents = false
     @State private var exporting = false
-    @State private var exportDocument: CSVDocument?
+    @State private var exportDocument: ExportDocument?
     @State private var exportFileName = ""
     @State private var exportError: String?
 

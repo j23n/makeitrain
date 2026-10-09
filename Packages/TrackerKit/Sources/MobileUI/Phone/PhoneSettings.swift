@@ -14,7 +14,7 @@ struct PhoneSettings: View {
     @Environment(\.undoManager) private var undoManager
     @State private var importing = false
     @State private var importingEvents = false
-    @State private var export: CSVDocument?
+    @State private var export: ExportDocument?
     @State private var exportName = ""
     @State private var exporting = false
 
