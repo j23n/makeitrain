@@ -162,14 +162,15 @@ struct MobileProjectCalendarSection: View {
         }
     }
 
+    /// The calendars' accounts, in the order of the calendars, which the
+    /// model sorts by account.
     private var accounts: [String] {
-        Set(model.calendars.map(\.account)).sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+        var seen: Set<String> = []
+        return model.calendars.map(\.account).filter { seen.insert($0).inserted }
     }
 
     private func calendars(in account: String) -> [CalendarInfo] {
-        model.calendars
-            .filter { $0.account == account }
-            .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+        model.calendars.filter { $0.account == account }
     }
 
     /// A calendar's title, and the project it's linked to if that's another.

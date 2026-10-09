@@ -629,7 +629,7 @@ struct ProjectSettingsPanel: View {
                     set: { model.setCalendar($0, forProject: project.id) }
                 )) {
                     Text("None").tag(String?.none)
-                    ForEach(calendars) { info in
+                    ForEach(model.calendars) { info in
                         Text(calendarLabel(info)).tag(String?.some(info.id))
                     }
                 }
@@ -637,15 +637,6 @@ struct ProjectSettingsPanel: View {
             }
         }
         .onAppear { model.refreshCalendars() }
-    }
-
-    /// This Mac's calendars by account, then title.
-    private var calendars: [CalendarInfo] {
-        model.calendars.sorted { a, b in
-            a.account != b.account
-                ? a.account.localizedStandardCompare(b.account) == .orderedAscending
-                : a.title.localizedStandardCompare(b.title) == .orderedAscending
-        }
     }
 
     /// Such as "Work · Exchange (linked to Website)".
