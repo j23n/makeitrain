@@ -94,9 +94,13 @@ import Testing
         // The running timer counts until now.
         #expect(spans([entry(1, "09:00", nil), entry(2, "10:00", "10:30")], now: "11:00", running: uuid(1)) == [tenToHalfPast])
         #expect(spans([entry(1, "09:00", "11:00"), entry(2, "10:00", nil)], now: "10:40", running: uuid(2)) == [TimeSpan(start: at("10:00"), end: at("10:40"))])
-        // A timer overtaken by another device's has no end of its own.
+        // A timer overtaken by another device's has no end of its own, so
+        // its overlaps have no span, whether it's the earlier entry or the
+        // later one.
         #expect(spans([entry(1, "09:00", nil), entry(2, "10:00", "10:30"), entry(3, "10:15", nil)], now: "11:00", running: uuid(3))
             == [nil, TimeSpan(start: at("10:15"), end: at("10:30"))])
+        #expect(spans([entry(1, "09:00", "12:00"), entry(2, "10:00", nil), entry(3, "10:30", nil)], now: "11:00", running: uuid(3))
+            == [nil, TimeSpan(start: at("10:30"), end: at("11:00"))])
     }
 
     @Test func trimmingEndsTheEarlierEntry() {
