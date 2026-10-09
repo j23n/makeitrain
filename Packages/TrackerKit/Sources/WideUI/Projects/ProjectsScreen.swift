@@ -28,7 +28,7 @@ struct ProjectsScreen: View {
                     columnHeaders
                     ForEach(tree.clients) { branch in
                         let projects = visible(branch.projects)
-                        if !projects.isEmpty || matches(branch.client.name) {
+                        if !projects.isEmpty || ProjectSearch.matches(filter, project: "", client: branch.client.name) {
                             clientRow(branch.client, projects: branch.projects, stats: stats)
                             ForEach(projects) { project in
                                 projectRow(project, stats: stats)
@@ -388,15 +388,10 @@ struct ProjectsScreen: View {
 
     // MARK: Filtering and keys
 
-    private func matches(_ name: String) -> Bool {
-        filter.isEmpty || ProjectSearch.terms(filter).allSatisfy { term in name.lowercased().contains(term) }
-    }
-
     private func visible(_ projects: [Project]) -> [Project] {
         guard !filter.isEmpty else { return projects }
         return projects.filter { project in
-            let client = model.ledger.client(forProject: project.id)?.name ?? ""
-            return matches(project.name + " " + client)
+            ProjectSearch.matches(filter, project: project.name, client: model.ledger.client(forProject: project.id)?.name ?? "")
         }
     }
 

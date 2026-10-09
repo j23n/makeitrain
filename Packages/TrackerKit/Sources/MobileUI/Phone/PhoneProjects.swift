@@ -284,10 +284,8 @@ struct PhoneProjects: View {
 
     private func visible(_ projects: [Project]) -> [Project] {
         guard !filter.isEmpty else { return projects }
-        let terms = ProjectSearch.terms(filter)
         return projects.filter { project in
-            let name = (project.name + " " + (model.ledger.client(forProject: project.id)?.name ?? "")).lowercased()
-            return terms.allSatisfy { name.contains($0) }
+            ProjectSearch.matches(filter, project: project.name, client: model.ledger.client(forProject: project.id)?.name ?? "")
         }
     }
 }
