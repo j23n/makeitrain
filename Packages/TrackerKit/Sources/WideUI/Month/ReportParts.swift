@@ -458,7 +458,7 @@ struct StatementPanel: View {
             .disabled(report.entries.isEmpty)
             .fileExporter(isPresented: $savingCSV, document: csv, contentType: .commaSeparatedText, defaultFilename: state.csvFileName) { _ in }
             Button {
-                pdf = ExportDocument(data: StatementPDF.data(for: report, ledger: model.ledger, title: state.title, now: model.now))
+                pdf = ExportDocument(data: StatementPDF.data(for: report, ledger: model.ledger, title: state.title))
                 savingPDF = true
             } label: {
                 HStack {

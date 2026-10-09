@@ -187,7 +187,7 @@ public struct Report: Hashable, Sendable {
 extension ResolvedEntry {
     /// Milliseconds from start to end, or 0 while running. Reports leave
     /// the running timer out, so the time now never changes them.
-    var length: Int64 {
+    public var length: Int64 {
         end.map { max(0, start.distance(to: $0)) } ?? 0
     }
 }

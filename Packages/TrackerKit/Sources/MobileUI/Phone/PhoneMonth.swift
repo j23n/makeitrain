@@ -76,7 +76,7 @@ struct PhoneMonth: View {
                     savingCSV = true
                 }
                 Button("Save PDF…", systemImage: "doc.richtext") {
-                    pdf = ExportDocument(data: StatementPDF.data(for: report, ledger: model.ledger, title: state.title, now: model.now))
+                    pdf = ExportDocument(data: StatementPDF.data(for: report, ledger: model.ledger, title: state.title))
                     savingPDF = true
                 }
             } label: {

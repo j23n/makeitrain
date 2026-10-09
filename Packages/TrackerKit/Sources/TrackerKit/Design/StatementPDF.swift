@@ -11,7 +11,7 @@ public enum StatementPDF {
 
     /// The PDF of a report, titled for the client or projects it covers.
     @MainActor
-    public static func data(for report: Report, ledger: Ledger, title: String, now: Timestamp) -> Data {
+    public static func data(for report: Report, ledger: Ledger, title: String) -> Data {
         let entries = report.entries
         var pages: [[ResolvedEntry]] = [Array(entries.prefix(rowsOnFirstPage))]
         var rest = Array(entries.dropFirst(rowsOnFirstPage))
@@ -32,8 +32,7 @@ public enum StatementPDF {
                 rows: rows,
                 isFirst: index == 0,
                 number: index + 1,
-                count: pages.count,
-                now: now
+                count: pages.count
             )
             .frame(width: page.width, height: page.height)
             let renderer = ImageRenderer(content: view)
@@ -65,7 +64,6 @@ struct StatementPage: View {
     let isFirst: Bool
     let number: Int
     let count: Int
-    let now: Timestamp
 
     private let ink = Color(red: 0.08, green: 0.09, blue: 0.11)
     private let gray = Color(red: 0.4, green: 0.43, blue: 0.48)
@@ -171,13 +169,13 @@ struct StatementPage: View {
                 let zone = entry.entry.timeZone
                 HStack(spacing: 8) {
                     Text(Format.monthDay(entry.entry.day)).frame(width: 62, alignment: .leading)
-                    Text("\(Format.time(entry.start, zone: zone))–\(entry.end.map { Format.time($0, zone: zone) } ?? "")")
+                    Text(Format.span(entry.start, entry.end, zone: zone))
                         .frame(width: 72, alignment: .leading)
                     Text(entry.entry.projectID.flatMap { ledger.projects[$0]?.name } ?? "Unassigned")
                         .frame(width: 110, alignment: .leading)
                     Text(([entry.entry.note] + entry.entry.tags).filter { !$0.isEmpty }.joined(separator: " · "))
                     Spacer(minLength: 4)
-                    Text(String(format: "%.2f", Double(entry.duration(now: now)) / 3_600_000))
+                    Text(String(format: "%.2f", Double(entry.length) / 3_600_000))
                         .frame(width: 40, alignment: .trailing)
                 }
                 .font(.system(size: 9))
