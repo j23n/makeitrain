@@ -266,12 +266,7 @@ extension Ledger {
         if let projectID = entry.entry.projectID, let project = projects[projectID] {
             parts.append(project.name)
         }
-        // A "#" added here comes with dashes for spaces, as a line splits at
-        // spaces.
-        parts += entry.entry.tags.map { tag in
-            let typed = Tags.typed(tag)
-            return typed == tag ? tag : typed.replacingOccurrences(of: " ", with: "-")
-        }
+        parts += entry.entry.tags.map(Tags.typed)
         if !entry.entry.note.isEmpty {
             parts.append(entry.entry.note)
         }
@@ -823,9 +818,10 @@ struct CommandReader {
     }
 
     /// A tag as typed, spelled as the project has it already where it's the
-    /// same but for case. A "#" in front of a word is dropped, as in
-    /// "#daily", unless the project has the tag with it; references such as
-    /// "#227" and "api#12" keep it.
+    /// same but for case, or but for the dashes a line writes for its
+    /// spaces, as "#code-review" for "code review" (see `Tags.typed`). A "#"
+    /// in front of a word is dropped, as in "#daily", unless the project has
+    /// the tag with it; references such as "#227" and "api#12" keep it.
     static func tag(_ word: String, known: [String]) -> String? {
         let typed = trimmed(word)
         let bare = typed.hasPrefix("#") ? String(typed.dropFirst()) : typed
@@ -836,7 +832,7 @@ struct CommandReader {
         if GitHub.Reference(tag: typed) != nil {
             return typed
         }
-        return known.first { Tags.same($0, bare) } ?? bare
+        return known.first { Tags.same($0, bare) } ?? known.first { Tags.same(Tags.typed($0), typed) } ?? bare
     }
 
     /// A word without the punctuation that ends a sentence or a list.

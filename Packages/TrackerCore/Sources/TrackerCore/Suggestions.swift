@@ -180,7 +180,8 @@ public enum LineSuggestions {
     }
 
     /// The tags of the line's project, or without one every tag, that
-    /// start with what's typed after "#", leaving out the ones the line has.
+    /// start with what's typed after "#" when written as a line writes them
+    /// (see `Tags.typed`), leaving out the ones the line has.
     static func tags(_ typed: String, word: Word, reading: CommandReading, in context: CommandContext) -> [LineSuggestion] {
         let query = typed.dropFirst().lowercased()
         let projectID = reading.draft?.projectID
@@ -189,7 +190,7 @@ public enum LineSuggestions {
         var found: [LineSuggestion] = []
         for tag in candidates {
             let shown = Tags.typed(tag)
-            let bare = tag.hasPrefix("#") ? String(tag.dropFirst()) : tag
+            let bare = shown.hasPrefix("#") ? String(shown.dropFirst()) : shown
             guard bare.lowercased().hasPrefix(query) else { continue }
             guard shown.lowercased() != typed.lowercased(), !present.contains(tag.lowercased()) else { continue }
             found.append(word.suggestion(.tag, shown, "", insert: shown))

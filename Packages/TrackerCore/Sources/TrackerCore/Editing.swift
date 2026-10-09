@@ -58,9 +58,11 @@ public enum Tags {
 
     /// A tag as a line writes it, so the command line reads it back as a
     /// tag: with a "#" in front, unless it starts with one already or
-    /// refers to an issue, as "api#12" does.
+    /// refers to an issue, as "api#12" does, and with dashes for spaces,
+    /// as a line splits at spaces: "code review" is "#code-review".
     public static func typed(_ tag: String) -> String {
-        tag.hasPrefix("#") || GitHub.Reference(tag: tag) != nil ? tag : "#" + tag
+        let word = tag.split(whereSeparator: \.isWhitespace).joined(separator: "-")
+        return tag.hasPrefix("#") || GitHub.Reference(tag: tag) != nil ? word : "#" + word
     }
 }
 

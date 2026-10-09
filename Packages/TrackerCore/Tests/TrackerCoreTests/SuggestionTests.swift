@@ -56,10 +56,18 @@ import Testing
     }
 
     @Test func writesTagsSoTheLineReadsThemBack() throws {
-        let context = F.context(F.ledger([F.entry(108, F.inHouse, "2026-10-01", "09:00", "10:00", tags: ["C#"], note: "Tooling")]))
+        let context = F.context(F.ledger([
+            F.entry(108, F.inHouse, "2026-10-01", "09:00", "10:00", tags: ["C#"], note: "Tooling"),
+            F.entry(109, F.inHouse, "2026-10-02", "09:00", "10:00", tags: ["code review"], note: "Refactor"),
+        ]))
         let tag = try #require(LineSuggestions.suggestions(for: "internal #c", cursor: 11, in: context).first)
         #expect(tag.title == "#C#")
         #expect(CommandReading(tag.text, in: context).draft?.tags == ["C#"])
+        // A tag with spaces is written with dashes, typed so too.
+        let review = try #require(LineSuggestions.suggestions(for: "internal #code-r", cursor: 16, in: context).first)
+        #expect(review.title == "#code-review")
+        #expect(review.text == "internal #code-review ")
+        #expect(CommandReading(review.text, in: context).draft?.tags == ["code review"])
     }
 
     @Test func offersTheDaysStartsAndEndsWhereATimeGoes() throws {

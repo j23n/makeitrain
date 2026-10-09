@@ -190,6 +190,10 @@ import Testing
         // Tags get a "#", so the line reads them back as tags.
         #expect(F.read("book stand").completion?.text == "book #Daily Standup")
         #expect(F.read("book #Daily Standup").draft == draft(F.bookings, ["Daily"], "Standup"))
+        // And dashes for spaces, which read back as the project's tag.
+        let reviewed = F.ledger([F.entry(108, F.bookings, "2026-10-01", "09:00", "10:00", tags: ["code review"], note: "Refactor")])
+        #expect(F.read("book refa", reviewed).completion?.text == "book #code-review Refactor")
+        #expect(F.read("book #code-review Refactor", reviewed).draft == draft(F.bookings, ["code review"], "Refactor"))
         // However many entries came since.
         let since = (0..<2000).map { F.entry(1000 + $0, F.inHouse, "2026-10-03", "09:00", "09:01", note: "Sync") }
         #expect(F.read("harbor", F.ledger(since)).completion?.text == "harbor Check-in")
@@ -201,6 +205,7 @@ import Testing
         let ledger = F.ledger([
             F.runningBookings,
             F.entry(108, F.inHouse, "2025-10-01", "09:00", "10:00", tags: ["C#"], note: "Tooling"),
+            F.entry(109, F.harbor, "2026-10-01", "14:00", "15:00", tags: ["code review", "client-call"], note: "Refactor"),
         ])
         let today = LocalDate(year: 2026, month: 10, day: 5)
         let lines = Dictionary(uniqueKeysWithValues: ledger.resolvedEntries().map { ($0.id, ledger.line(for: $0, today: today)) })
@@ -209,6 +214,8 @@ import Testing
         #expect(lines[uuid(103)] == "5 oct from 9:30 Bookings #227 Export to PDF")
         // A year back, the day has its year.
         #expect(lines[uuid(108)] == "2025-10-01 9:00-10:00 Internal #C# Tooling")
+        // A tag's spaces are written as dashes; a tag's own dashes stay.
+        #expect(lines[uuid(109)] == "1 oct 14:00-15:00 Harbor #code-review #client-call Refactor")
 
         for entry in ledger.resolvedEntries() {
             // Read as an entry's own line is, without the entry.

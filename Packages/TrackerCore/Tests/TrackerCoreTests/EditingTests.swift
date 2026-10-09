@@ -215,5 +215,9 @@ import Testing
         #expect(Tags.typed("#daily") == "#daily")
         #expect(Tags.typed("api#12") == "api#12")
         #expect(Tags.typed("C#") == "#C#")
+        // A line splits at spaces, so they're written as dashes.
+        #expect(Tags.typed("code review") == "#code-review")
+        #expect(Tags.typed("#code review") == "#code-review")
+        #expect(Tags.typed("client-call") == "#client-call")
     }
 }
