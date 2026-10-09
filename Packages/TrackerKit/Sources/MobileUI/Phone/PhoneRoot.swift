@@ -76,16 +76,39 @@ final class PhoneRouter {
 /// floating over the tab bar, opening over everything when tapped.
 struct PhoneRoot: View {
     let model: AppModel
-    @State private var router: PhoneRouter
+    /// Where the app is, with today's and the week's corrections. It's made
+    /// as the app appears rather than in an initializer, which runs again
+    /// whenever the view around it redraws. The tabs wait for it, so their
+    /// day grids' first scroll sees the data.
+    @State private var router: PhoneRouter?
+
+    var body: some View {
+        if let router {
+            PhoneTabs(model: model, router: router)
+        } else {
+            // onAppear runs before the first frame is drawn, so this is
+            // never seen.
+            Color.clear
+                .onAppear {
+                    UITabBarItem.appearance().badgeColor = UIColor(Theme.amber)
+                    router = PhoneRouter(model: model)
+                }
+        }
+    }
+}
+
+/// The tabs and the command line over them, once the router is made.
+private struct PhoneTabs: View {
+    let model: AppModel
+    @Bindable var router: PhoneRouter
     @State private var line: CommandLineModel
     /// What needs correcting this week, for the Week tab's badge.
     @State private var weekCorrections = 0
 
-    init(model: AppModel) {
+    init(model: AppModel, router: PhoneRouter) {
         self.model = model
-        _router = State(initialValue: PhoneRouter(model: model))
+        self.router = router
         _line = State(initialValue: CommandLineModel(model: model))
-        UITabBarItem.appearance().badgeColor = UIColor(Theme.amber)
     }
 
     var body: some View {
