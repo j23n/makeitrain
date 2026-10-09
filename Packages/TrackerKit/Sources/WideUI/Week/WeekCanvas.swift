@@ -280,7 +280,6 @@ struct DayColumn: View {
         let rect = frame(of: block, start: start, end: end, width: width)
         let entry = block.entry
         let selected = week.selectedEntry == entry.id
-        let change = week.suggestedChange(of: entry.id)
         return EntryBlock(
             model: model,
             entry: entry,
@@ -288,7 +287,7 @@ struct DayColumn: View {
             endSecond: end,
             height: rect.height,
             selected: selected,
-            change: change.map { ($0.before, $0.after) },
+            change: week.suggestedChange(of: entry.id),
             overnight: week.ranLongNote(for: entry)
         )
         .frame(width: rect.width, height: rect.height)

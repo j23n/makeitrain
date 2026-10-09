@@ -177,12 +177,12 @@ public final class WeekModel {
         return (total, corrected == total ? nil : corrected)
     }
 
-    /// The entry as a suggestion would leave it, if one would change it,
-    /// with that suggestion's number.
-    public func suggestedChange(of entryID: UUID) -> (number: Int, before: TimeEntry, after: TimeEntry)? {
+    /// The entry as it is and as a suggestion would leave it, if one would
+    /// change it.
+    public func suggestedChange(of entryID: UUID) -> (before: TimeEntry, after: TimeEntry)? {
         for preview in previews {
             if let change = preview.diff.entries.first(where: { $0.before?.id == entryID }), let before = change.before {
-                return (preview.number, before, change.after)
+                return (before, change.after)
             }
         }
         return nil

@@ -121,13 +121,12 @@ struct PhoneDayGrid: View {
         let top = y(block.startSecond, hours)
         let height = max(y(block.endSecond, hours) - top, 20)
         let entry = block.entry
-        let change = week.suggestedChange(of: entry.id)
         return PhoneEntryBlock(
             model: model,
             entry: entry,
             height: height,
             selected: week.selectedEntry == entry.id,
-            change: change.map { ($0.before, $0.after) },
+            change: week.suggestedChange(of: entry.id),
             overnight: week.ranLongNote(for: entry)
         )
         .frame(width: columnWidth - (block.columns > 1 ? 2 : 0), height: height)
