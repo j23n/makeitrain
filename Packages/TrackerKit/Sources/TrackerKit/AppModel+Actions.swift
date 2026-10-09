@@ -20,10 +20,10 @@ extension AppModel {
         startTimer(EntryDraft(entry.entry), undoManager: undoManager)
     }
 
-    /// Stops the running timer, now or at an earlier time.
-    public func stopTimer(at time: Timestamp? = nil, undoManager: UndoManager?) {
+    /// Stops the running timer now.
+    public func stopTimer(undoManager: UndoManager?) {
         edit("Stop Timer", undoManager: undoManager) { ledger, now in
-            ledger.stopTimer(at: time ?? now, now: now)
+            ledger.stopTimer(at: now, now: now)
         }
     }
 
@@ -37,13 +37,6 @@ extension AppModel {
     }
 
     // MARK: - Entries
-
-    /// Adds an entry made by hand.
-    public func addEntry(_ entry: TimeEntry, undoManager: UndoManager?) {
-        edit("Add Entry", undoManager: undoManager) { ledger, now in
-            ledger.addEntry(entry, now: now)
-        }
-    }
 
     /// Changes an entry, as one step to undo with the name `actionName`.
     public func updateEntry(_ id: UUID, actionName: String, undoManager: UndoManager?, _ change: (inout TimeEntry) -> Void) {
@@ -113,19 +106,13 @@ extension AppModel {
 
     // MARK: - Clients and projects
 
-    public func updateClient(_ id: UUID, actionName: String = "Edit Client", undoManager: UndoManager?, _ change: (inout Client) -> Void) {
+    public func updateClient(_ id: UUID, actionName: String, undoManager: UndoManager?, _ change: (inout Client) -> Void) {
         edit(actionName, undoManager: undoManager) { ledger, now in
             ledger.updateClient(id, now: now, change)
         }
     }
 
-    public func mergeClient(_ id: UUID, into target: UUID, undoManager: UndoManager?) throws {
-        try edit("Merge Clients", undoManager: undoManager) { ledger, now in
-            try ledger.mergeClient(id, into: target, now: now)
-        }
-    }
-
-    public func updateProject(_ id: UUID, actionName: String = "Edit Project", undoManager: UndoManager?, _ change: (inout Project) -> Void) {
+    public func updateProject(_ id: UUID, actionName: String, undoManager: UndoManager?, _ change: (inout Project) -> Void) {
         edit(actionName, undoManager: undoManager) { ledger, now in
             ledger.updateProject(id, now: now, change)
         }

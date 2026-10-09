@@ -7,7 +7,7 @@ import TrackerCore
 extension AppModel {
     /// What needs correcting on some days, in order, leaving out what was
     /// skipped on this device.
-    public func corrections(on days: ClosedRange<LocalDate>, includingSkipped: Bool = false) -> [Correction] {
+    public func corrections(on days: ClosedRange<LocalDate>) -> [Correction] {
         let calendar = linkedEvents(on: days)
         let found = Corrections.find(
             on: days,
@@ -18,7 +18,6 @@ extension AppModel {
             timeZone: environment.timeZone(),
             now: environment.now()
         )
-        guard !includingSkipped else { return found }
         return found.filter { !preferences.isSkipped($0.id) }
     }
 

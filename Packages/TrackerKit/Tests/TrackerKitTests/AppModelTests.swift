@@ -86,6 +86,13 @@ func eventually(_ condition: () -> Bool) async {
 }
 
 extension AppModel {
+    /// Adds an entry made by hand.
+    func addEntry(_ entry: TimeEntry, undoManager: UndoManager?) {
+        edit("Add Entry", undoManager: undoManager) { ledger, now in
+            ledger.addEntry(entry, now: now)
+        }
+    }
+
     /// Adds a project and returns its id, as "new project" on the command
     /// line does.
     @discardableResult
