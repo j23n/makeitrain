@@ -193,20 +193,10 @@ public enum PreviewData {
         return stopped
     }
 
-    /// The id of the sample entry with this note, such as "Call with Globex",
-    /// which overlaps "Offline mode", or "Landing page copy", the running
-    /// timer.
-    public static func entry(_ note: String) -> UUID {
-        guard let found = ledger.entries.values.first(where: { $0.note == note }) else {
-            preconditionFailure("No sample entry has the note \(note)")
-        }
-        return found.id
-    }
-
     /// A model showing `ledger`, the sample data unless given another. It
     /// reads no files; edits made in a live preview are saved to a
     /// temporary folder. The other values set up the notices, and the
-    /// sample calendars and their links to projects.
+    /// sample calendars' links to projects.
     @MainActor
     public static func model(
         _ ledger: Ledger = PreviewData.ledger,
@@ -214,7 +204,6 @@ public enum PreviewData {
         issues: [FileIssue] = [],
         missingFiles: Int = 0,
         lastError: String? = nil,
-        calendarAccess: CalendarAccess = .granted,
         calendarLinks: [CalendarLink] = PreviewData.calendarLinks
     ) -> AppModel {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("TimeTrackerPreview-\(UUID().uuidString)")
@@ -224,7 +213,7 @@ public enum PreviewData {
             defaults: UserDefaults(suiteName: "TimeTrackerPreview") ?? .standard,
             now: { now },
             timeZone: { "Europe/Berlin" },
-            calendars: PreviewCalendars(access: calendarAccess)
+            calendars: PreviewCalendars()
         ))
         model.firstWeekday = 2
         model.showForPreview(ledger, state: state, issues: issues, missingFiles: missingFiles, lastError: lastError)
@@ -300,30 +289,25 @@ public enum PreviewData {
     }
 }
 
-/// Calendars for previews: `PreviewData.calendars` with their events.
+/// Calendars for previews: `PreviewData.calendars` with their events,
+/// which the app may read.
 @MainActor
 public final class PreviewCalendars: CalendarProvider {
-    public private(set) var access: CalendarAccess
+    public let access = CalendarAccess.granted
     public var onChange: (() -> Void)?
 
-    public init(access: CalendarAccess = .granted) {
-        self.access = access
-    }
+    public init() {}
 
     public func requestAccess() async -> CalendarAccess {
-        if access == .notDetermined {
-            access = .granted
-        }
-        return access
+        access
     }
 
     public func calendars() -> [CalendarInfo] {
-        access == .granted ? PreviewData.calendars : []
+        PreviewData.calendars
     }
 
     public func events(inCalendars ids: Set<String>, from start: Timestamp, to end: Timestamp) -> [CalendarImport.Event] {
-        guard access == .granted else { return [] }
-        return PreviewData.events.filter { ids.contains($0.calendarID) && $0.start < end && $0.end > start }
+        PreviewData.events.filter { ids.contains($0.calendarID) && $0.start < end && $0.end > start }
     }
 }
 #endif

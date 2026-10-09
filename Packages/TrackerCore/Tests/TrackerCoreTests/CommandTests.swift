@@ -289,6 +289,27 @@ import Testing
         }
     }
 
+    @Test func readsTypedDurations() {
+        let minute: Int64 = 60000
+        #expect(Durations.parse("1:30") == 90 * minute)
+        #expect(Durations.parse(" 0:05 ") == 5 * minute)
+        #expect(Durations.parse(":45") == 45 * minute)
+        #expect(Durations.parse("1.5") == 90 * minute)
+        #expect(Durations.parse("0,25") == 15 * minute)
+        #expect(Durations.parse("2") == 120 * minute)
+        #expect(Durations.parse("90m") == 90 * minute)
+        #expect(Durations.parse("1h 30m") == 90 * minute)
+        #expect(Durations.parse("1H30") == 90 * minute)
+        #expect(Durations.parse("1.5h") == 90 * minute)
+        #expect(Durations.parse("0") == 0)
+    }
+
+    @Test func rejectsDurationsItCantRead() {
+        for text in ["", "abc", "1:5", "1:60", "1:30:00", "-1", "h", "30m15", "1h 2x", "1e9"] {
+            #expect(Durations.parse(text) == nil, "\(text)")
+        }
+    }
+
     @Test func readsDurationsThatSayTheirUnit() {
         let minute: Int64 = 60000
         #expect(Durations.parseWithUnit("45m") == 45 * minute)
