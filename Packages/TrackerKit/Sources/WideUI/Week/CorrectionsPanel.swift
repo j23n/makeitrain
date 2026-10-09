@@ -66,19 +66,9 @@ struct CorrectionsPanel: View {
                 .disabled(model.isReadOnly)
             }
             HStack(spacing: 12) {
-                HStack(spacing: 5) {
-                    KeyCap("J")
-                    KeyCap("K")
-                    Text("move")
-                }
-                HStack(spacing: 5) {
-                    KeyCap("⏎")
-                    Text("accept")
-                }
-                HStack(spacing: 5) {
-                    KeyCap("⇥")
-                    Text("skip")
-                }
+                KeyCapHint("J", "K", text: "move")
+                KeyCapHint("⏎", text: "accept")
+                KeyCapHint("⇥", text: "skip")
             }
             .font(.system(size: 12))
             .foregroundStyle(Theme.text2)
