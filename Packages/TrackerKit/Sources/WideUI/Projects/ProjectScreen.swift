@@ -43,7 +43,6 @@ struct ProjectScreen: View {
                     }
                     if !commandSidebarShown {
                         ProjectSettingsPanel(model: model, project: project, navigator: navigator)
-                            .frame(width: Sidebar.width)
                     }
                 }
             }
@@ -458,9 +457,7 @@ struct ProjectSettingsPanel: View {
             .padding(22)
             .disabled(model.isReadOnly)
         }
-        .frame(maxHeight: .infinity, alignment: .top)
-        .background(Theme.panel)
-        .overlay(alignment: .leading) { Rectangle().fill(Theme.line).frame(width: 1) }
+        .sidebarColumn()
         .onAppear { name = project.name }
         .onChange(of: project.name) { name = project.name }
     }
