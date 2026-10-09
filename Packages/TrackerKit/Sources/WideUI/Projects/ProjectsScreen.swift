@@ -15,10 +15,8 @@ struct ProjectsScreen: View {
     @FocusState private var focused: Bool
     @Environment(\.undoManager) private var undoManager
 
-    private var tree: ProjectTree { ProjectTree(ledger: model.ledger) }
-
     var body: some View {
-        let tree = self.tree
+        let tree = ProjectTree(ledger: model.ledger)
         let stats = ProjectStats(model: model)
         VStack(alignment: .leading, spacing: 14) {
             header(tree)
