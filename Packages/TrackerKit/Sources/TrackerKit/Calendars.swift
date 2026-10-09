@@ -106,7 +106,7 @@ public struct CalendarLink: Codable, Hashable, Sendable {
 }
 
 /// The ids of entries made from calendar events.
-public enum CalendarEntryID {
+enum CalendarEntryID {
     /// The namespace of those ids. Changing it would import every event again.
     static let namespace = UUID(uuidString: "7F1247D3-9F80-44AE-BC83-1157BB35223C")!
 
@@ -116,7 +116,7 @@ public enum CalendarEntryID {
     /// device that sees the event therefore gives its entry the same id,
     /// except for Exchange calendars, whose event ids differ between the Mac
     /// and iOS.
-    public static func forEvent(externalID: String, occurrence: Date?) -> UUID {
+    static func forEvent(externalID: String, occurrence: Date?) -> UUID {
         var name = externalID
         if let occurrence {
             name += "\n" + String(Timestamp(occurrence).wholeSeconds.milliseconds)
@@ -144,12 +144,12 @@ extension UUID {
 
 /// The calendars in the Calendar app, through EventKit.
 @MainActor
-public final class EventKitCalendars: CalendarProvider {
-    public var onChange: (() -> Void)?
+final class EventKitCalendars: CalendarProvider {
+    var onChange: (() -> Void)?
     private let store = EKEventStore()
     private var observer: NSObjectProtocol?
 
-    public init() {
+    init() {
         observer = NotificationCenter.default.addObserver(
             forName: .EKEventStoreChanged,
             object: store,
@@ -161,7 +161,7 @@ public final class EventKitCalendars: CalendarProvider {
         }
     }
 
-    public var access: CalendarAccess {
+    var access: CalendarAccess {
         switch EKEventStore.authorizationStatus(for: .event) {
         case .fullAccess: .granted
         case .notDetermined: .notDetermined
@@ -171,12 +171,12 @@ public final class EventKitCalendars: CalendarProvider {
         }
     }
 
-    public func requestAccess() async -> CalendarAccess {
+    func requestAccess() async -> CalendarAccess {
         _ = try? await store.requestFullAccessToEvents()
         return access
     }
 
-    public func calendars() -> [CalendarInfo] {
+    func calendars() -> [CalendarInfo] {
         guard access == .granted else { return [] }
         return store.calendars(for: .event)
             .filter { $0.type != .birthday }
@@ -190,7 +190,7 @@ public final class EventKitCalendars: CalendarProvider {
             }
     }
 
-    public func events(inCalendars ids: Set<String>, from start: Timestamp, to end: Timestamp) -> [CalendarImport.Event] {
+    func events(inCalendars ids: Set<String>, from start: Timestamp, to end: Timestamp) -> [CalendarImport.Event] {
         guard access == .granted else { return [] }
         let calendars = store.calendars(for: .event).filter { ids.contains($0.calendarIdentifier) }
         guard !calendars.isEmpty else { return [] }

@@ -116,7 +116,7 @@ public enum Format {
 extension LocalDate {
     /// The date in the user's current calendar, at noon in the current time
     /// zone, for date pickers.
-    public var pickerDate: Date {
+    var pickerDate: Date {
         var components = DateComponents()
         components.year = year
         components.month = month
@@ -126,7 +126,7 @@ extension LocalDate {
     }
 
     /// The day a date picker's date falls on, in the current time zone.
-    public init(pickerDate date: Date) {
+    init(pickerDate date: Date) {
         let components = Calendar.current.dateComponents([.year, .month, .day], from: date)
         self.init(year: components.year ?? 1970, month: components.month ?? 1, day: components.day ?? 1)
     }

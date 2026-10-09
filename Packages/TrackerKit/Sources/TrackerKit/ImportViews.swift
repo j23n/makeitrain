@@ -3,15 +3,10 @@ import TrackerCore
 import UniformTypeIdentifiers
 
 /// A CSV file picked for import, with what importing it adds.
-public struct ImportRequest: Identifiable {
-    public let id = UUID()
-    public let fileName: String
-    public let plan: CSVImport.Plan
-
-    public init(fileName: String, plan: CSVImport.Plan) {
-        self.fileName = fileName
-        self.plan = plan
-    }
+struct ImportRequest: Identifiable {
+    let id = UUID()
+    let fileName: String
+    let plan: CSVImport.Plan
 }
 
 extension View {

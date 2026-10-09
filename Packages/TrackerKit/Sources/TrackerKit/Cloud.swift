@@ -41,15 +41,15 @@ public protocol CloudProvider: AnyObject {
 
 /// iCloud Drive, through the app's ubiquity container.
 @MainActor
-public final class ICloudProvider: CloudProvider {
+final class ICloudProvider: CloudProvider {
     private let containerIdentifier: String
-    public var onAccountChange: (() -> Void)?
+    var onAccountChange: (() -> Void)?
 
     private var query: NSMetadataQuery?
     private var queryObservers: [NSObjectProtocol] = []
     private var accountObserver: NSObjectProtocol?
 
-    public init(containerIdentifier: String) {
+    init(containerIdentifier: String) {
         self.containerIdentifier = containerIdentifier
         accountObserver = NotificationCenter.default.addObserver(
             forName: .NSUbiquityIdentityDidChange,
@@ -62,11 +62,11 @@ public final class ICloudProvider: CloudProvider {
         }
     }
 
-    public var isAvailable: Bool {
+    var isAvailable: Bool {
         FileManager.default.ubiquityIdentityToken != nil
     }
 
-    public func documentsFolder() async -> URL? {
+    func documentsFolder() async -> URL? {
         let identifier = containerIdentifier
         // Apple asks not to look up the container on the main thread: the
         // first lookup can take a while.
@@ -80,11 +80,11 @@ public final class ICloudProvider: CloudProvider {
         }.value
     }
 
-    public func fileAccess() -> any FileAccess {
+    func fileAccess() -> any FileAccess {
         CoordinatedFileAccess()
     }
 
-    public func startWatching(onChange: @escaping (CloudSnapshot) -> Void) {
+    func startWatching(onChange: @escaping (CloudSnapshot) -> Void) {
         stopWatching()
         let query = NSMetadataQuery()
         query.searchScopes = [NSMetadataQueryUbiquitousDocumentsScope]
@@ -107,7 +107,7 @@ public final class ICloudProvider: CloudProvider {
         query.start()
     }
 
-    public func stopWatching() {
+    func stopWatching() {
         query?.stop()
         query = nil
         for observer in queryObservers {
@@ -116,14 +116,14 @@ public final class ICloudProvider: CloudProvider {
         queryObservers = []
     }
 
-    public func conflictVersions(of file: URL) async -> [Data] {
+    func conflictVersions(of file: URL) async -> [Data] {
         await Task.detached {
             let versions = NSFileVersion.unresolvedConflictVersionsOfItem(at: file) ?? []
             return versions.compactMap { try? Data(contentsOf: $0.url) }
         }.value
     }
 
-    public func resolveConflicts(of file: URL) async {
+    func resolveConflicts(of file: URL) async {
         await Task.detached {
             var error: NSError?
             NSFileCoordinator(filePresenter: nil).coordinate(writingItemAt: file, options: [], error: &error) { url in
@@ -159,13 +159,11 @@ public final class ICloudProvider: CloudProvider {
 /// File access for iCloud: every read and write goes through
 /// `NSFileCoordinator`, and a file that isn't downloaded yet counts as
 /// `FileProblem.notDownloaded` instead of missing, so it's never overwritten.
-public struct CoordinatedFileAccess: FileAccess {
+struct CoordinatedFileAccess: FileAccess {
     /// The file operations themselves, without coordination.
     private let plain = LocalFileAccess()
 
-    public init() {}
-
-    public func fileNames(in folder: URL) throws -> [String] {
+    func fileNames(in folder: URL) throws -> [String] {
         let names = try plain.fileNames(in: folder)
         // Some systems show a file iCloud hasn't downloaded as a hidden
         // ".name.icloud" placeholder.
@@ -174,26 +172,26 @@ public struct CoordinatedFileAccess: FileAccess {
         }))
     }
 
-    public func read(_ file: URL) throws -> Data? {
+    func read(_ file: URL) throws -> Data? {
         try checkDownloaded(file)
         return try plain.read(file)
     }
 
-    public func write(_ data: Data, to file: URL) throws {
+    func write(_ data: Data, to file: URL) throws {
         try plain.write(data, to: file)
     }
 
-    public func remove(_ file: URL) throws {
+    func remove(_ file: URL) throws {
         try plain.remove(file)
     }
 
-    public func readCoordinated(_ file: URL) throws -> Data? {
+    func readCoordinated(_ file: URL) throws -> Data? {
         // Fail fast rather than wait for a download inside the coordination.
         try checkDownloaded(file)
         return try coordinate(reading: true, files: [file]) { try read(file) }
     }
 
-    public func coordinateWriting<T>(_ files: [URL], _ body: () throws -> T) throws -> T {
+    func coordinateWriting<T>(_ files: [URL], _ body: () throws -> T) throws -> T {
         try coordinate(reading: false, files: files, body)
     }
 

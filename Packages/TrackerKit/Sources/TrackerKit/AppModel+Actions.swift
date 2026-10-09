@@ -86,7 +86,7 @@ extension AppModel {
 
     /// Reads a CSV file picked in a file importer, which may be outside the
     /// app's sandbox.
-    public func importRequest(forFileAt url: URL) throws -> ImportRequest {
+    func importRequest(forFileAt url: URL) throws -> ImportRequest {
         let accessing = url.startAccessingSecurityScopedResource()
         defer {
             if accessing {

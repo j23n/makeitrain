@@ -292,21 +292,19 @@ public enum PreviewData {
 /// Calendars for previews: `PreviewData.calendars` with their events,
 /// which the app may read.
 @MainActor
-public final class PreviewCalendars: CalendarProvider {
-    public let access = CalendarAccess.granted
-    public var onChange: (() -> Void)?
+final class PreviewCalendars: CalendarProvider {
+    let access = CalendarAccess.granted
+    var onChange: (() -> Void)?
 
-    public init() {}
-
-    public func requestAccess() async -> CalendarAccess {
+    func requestAccess() async -> CalendarAccess {
         access
     }
 
-    public func calendars() -> [CalendarInfo] {
+    func calendars() -> [CalendarInfo] {
         PreviewData.calendars
     }
 
-    public func events(inCalendars ids: Set<String>, from start: Timestamp, to end: Timestamp) -> [CalendarImport.Event] {
+    func events(inCalendars ids: Set<String>, from start: Timestamp, to end: Timestamp) -> [CalendarImport.Event] {
         PreviewData.events.filter { ids.contains($0.calendarID) && $0.start < end && $0.end > start }
     }
 }
