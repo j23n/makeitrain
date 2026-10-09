@@ -88,7 +88,8 @@ public final class EntryLineModel {
     /// the word. Returns whether there was one.
     @discardableResult
     public func acceptSuggestion(at index: Int? = nil) -> Bool {
-        guard let suggestion = suggestions.take(at: index) else { return false }
+        guard let suggestion = suggestions.suggestion(at: index) else { return false }
+        suggestions.requestCursor(after: suggestion)
         text = suggestion.text
         cursor = suggestion.cursor
         return true
@@ -102,12 +103,23 @@ public final class EntryLineModel {
 
     /// What Up does: moves the highlight through the suggestions.
     public func up() -> Bool {
-        suggestions.move(by: -1)
+        moveHighlight(by: -1)
     }
 
     /// What Down does: moves the highlight the other way.
     public func down() -> Bool {
-        suggestions.move(by: 1)
+        moveHighlight(by: 1)
+    }
+
+    /// Moves the highlight through the suggestions, or returns false when
+    /// there are none. It writes the suggestions only when the highlight
+    /// moves, so a key that moves nothing redraws nothing.
+    private func moveHighlight(by step: Int) -> Bool {
+        guard let index = suggestions.highlight(movedBy: step) else { return false }
+        if index != suggestions.highlighted {
+            suggestions.highlight(index)
+        }
+        return true
     }
 
     private func refresh() {

@@ -84,7 +84,8 @@ public final class CommandLineModel {
     /// the word. Returns whether there was one.
     @discardableResult
     public func acceptSuggestion(at index: Int? = nil) -> Bool {
-        guard let suggestion = suggestions.take(at: index) else { return false }
+        guard let suggestion = suggestions.suggestion(at: index) else { return false }
+        suggestions.requestCursor(after: suggestion)
         historyIndex = nil
         text = suggestion.text
         cursor = suggestion.cursor
@@ -167,13 +168,24 @@ public final class CommandLineModel {
     /// What Up does: moves the highlight through the suggestions, or else
     /// brings back the line before.
     public func up() -> Bool {
-        suggestions.move(by: -1) || previousLine()
+        moveHighlight(by: -1) || previousLine()
     }
 
     /// What Down does: moves the highlight the other way, or else goes
     /// forward through the earlier lines, or lists today's entries.
     public func down() -> Bool {
-        suggestions.move(by: 1) || nextLine()
+        moveHighlight(by: 1) || nextLine()
+    }
+
+    /// Moves the highlight through the suggestions, or returns false when
+    /// there are none. It writes the suggestions only when the highlight
+    /// moves, so a key that moves nothing redraws nothing.
+    private func moveHighlight(by step: Int) -> Bool {
+        guard let index = suggestions.highlight(movedBy: step) else { return false }
+        if index != suggestions.highlighted {
+            suggestions.highlight(index)
+        }
+        return true
     }
 
     public func clear() {
@@ -214,22 +226,29 @@ public struct LineSuggestionState {
         highlighted = 0
     }
 
-    /// Moves the highlight. Returns false when there's nothing to move
-    /// through, so the key does what it otherwise does.
-    mutating func move(by step: Int) -> Bool {
-        guard !items.isEmpty else { return false }
-        highlighted = (highlighted + step + items.count) % items.count
-        return true
+    /// Where moving the highlight by `step` puts it, or nil when there's
+    /// nothing to move through, so the key does what it otherwise does.
+    func highlight(movedBy step: Int) -> Int? {
+        guard !items.isEmpty else { return nil }
+        return (highlighted + step + items.count) % items.count
     }
 
-    /// The highlighted suggestion, or the one at `index`, if there is
-    /// one, asking the field to put the insertion point after it.
-    mutating func take(at index: Int?) -> LineSuggestion? {
+    /// Highlights the suggestion at `index`.
+    mutating func highlight(_ index: Int) {
+        highlighted = index
+    }
+
+    /// The highlighted suggestion, or the one at `index`, if there is one.
+    func suggestion(at index: Int?) -> LineSuggestion? {
         let chosen = index ?? highlighted
-        guard items.indices.contains(chosen) else { return nil }
-        requestedCursor = items[chosen].cursor
+        return items.indices.contains(chosen) ? items[chosen] : nil
+    }
+
+    /// Asks the field to put the insertion point after a suggestion that's
+    /// taken.
+    mutating func requestCursor(after suggestion: LineSuggestion) {
+        requestedCursor = suggestion.cursor
         cursorRequest += 1
-        return items[chosen]
     }
 
     /// The suggestions as chips to click: each one's title and what it's

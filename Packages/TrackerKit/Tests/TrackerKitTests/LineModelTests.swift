@@ -143,6 +143,34 @@ import TrackerCore
         #expect(!line.down())
     }
 
+    @Test func keysThatMoveNothingLeaveTheSuggestionsAlone() async throws {
+        let (harness, model) = await Harness.started()
+        defer { harness.cleanUp() }
+        model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
+        let workshop = entry(note: "Workshop", at: "2026-09-22T09:00:00+02:00")
+        model.addEntry(workshop, undoManager: nil)
+        let line = EntryLineModel(model: model)
+        line.show(workshop.id)
+
+        // With one suggestion, Up and Down are taken but move nothing, so
+        // what shows the suggestions doesn't redraw.
+        line.text = "22 sep 9:00-10:00 web"
+        try #require(line.suggestions.items.count == 1)
+        let withOne = watch { _ = line.suggestions }
+        #expect(line.up())
+        #expect(line.down())
+        #expect(!withOne.isSet)
+
+        // Nor does it with none, when the keys are left to the field.
+        #expect(line.tab())
+        try #require(line.suggestions.isEmpty)
+        let withNone = watch { _ = line.suggestions }
+        #expect(!line.tab())
+        #expect(!line.up())
+        #expect(!line.down())
+        #expect(!withNone.isSet)
+    }
+
     @Test func aLineWithoutTimesKeepsTheEntrys() async throws {
         let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
