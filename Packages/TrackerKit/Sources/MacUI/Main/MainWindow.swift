@@ -24,7 +24,12 @@ struct MainWindow: View {
         }
         .frame(minWidth: 960, minHeight: 600)
         .background(WindowConfigurator())
-        .focusedSceneValue(\.fileActions, fileActions)
+        .modifier(FileMenuActions(
+            model: model,
+            importCSV: { importing = true },
+            importEvents: { importingEvents = true },
+            exportEntries: { exportEntries() }
+        ))
         .onChange(of: model.request, initial: true) { _, request in
             handle(request)
         }
@@ -47,14 +52,6 @@ struct MainWindow: View {
         .sheet(isPresented: $importingEvents) {
             CalendarImportSheet(model: model, undoManager: undoManager)
         }
-    }
-
-    private var fileActions: FileActions {
-        FileActions(
-            importCSV: { importing = true },
-            importEvents: { importingEvents = true },
-            exportEntries: model.hasFinishedEntries ? { exportEntries() } : nil
-        )
     }
 
     /// Imports or exports as Settings asked, also when it opened the
@@ -80,6 +77,24 @@ struct MainWindow: View {
         exportDocument = csv.document
         exportFileName = csv.fileName
         exporting = true
+    }
+}
+
+/// Gives the File menu the main window's imports and export. A modifier,
+/// so that only it follows the entries to know whether there's any to
+/// export, not the window around it.
+private struct FileMenuActions: ViewModifier {
+    let model: AppModel
+    let importCSV: () -> Void
+    let importEvents: () -> Void
+    let exportEntries: () -> Void
+
+    func body(content: Content) -> some View {
+        content.focusedSceneValue(\.fileActions, FileActions(
+            importCSV: importCSV,
+            importEvents: importEvents,
+            exportEntries: model.hasFinishedEntries ? exportEntries : nil
+        ))
     }
 }
 
