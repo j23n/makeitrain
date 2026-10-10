@@ -70,12 +70,9 @@ struct CommandBar: View {
         line.message != nil || line.preview != nil || (line.reading.problem != nil && !line.text.isEmpty)
     }
 
-    /// What "find" found, or today's entries after Down.
+    /// What "find" found, or today's entries while nothing is typed.
     private var listed: [ResolvedEntry] {
-        if case .find? = line.reading.primary {
-            return Array(line.found.prefix(12))
-        }
-        return line.showsToday ? Array(line.todaysEntries.prefix(12)) : []
+        line.listedEntries(alwaysListsToday: true)
     }
 
     private func submit(alternate: Bool) {
@@ -85,7 +82,7 @@ struct CommandBar: View {
     }
 
     private func cancel() {
-        if line.text.isEmpty && !line.showsToday {
+        if line.text.isEmpty {
             close()
         } else {
             line.clear()
@@ -101,8 +98,6 @@ struct CommandBar: View {
                     .lineLimit(1)
             } else if case .addProject? = line.reading.alternate {
                 KeyHint("⌥⏎", "add and start")
-            } else if line.reading.alternate != nil || line.text.isEmpty {
-                KeyHint("⌥⏎", "log as finished")
             }
             if line.text.isEmpty {
                 if line.model.running != nil {
@@ -110,7 +105,6 @@ struct CommandBar: View {
                     KeyHint("from 10:30", "change its start")
                 } else {
                     KeyHint("↑", "history")
-                    KeyHint("↓", "today's entries")
                 }
             }
             Spacer(minLength: 0)
