@@ -326,16 +326,25 @@ struct YearScreen: View {
     /// Moves the cursor by `step` months, into the year before or after
     /// past either end.
     private func move(by step: Int) {
-        let month = cursor + step
-        if month < 1 {
-            showYear(shownYear - 1)
-            cursor = month + 12
-        } else if month > 12 {
-            showYear(shownYear + 1)
-            cursor = month - 12
-        } else {
-            cursor = month
+        let moved = Self.moved(cursor, of: shownYear, by: step)
+        if moved.year != shownYear {
+            showYear(moved.year)
         }
+        cursor = moved.month
+    }
+
+    /// The month, from 1 for January, and the year `step` months from
+    /// `month` of `year`.
+    static func moved(_ month: Int, of year: Int, by step: Int) -> (month: Int, year: Int) {
+        let index = year * 12 + month - 1 + step
+        return (index % 12 + 1, index / 12)
+    }
+
+    /// The day a month of the year opens on: today in this month, and
+    /// otherwise its first.
+    static func day(opening month: Int, of year: Int, today: LocalDate) -> LocalDate {
+        let first = LocalDate(year: year, month: month, day: 1)
+        return today.monthKey == first.monthKey ? today : first
     }
 
     /// Shows another year in place of this one, as stepping a week does.
@@ -346,9 +355,7 @@ struct YearScreen: View {
 
     /// Opens the month at the cursor, on today when it's this month.
     private func open() {
-        let today = model.today
-        let first = LocalDate(year: shownYear, month: cursor, day: 1)
-        navigator.go(.month(today.monthKey == first.monthKey ? today : first))
+        navigator.go(.month(Self.day(opening: cursor, of: shownYear, today: model.today)))
     }
 
     private var keyHints: some View {
@@ -405,7 +412,7 @@ struct MiniMonth: View {
         }
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 12).fill(Theme.panel))
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(isCursor ? Theme.accentLine : Theme.line, lineWidth: isCursor ? 1.5 : 1))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(isCursor ? Theme.accent : Theme.line, lineWidth: isCursor ? 1.5 : 1))
         .contentShape(Rectangle())
         .onTapGesture(perform: open)
         .accessibilityElement(children: .ignore)

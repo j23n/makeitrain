@@ -257,15 +257,15 @@ struct DayColumn: View {
 
     // MARK: Blocks
 
-    /// The least height a block can be clicked in, where there's room
-    /// below it.
+    /// The least height a block can be clicked and dragged in.
     private static let minimumHitHeight = 10.0
 
     /// Where a block goes in a column `width` wide, from `start` to `end`
-    /// seconds, moved sideways while it's dragged, and how far down it can
-    /// be clicked. It ends where its entry does, however short, so it never
-    /// covers the entry after it.
-    private func frame(of block: DayBlock, start: Int, end: Int, width: CGFloat) -> (rect: CGRect, hitHeight: CGFloat) {
+    /// seconds, moved sideways while it's dragged, and where it can be
+    /// clicked: the same, or for a short block, a little more above and
+    /// below it. It's drawn ending where its entry does, however short, so
+    /// it never covers the entry after it.
+    private func frame(of block: DayBlock, start: Int, end: Int, width: CGFloat) -> (drawn: CGRect, hit: CGRect) {
         let columnWidth = (width - 8) / CGFloat(max(block.columns, 1))
         var dx: CGFloat = 0
         if let drag, drag.id == block.id, drag.kind == .move {
@@ -274,26 +274,32 @@ struct DayColumn: View {
         var placed = block
         placed.startSecond = start
         placed.endSecond = end
-        let nextStart = DayLayout.nextStart(after: placed, in: blocks)
-        let drawn = DayLayout.height(from: start, to: end, hourHeight: Double(height), nextStart: nextStart)
-        let hit = DayLayout.height(from: start, to: end, hourHeight: Double(height), minimum: Self.minimumHitHeight, nextStart: nextStart)
-        let rect = CGRect(
-            x: 4 + CGFloat(block.column) * columnWidth + dx,
-            y: y(start),
-            width: columnWidth - (block.columns > 1 ? 2 : 0),
-            height: CGFloat(drawn)
+        let drawnHeight = DayLayout.height(
+            from: start,
+            to: end,
+            hourHeight: Double(height),
+            nextStart: DayLayout.nextStart(after: placed, in: blocks)
         )
-        return (rect, CGFloat(hit))
+        let hit = DayLayout.hitSpan(top: Double(y(start)), height: drawnHeight, minimum: Self.minimumHitHeight)
+        let x = 4 + CGFloat(block.column) * columnWidth + dx
+        let blockWidth = columnWidth - (block.columns > 1 ? 2 : 0)
+        return (
+            CGRect(x: x, y: y(start), width: blockWidth, height: CGFloat(drawnHeight)),
+            CGRect(x: x, y: CGFloat(hit.top), width: blockWidth, height: CGFloat(hit.height))
+        )
     }
 
     private func blockView(_ block: DayBlock, width: CGFloat) -> some View {
         let (start, end) = dragTimes(block)
-        let (rect, hitHeight) = frame(of: block, start: start, end: end, width: width)
+        let (rect, hit) = frame(of: block, start: start, end: end, width: width)
         let entry = block.entry
         let selected = week.selectedEntry == entry.id
-        // The edges take a third each of a short block, so the middle still
-        // moves it.
-        let handle = min(6, rect.height / 3)
+        // A short block can be clicked a little above and below it, over
+        // the edges of its neighbors, so it goes over them.
+        let short = hit.height > rect.height
+        // The edges take a third each of where a short block can be
+        // clicked, so its middle still moves it.
+        let handle = min(6, hit.height / 3)
         return EntryBlock(
             model: model,
             entry: entry,
@@ -305,11 +311,12 @@ struct DayColumn: View {
             overnight: week.ranLongNote(for: entry)
         )
         .frame(width: rect.width, height: rect.height)
+        .frame(width: hit.width, height: hit.height)
         .overlay(alignment: .top) { edgeHandle(block, kind: .start, height: handle, width: width) }
         .overlay(alignment: .bottom) { edgeHandle(block, kind: .end, height: handle, width: width) }
-        .contentShape(Rectangle().size(width: rect.width, height: hitHeight))
-        .offset(x: rect.minX, y: rect.minY)
-        .zIndex(drag?.id == block.id ? 2 : (selected ? 1 : 0))
+        .contentShape(Rectangle())
+        .offset(x: hit.minX, y: hit.minY)
+        .zIndex(drag?.id == block.id ? 3 : (selected ? 2 : (short ? 1 : 0)))
         .onTapGesture {
             week.selectedEntry = entry.id
             onSelect()
@@ -584,7 +591,11 @@ struct EntryBlock: View {
     /// The block's times, tags and title, and how long it ran overnight,
     /// for hovering and VoiceOver.
     private var summary: String {
-        let end = entry.isRunning ? "now" : Format.time(secondOfDay: min(endSecond, 86399))
+        // A block ends at midnight when its entry does or runs on past it,
+        // so the entry's own end says which.
+        let end = entry.isRunning
+            ? "now"
+            : (endSecond >= 86400 ? (entry.end.map { Format.time($0, zone: zone) } ?? "24:00") : Format.time(secondOfDay: endSecond))
         return [Format.time(secondOfDay: startSecond) + "–" + end, tags, title, overnight ?? ""]
             .filter { !$0.isEmpty }
             .joined(separator: " ")

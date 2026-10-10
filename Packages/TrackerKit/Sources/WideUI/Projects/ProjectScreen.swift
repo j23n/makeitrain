@@ -50,8 +50,7 @@ struct ProjectScreen: View {
             .focused($focused)
             .onKeyPress(characters: CharacterSet(charactersIn: "sSrRcCaAmM")) { press in
                 guard !isEditingText() else { return .ignored }
-                handleKey(press.characters.lowercased(), project: project)
-                return .handled
+                return handleKey(press.characters.lowercased(), project: project)
             }
             .takesUnusedKeys(letters: "srcam")
             .onAppear {
@@ -92,15 +91,15 @@ struct ProjectScreen: View {
 
     /// What a single key does: S starts the project's timer, and R, C, A
     /// and M rename, color, archive or merge it, putting the line for it in
-    /// the command line, as the projects table does.
-    private func handleKey(_ key: String, project: Project) {
-        guard !model.isReadOnly else { return }
+    /// the command line, as the projects table does. A key that can't act
+    /// now, as while the data is read-only, is ignored, so it sounds.
+    private func handleKey(_ key: String, project: Project) -> KeyPress.Result {
+        guard !model.isReadOnly else { return .ignored }
         let name = project.name.lowercased()
         switch key {
         case "s":
-            if canStart(project) {
-                model.startTimer(EntryDraft(projectID: projectID), undoManager: undoManager)
-            }
+            guard canStart(project) else { return .ignored }
+            model.startTimer(EntryDraft(projectID: projectID), undoManager: undoManager)
         case "r":
             model.request = .command("rename \(name) to ")
         case "c":
@@ -112,8 +111,9 @@ struct ProjectScreen: View {
         case "m":
             model.request = .command("merge \(name) into ")
         default:
-            break
+            return .ignored
         }
+        return .handled
     }
 
     private func breadcrumb(_ project: Project) -> some View {

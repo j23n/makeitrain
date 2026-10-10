@@ -102,9 +102,6 @@ import Testing
         // But not past the entry that starts when it ends.
         #expect(abs(DayLayout.height(from: 0, to: 60, hourHeight: 56, nextStart: 60) - 56.0 / 60) < 0.000_001)
         #expect(abs(DayLayout.height(from: 0, to: 0, hourHeight: 56, nextStart: 120) - 56.0 / 30) < 0.000_001)
-        // A larger minimum, as for where a block can be tapped, works alike.
-        #expect(DayLayout.height(from: 0, to: 600, hourHeight: 40, minimum: 20, nextStart: 3600) == 20)
-        #expect(abs(DayLayout.height(from: 0, to: 600, hourHeight: 40, minimum: 20, nextStart: 900) - 10) < 0.000_001)
         // Blocks that start before this one ends sit beside it, not below.
         let result = blocks([
             entry(1, "2026-09-23T09:00:00+02:00", "2026-09-23T09:01:00+02:00"),
@@ -112,6 +109,40 @@ import Testing
             entry(3, "2026-09-23T11:00:00+02:00", "2026-09-23T12:00:00+02:00"),
         ])
         #expect(DayLayout.nextStart(after: result[0], in: result) == 11 * 3600)
+    }
+
+    @Test func aShortBlockInARunCanStillBePicked() throws {
+        // As in the previews: 5 minutes, then 2, then 18, back to back.
+        let result = blocks([
+            entry(1, "2026-09-23T12:40:00+02:00", "2026-09-23T12:45:00+02:00"),
+            entry(2, "2026-09-23T12:45:00+02:00", "2026-09-23T12:47:00+02:00"),
+            entry(3, "2026-09-23T12:47:00+02:00", "2026-09-23T13:05:00+02:00"),
+        ])
+        let hourHeight = 56.0
+        let merge = result[1]
+        let top = Double(merge.startSecond) / 3600 * hourHeight
+        let height = DayLayout.height(
+            from: merge.startSecond,
+            to: merge.endSecond,
+            hourHeight: hourHeight,
+            nextStart: DayLayout.nextStart(after: merge, in: result)
+        )
+        // Drawn two minutes tall, under 2 points, so as not to cover the
+        // next entry...
+        #expect(abs(height - hourHeight / 30) < 0.000_001)
+        // ...but it can be clicked in 10, centered on it, over the edges of
+        // the blocks before and after.
+        let hit = DayLayout.hitSpan(top: top, height: height, minimum: 10)
+        #expect(hit.height == 10)
+        #expect(abs((hit.top + hit.height / 2) - (top + height / 2)) < 0.000_001)
+        let earlierBottom = Double(result[0].endSecond) / 3600 * hourHeight
+        let laterTop = Double(result[2].startSecond) / 3600 * hourHeight
+        #expect(hit.top < earlierBottom)
+        #expect(hit.top + hit.height > laterTop)
+        // A block that's tall enough is clicked where it's drawn.
+        let tall = DayLayout.hitSpan(top: 100, height: 16.8, minimum: 10)
+        #expect(tall.top == 100)
+        #expect(tall.height == 16.8)
     }
 
     @Test func placesTimesOnTheDayAndOthersAtItsEnds() {

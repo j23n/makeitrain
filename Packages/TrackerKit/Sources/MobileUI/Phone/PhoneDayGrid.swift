@@ -112,26 +112,25 @@ struct PhoneDayGrid: View {
 
     // MARK: Blocks
 
-    /// The least height a block can be tapped in, where there's room
-    /// below it.
+    /// The least height a block can be tapped in.
     private static let minimumHitHeight = 24.0
 
     /// An entry's block, ending where the entry does however short it is,
     /// so it never covers the entry after it. A short one can be tapped a
-    /// little below it, where nothing else is.
+    /// little above and below it, over the edges of its neighbors, so it
+    /// goes over them.
     private func blockView(_ block: DayBlock, in blocks: [DayBlock], hours: Range<Int>, width: CGFloat) -> some View {
         let columnWidth = (width - 8) / CGFloat(max(block.columns, 1))
         let blockWidth = columnWidth - (block.columns > 1 ? 2 : 0)
         let top = y(block.startSecond, hours)
-        let nextStart = DayLayout.nextStart(after: block, in: blocks)
-        let height = CGFloat(DayLayout.height(from: block.startSecond, to: block.endSecond, hourHeight: Double(hourHeight), nextStart: nextStart))
-        let hitHeight = CGFloat(DayLayout.height(
+        let drawnHeight = DayLayout.height(
             from: block.startSecond,
             to: block.endSecond,
             hourHeight: Double(hourHeight),
-            minimum: Self.minimumHitHeight,
-            nextStart: nextStart
-        ))
+            nextStart: DayLayout.nextStart(after: block, in: blocks)
+        )
+        let height = CGFloat(drawnHeight)
+        let hit = DayLayout.hitSpan(top: Double(top), height: drawnHeight, minimum: Self.minimumHitHeight)
         let entry = block.entry
         return PhoneEntryBlock(
             model: model,
@@ -142,8 +141,10 @@ struct PhoneDayGrid: View {
             overnight: week.ranLongNote(for: entry)
         )
         .frame(width: blockWidth, height: height)
-        .contentShape(Rectangle().size(width: blockWidth, height: hitHeight))
-        .offset(x: 4 + CGFloat(block.column) * columnWidth, y: top)
+        .frame(width: blockWidth, height: CGFloat(hit.height))
+        .contentShape(Rectangle())
+        .offset(x: 4 + CGFloat(block.column) * columnWidth, y: CGFloat(hit.top))
+        .zIndex(CGFloat(hit.height) > height ? 1 : 0)
         .onTapGesture {
             week.selectedEntry = entry.id
             onSelect(entry)

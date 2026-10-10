@@ -44,7 +44,7 @@ The main window, and an iPad window wide enough, has a bar with Back and Forward
 
 - ⌘1 to ⌘5 show the day, the week, the month, the year or the projects, around the day shown, and ⌘[ and ⌘] go back and forward. They're in the View menu on the Mac, and with a keyboard on iPad.
 - Zooming keeps the day shown. From a year, the month, week and day are today's when the year is this one, and otherwise today's date in that year; from the projects, they're today's.
-- Each screen shows its keys under it, or for a project, at the top. Keys a screen doesn't use do nothing, without the alert sound; a key it uses but can't act on now, such as Return on a week with nothing to accept, still sounds.
+- Each screen shows its keys under it, or for a project, at the top. Keys a screen doesn't use do nothing, without the alert sound; a key it uses but can't act on now, such as Return on a week with nothing to accept, or any of them while the data is read-only, still sounds.
 
 | Screen | Keys |
 | --- | --- |
@@ -93,7 +93,7 @@ On the Mac's and the iPad's week, each correction is numbered and listed in the 
 ## Editing entries
 
 - The week, or a day, shows entries as blocks on an hour grid, from 7:00 to 19:00, widened to any entry and to the time now. A day with nothing on a weekend is left out of the week.
-- A block is as tall as its entry is long, so it ends where the entry does and the entry after it starts right below; an entry of a minute or two is a hairline. A short block can still be clicked, or tapped on iPhone, a little below it where nothing else is, and dragged by its middle or its edges.
+- A block is as tall as its entry is long, so it ends where the entry does and the entry after it starts right below; an entry of a minute or two is a hairline. A short block can still be clicked, or tapped on iPhone, a little above and below it, over the edges of the blocks next to it, and dragged by its middle or its edges.
 - Blocks show their times, tags and title in the project's color, the title being the note, or the project without one. Tags come before the title, since they say more about the entry. With room for one line, a block shows its start, its tags, and as much of the title as fits after them; a block too short for a line is a bar, and on the Mac its times, tags and title show when the pointer rests on it.
 - On the Mac and a wide iPad window, drag a block to move it, to another day too, or its top or bottom edge to change its start or end. Clicking an entry shows it in the sidebar, in place of the corrections, as the iPhone's entry sheet does: its line, such as `2 oct 13:30-16:30 web #12 Fix login`, to change by typing, what the line reads as (its day, times and length, project, tags and note, or why it isn't an entry), and Stop or Continue it now, Duplicate, Split in the middle and Delete. Return puts the keyboard in the line and applies it; Escape puts it back, and closes the entry when it's unchanged. While the line is edited, the same suggestions show under it. A line without times, such as `web Fix login`, keeps the entry's.
 - On iPhone, tap an entry to change it as a line, or to stop, continue, duplicate, split or delete it. Touching and holding an entry, or right-clicking one on the Mac, offers the same, and setting its project.

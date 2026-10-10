@@ -70,9 +70,9 @@ extension View {
     /// than at the end of the responder chain, where the Mac plays the
     /// alert sound. The screen's own keys, `keys` and the `letters` in
     /// either case, go on when it can't act on them, so a key that fails
-    /// still sounds, as do keys with ⌘ or ⌃, which are shortcuts. Tab,
-    /// which moves between controls, and keys typed in a text field are
-    /// left alone.
+    /// still sounds, as do keys with ⌘ or ⌃, which are shortcuts. Tab and
+    /// Shift-Tab, which move between controls, and keys typed in a text
+    /// field are left alone.
     @MainActor
     func takesUnusedKeys(_ keys: [KeyEquivalent] = [], letters: String = "") -> some View {
         onKeyPress { press in
@@ -80,6 +80,8 @@ extension View {
                   !press.modifiers.contains(.command),
                   !press.modifiers.contains(.control),
                   press.key != .tab,
+                  // Shift-Tab comes as the back-tab character on the Mac.
+                  press.characters != "\u{19}",
                   !keys.contains(press.key)
             else { return .ignored }
             let typed = press.characters.lowercased()
