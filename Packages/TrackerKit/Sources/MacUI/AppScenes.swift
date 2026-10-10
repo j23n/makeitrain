@@ -15,6 +15,9 @@ public struct AppScenes: Scene {
         let model = AppModel.shared
         MenuBarExtra {
             MenuBarPopover(model: model)
+                #if FEEDBACK
+                .feedbackRedaction(Feedback.center)
+                #endif
         } label: {
             MenuBarLabel(model: model)
         }
@@ -23,6 +26,9 @@ public struct AppScenes: Scene {
         Window("Time Tracker", id: WindowID.main) {
             MainWindow(model: model)
                 .dockIcon()
+                #if FEEDBACK
+                .feedbackRedaction(Feedback.center)
+                #endif
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1320, height: 840)
@@ -36,6 +42,9 @@ public struct AppScenes: Scene {
         Settings {
             SettingsView(model: model)
                 .dockIcon()
+                #if FEEDBACK
+                .feedbackRedaction(Feedback.center)
+                #endif
         }
     }
 }

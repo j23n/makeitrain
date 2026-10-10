@@ -21,6 +21,10 @@ public struct MobileScenes: Scene {
         WindowGroup {
             MobileRoot(model: model)
                 .task { await model.start() }
+                #if FEEDBACK
+                // Nothing of the person's in a feedback screenshot (Feedback.swift).
+                .feedbackRedaction(Feedback.center)
+                #endif
         }
         #if FEEDBACK
         // Made at launch, so a shake or a screenshot can start a report from the first screen.
