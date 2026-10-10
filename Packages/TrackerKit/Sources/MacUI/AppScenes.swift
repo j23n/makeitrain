@@ -5,6 +5,7 @@ import FeedbackKit
 #endif
 import SwiftUI
 import TrackerKit
+import WideUI
 
 /// The Mac app's scenes: the menu bar popover, the main window and Settings,
 /// all showing the app's one model.
@@ -34,6 +35,7 @@ public struct AppScenes: Scene {
         .defaultSize(width: 1320, height: 840)
         .commands {
             FileCommands()
+            ViewCommands()
             #if FEEDBACK
             FeedbackCommands(center: Feedback.center)
             #endif

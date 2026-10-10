@@ -231,11 +231,9 @@ public enum CommandText {
         }
     }
 
-    /// What an empty command line says it's for, with a timer running or
-    /// not.
-    public static func placeholder(running: ResolvedEntry?) -> String {
-        running == nil ? "start a timer or log time" : "switch, stop or log time"
-    }
+    /// What an empty command line says it's for, in the menu bar, the
+    /// shortcut's panel, the main window and on iPhone alike.
+    public static let placeholder = "Start, switch, stop or log time"
 
     /// Why a line can't be run, as a sentence.
     public static func message(_ problem: CommandProblem, zone: String) -> String {

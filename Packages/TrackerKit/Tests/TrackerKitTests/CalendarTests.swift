@@ -63,6 +63,29 @@ final class FakeCalendars: CalendarProvider {
         #expect(relinked.map(\.projectID) == links.map(\.projectID))
     }
 
+    @Test func readsLinkedCalendarsAtLaunch() async throws {
+        let harness = Harness()
+        defer { harness.cleanUp() }
+        let website = Project(name: "Website", updated: at("2026-09-21T09:00:00+02:00"))
+        let saved = Ledger(projects: [website])
+        _ = try Folder(root: harness.localFolder).save(saved, changes: .all(in: saved))
+        CalendarLink.save(
+            [CalendarLink(calendarID: "acme", title: "Calendar", account: "jo@acme.example", projectID: website.id)],
+            to: harness.defaults
+        )
+        let calendars = FakeCalendars()
+        calendars.list = [CalendarInfo(id: "acme", title: "Calendar", account: "jo@acme.example")]
+
+        // Starting is enough: the projects table shows the link, and offers
+        // to link other projects, without a project's page reading the
+        // calendars first.
+        let model = harness.model(calendars: calendars)
+        await model.start()
+        #expect(model.calendars.map(\.id) == ["acme"])
+        #expect(model.linkedCalendar(ofProject: website.id)?.title == "Calendar")
+        #expect(model.hasLinkedCalendars)
+    }
+
     @Test func importsEventsFromLinkedCalendarsAsOneStep() async throws {
         let harness = Harness()
         defer { harness.cleanUp() }

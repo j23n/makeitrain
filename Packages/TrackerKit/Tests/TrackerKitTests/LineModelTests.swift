@@ -84,7 +84,7 @@ import TrackerCore
         let today = TimeEntry(start: start, end: model.now, timeZone: "Europe/Berlin", note: "Standup", updated: start)
         model.addEntry(today, undoManager: nil)
         #expect(line.listedEntries(alwaysListsToday: true).map(\.entry.id) == [today.id])
-        // Without the option, only Down lists them, as in the main window.
+        // Without the option, only Down lists them.
         #expect(line.listedEntries(alwaysListsToday: false).isEmpty)
 
         line.text = "web"
@@ -113,6 +113,64 @@ import TrackerCore
         #expect(line.text == "Website ")
         line.apply(line.chips.first { $0.title == "#" }!)
         #expect(line.text == "Website #")
+    }
+
+    @Test func everyCommandLineSaysTheSameWhenEmpty() {
+        // The menu bar's, the shortcut's, the main window's and the
+        // iPhone's lines all show this one.
+        #expect(CommandText.placeholder == "Start, switch, stop or log time")
+    }
+
+    @Test func listsWhatFindFoundInPlaceOfTodaysEntries() async throws {
+        let (harness, model) = await Harness.started()
+        defer { harness.cleanUp() }
+        model.addEntry(entry(note: "Workshop", at: "2026-09-23T07:00:00+02:00"), undoManager: nil)
+        model.addEntry(entry(note: "Review", at: "2026-09-22T07:00:00+02:00"), undoManager: nil)
+        let line = CommandLineModel(model: model)
+
+        #expect(line.listedEntries(alwaysListsToday: true).map(\.entry.note) == ["Workshop"])
+        line.text = "find review"
+        #expect(line.listedEntries(alwaysListsToday: true).map(\.entry.note) == ["Review"])
+        line.text = "web"
+        #expect(line.listedEntries(alwaysListsToday: true).isEmpty)
+    }
+
+    @Test func escapeClearsTheLineThenClosesIt() async throws {
+        let (harness, model) = await Harness.started()
+        defer { harness.cleanUp() }
+        let line = CommandLineModel(model: model)
+
+        line.text = "web"
+        #expect(!line.cancel())
+        #expect(line.text.isEmpty)
+        // With nothing typed, the line closes, though today's entries are
+        // listed under it.
+        #expect(line.cancel())
+    }
+
+    @Test func returnClosesTheLineAsSettingsSay() async throws {
+        let (harness, model) = await Harness.started()
+        defer { harness.cleanUp() }
+        let website = model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
+        let line = CommandLineModel(model: model)
+
+        line.text = "web review"
+        #expect(line.submitClosing(alternate: false, undoManager: nil))
+        #expect(model.running?.entry.projectID == website)
+
+        harness.clock.advance(seconds: 600)
+        model.preferences.closesAfterReturn = false
+        line.text = "stop"
+        #expect(!line.submitClosing(alternate: false, undoManager: nil))
+        #expect(model.running == nil)
+        #expect(line.text.isEmpty)
+
+        // A line that can't run stays, saying why.
+        model.preferences.closesAfterReturn = true
+        line.text = "stop"
+        #expect(!line.submitClosing(alternate: false, undoManager: nil))
+        #expect(line.message != nil)
+        #expect(line.hasPreview)
     }
 
     @Test func readsAnEntrysLineAndAppliesIt() async throws {

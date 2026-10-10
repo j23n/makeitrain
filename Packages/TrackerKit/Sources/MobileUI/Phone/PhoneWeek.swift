@@ -39,7 +39,7 @@ struct PhoneWeek: View {
             } else {
                 PhoneCommandBar(
                     model: model,
-                    placeholder: CommandText.placeholder(running: model.running),
+                    placeholder: CommandText.placeholder,
                     open: { router.openCommandLine() }
                 )
             }

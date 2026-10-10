@@ -4,8 +4,9 @@ import TrackerCore
 
 /// Sample data for SwiftUI previews: a week of work for a designer with two
 /// clients, with a running timer, an overlap, an unassigned entry, one
-/// recorded in New York, an archived project, and tags that refer to issues
-/// in Acme's GitHub repositories, some written "Core/#31". There's also
+/// recorded in New York, an archived project, a run of short entries on
+/// Tuesday, and tags that refer to issues in Acme's GitHub repositories,
+/// some written "Core/#31". There's also
 /// a freelancer's three months, with hundreds of hours and dozens of issue
 /// tags. "Now" is Wednesday, September 23, 2026, at 15:40 in Berlin.
 public enum PreviewData {
@@ -93,6 +94,14 @@ public enum PreviewData {
             make(nil, "23T12:00", "23T12:20", "Email"),
             make(mobileApp, "23T13:00", "23T14:30", "Code review", ["development", "Core/#31"]),
             make(website, "23T14:45", nil, "Landing page copy", ["design", "#44"]),
+
+            // A run of short entries, back to back, for how the grids draw
+            // them: 10, 5, 2, 18 and 25 minutes.
+            make(website, "22T12:30", "22T12:40", "Fix the menu link", ["#42"]),
+            make(brand, "22T12:40", "22T12:45", "Reply to Globex", ["client-call"]),
+            make(mobileApp, "22T12:45", "22T12:47", "Merge", ["api#57"]),
+            make(internalWork, "22T12:47", "22T13:05", "Timesheets", ["admin"]),
+            make(mobileApp, "22T13:05", "22T13:30", "Triage", ["development", "#118"]),
         ]
         return Ledger(clients: clients, projects: projects, entries: entries)
     }()

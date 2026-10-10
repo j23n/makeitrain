@@ -73,8 +73,9 @@ import TrackerKit
         #expect(navigator.screen == .month(thursday))
         navigator.zoom(.year, today: monday)
         #expect(navigator.screen == .year(2026))
+        // The year keeps no day of its own: zooming in goes to today.
         navigator.zoom(.day, today: monday)
-        #expect(navigator.screen == .day(LocalDate(year: 2026, month: 1, day: 1)))
+        #expect(navigator.screen == .day(monday))
         navigator.zoom(.projects, today: monday)
         #expect(navigator.screen == .projects)
         // The projects have no day, so zooming back in goes to today.
@@ -84,9 +85,55 @@ import TrackerKit
 
     @Test func aProjectsPageZoomsAsTheProjects() {
         #expect(Screen.project(project).zoom == .projects)
-        #expect(Screen.project(project).day == nil)
-        #expect(Screen.year(2025).day == LocalDate(year: 2025, month: 1, day: 1))
+        #expect(Screen.project(project).day(today: thursday) == thursday)
         #expect(Zoom.year.screen(today: thursday) == .year(2026))
         #expect(Zoom.day.screen(today: thursday) == .day(thursday))
+    }
+
+    @Test func commandAndANumberShowEachZoom() throws {
+        // ⌘1 to ⌘5, in the bar's order.
+        #expect(Zoom.allCases.map(\.shortcutKey) == ["1", "2", "3", "4", "5"])
+        #expect(Zoom(shortcutKey: "6") == nil)
+        let navigator = Navigator(.week(thursday))
+        let keys: [(Character, Screen)] = [
+            ("3", .month(thursday)),
+            ("1", .day(thursday)),
+            ("4", .year(2026)),
+            ("2", .week(monday)),
+            ("5", .projects),
+        ]
+        for (key, screen) in keys {
+            navigator.zoom(try #require(Zoom(shortcutKey: key)), today: monday)
+            #expect(navigator.screen == screen)
+        }
+        // Back returns to the screen before.
+        navigator.goBack()
+        #expect(navigator.screen == .week(monday))
+    }
+
+    @Test func zoomingInFromThisYearGoesToToday() {
+        for zoom in [Zoom.month, .week, .day] {
+            let navigator = Navigator(.year(2026))
+            navigator.zoom(zoom, today: thursday)
+            #expect(navigator.screen == zoom.screen(today: thursday))
+            navigator.goBack()
+            #expect(navigator.screen == .year(2026))
+        }
+        // Zooming between the others still keeps the day shown.
+        let navigator = Navigator(.year(2026))
+        navigator.zoom(.week, today: thursday)
+        navigator.replace(.week(monday.adding(days: -14)))
+        navigator.zoom(.month, today: thursday)
+        #expect(navigator.screen == .month(monday.adding(days: -14)))
+    }
+
+    @Test func zoomingInFromAnotherYearGoesToTodaysDateInIt() {
+        #expect(Screen.year(2025).day(today: thursday) == LocalDate(year: 2025, month: 10, day: 1))
+        let leapDay = LocalDate(year: 2028, month: 2, day: 29)
+        #expect(Screen.year(2027).day(today: leapDay) == LocalDate(year: 2027, month: 2, day: 28))
+        #expect(Screen.year(2024).day(today: leapDay) == LocalDate(year: 2024, month: 2, day: 29))
+        let navigator = Navigator(.year(2025))
+        navigator.zoom(.month, today: thursday)
+        #expect(navigator.screen == .month(LocalDate(year: 2025, month: 10, day: 1)))
     }
 }

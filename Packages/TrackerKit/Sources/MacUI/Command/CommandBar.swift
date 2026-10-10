@@ -7,14 +7,14 @@ import WideUI
 
 /// The running timer and the command line, with what the line would do
 /// under it and the keys to know: in the menu bar's popover and in the
-/// panel the shortcut opens. It's disabled while the data is read-only.
+/// panel the shortcut opens. The main window's line shows the same under
+/// it. It's disabled while the data is read-only.
 struct CommandBar: View {
     let line: CommandLineModel
     /// After a line ran, or Escape with nothing typed, as for closing the
     /// popover.
     let close: () -> Void
     @Environment(\.undoManager) private var undoManager
-    private let placeholder = "Start, switch, stop or log time"
 
     var body: some View {
         VStack(spacing: 0) {
@@ -29,36 +29,19 @@ struct CommandBar: View {
                     .accessibilityHidden(true)
                 CommandField(
                     line: line,
-                    placeholder: placeholder,
+                    placeholder: CommandText.placeholder,
                     focusesWithWindow: true,
                     onSubmit: submit,
                     onCancel: cancel
                 )
                 .frame(height: 24)
-                .accessibilityLabel(Text(placeholder))
+                .accessibilityLabel(Text(CommandText.placeholder))
                 KeyCap("esc")
             }
             .padding(.leading, 14)
             .padding(.trailing, 12)
             .frame(height: 54)
-
-            if !line.suggestions.isEmpty {
-                SuggestionStrip(suggestions: line.suggestions, ledger: line.model.ledger) { index in
-                    line.acceptSuggestion(at: index)
-                }
-                .padding(.horizontal, 14)
-                .padding(.bottom, 10)
-            }
-            if hasPreview {
-                Divider().overlay(Theme.line)
-                CommandPreviewView(line: line)
-            }
-            if !listed.isEmpty {
-                Divider().overlay(Theme.line)
-                EntryList(model: line.model, entries: listed)
-            }
-            Divider().overlay(Theme.line)
-            hints
+            CommandDetails(line: line)
         }
         .disabled(line.model.isReadOnly)
         .onChange(of: line.model.revision) {
@@ -66,51 +49,16 @@ struct CommandBar: View {
         }
     }
 
-    private var hasPreview: Bool {
-        line.message != nil || line.preview != nil || (line.reading.problem != nil && !line.text.isEmpty)
-    }
-
-    /// What "find" found, or today's entries while nothing is typed.
-    private var listed: [ResolvedEntry] {
-        line.listedEntries(alwaysListsToday: true)
-    }
-
     private func submit(alternate: Bool) {
-        if line.submit(alternate: alternate, undoManager: undoManager), line.model.preferences.closesAfterReturn {
+        if line.submitClosing(alternate: alternate, undoManager: undoManager) {
             close()
         }
     }
 
     private func cancel() {
-        if line.text.isEmpty {
+        if line.cancel() {
             close()
-        } else {
-            line.clear()
         }
-    }
-
-    /// The keys that do something with what's typed.
-    private var hints: some View {
-        HStack(spacing: 16) {
-            // Tab takes a suggestion first.
-            if let completion = line.reading.completion, line.suggestions.isEmpty {
-                KeyHint("⇥", "\(completion.text), from \(Format.weekday(completion.day))")
-                    .lineLimit(1)
-            } else if case .addProject? = line.reading.alternate {
-                KeyHint("⌥⏎", "add and start")
-            }
-            if line.text.isEmpty {
-                if line.model.running != nil {
-                    KeyHint("stop", "stop the timer")
-                    KeyHint("from 10:30", "change its start")
-                } else {
-                    KeyHint("↑", "history")
-                }
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 14)
-        .frame(height: 32)
     }
 }
 

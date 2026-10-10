@@ -70,7 +70,8 @@ public final class AppModel {
 
     /// Whether the app may read this device's calendars.
     public internal(set) var calendarAccess: CalendarAccess
-    /// This device's calendars, as of the last `refreshCalendars()`.
+    /// This device's calendars, as of the last `refreshCalendars()`, which
+    /// `start()` does first.
     public internal(set) var calendars: [CalendarInfo] = []
     /// The calendars on this device whose events become entries, and their
     /// projects. Each device keeps its own.
@@ -164,9 +165,10 @@ public final class AppModel {
 
     // MARK: - Loading and saving
 
-    /// Opens the chosen storage and starts the clock, at launch. On iPad
-    /// each window asks for this as it opens, and App Intents do before
-    /// they act; only the first time counts, and the others wait for it.
+    /// Opens the chosen storage, starts the clock and reads this device's
+    /// calendars, at launch. On iPad each window asks for this as it opens,
+    /// and App Intents do before they act; only the first time counts, and
+    /// the others wait for it.
     public func start() async {
         if let starting {
             await starting.value
@@ -175,6 +177,9 @@ public final class AppModel {
         let task = Task {
             startClock()
             readLatestBackup()
+            // Screens that show linked calendars, such as the projects
+            // table, read them from `calendars` without asking for them.
+            refreshCalendars()
             await open(storage)
         }
         starting = task

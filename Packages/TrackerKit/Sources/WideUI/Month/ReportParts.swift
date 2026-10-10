@@ -4,14 +4,12 @@ import TrackerKit
 import UniformTypeIdentifiers
 
 /// A report's page: what it covers, the year's weeks over the screen's
-/// own content, and the statement beside them unless the command line's
-/// sidebar takes its place.
+/// own content, and the statement beside them.
 struct ReportPage<Content: View>: View {
     let model: AppModel
     let state: ReportState
     let navigator: Navigator
     let content: Content
-    @Environment(\.commandSidebarShown) private var commandSidebarShown
 
     init(model: AppModel, state: ReportState, navigator: Navigator, @ViewBuilder content: () -> Content) {
         self.model = model
@@ -33,9 +31,7 @@ struct ReportPage<Content: View>: View {
                     .padding(.top, 20)
                     .padding(.bottom, 28)
                 }
-                if !commandSidebarShown {
-                    StatementPanel(model: model, state: state, navigator: navigator)
-                }
+                StatementPanel(model: model, state: state, navigator: navigator)
             }
         }
     }

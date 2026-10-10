@@ -77,8 +77,12 @@ struct ProjectsScreen: View {
             handleKey(press.characters.lowercased())
             return .handled
         }
+        .takesUnusedKeys([.upArrow, .downArrow, .return], letters: "rcamn")
         .onAppear {
             focused = true
+            // As a project's page does, so a calendar added or renamed
+            // since shows.
+            model.refreshCalendars()
         }
     }
 
