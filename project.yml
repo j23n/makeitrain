@@ -28,6 +28,12 @@ configs:
   Debug: debug
   Release: release
 
+# Your team, from the gitignored Signing.xcconfig at the root (make signing TEAM=…). No target
+# sets DEVELOPMENT_TEAM itself, since a target's own setting would win over it.
+configFiles:
+  Debug: Config/Project.xcconfig
+  Release: Config/Project.xcconfig
+
 fileGroups:
   - Config
   - project.yml
@@ -110,6 +116,14 @@ targets:
     sources:
       - App
       - Shared
+    # The build number: the number of commits, set when the bundle is built (j23n/apple-ci
+    # README.md, "Build numbers"). The script reads .git, hence no script sandbox here.
+    postBuildScripts:
+      - name: Build number
+        script: '"$SRCROOT/.apple-ci/build-number.sh"'
+        inputFiles:
+          - $(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)
+        basedOnDependencyAnalysis: false
     dependencies:
       # The widget extension (the Live Activity and the controls) is iOS only.
       - target: TimeTrackerWidgets
@@ -128,8 +142,8 @@ targets:
         "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": App/TimeTracker-macOS.entitlements
         CODE_SIGN_STYLE: Automatic
         "COMBINE_HIDPI_IMAGES[sdk=macosx*]": "YES"
+        ENABLE_USER_SCRIPT_SANDBOXING: "NO"
         CURRENT_PROJECT_VERSION: "1"
-        DEVELOPMENT_TEAM: ""
         "ENABLE_HARDENED_RUNTIME[sdk=macosx*]": "YES"
         ENABLE_PREVIEWS: "YES"
         GENERATE_INFOPLIST_FILE: "YES"
@@ -182,6 +196,14 @@ targets:
     sources:
       - Widgets
       - Shared
+    # The build number: the number of commits, set when the bundle is built (j23n/apple-ci
+    # README.md, "Build numbers"). The script reads .git, hence no script sandbox here.
+    postBuildScripts:
+      - name: Build number
+        script: '"$SRCROOT/.apple-ci/build-number.sh"'
+        inputFiles:
+          - $(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)
+        basedOnDependencyAnalysis: false
     dependencies:
       - package: TrackerKit
         product: TimerActivity
@@ -189,7 +211,7 @@ targets:
       base:
         CODE_SIGN_STYLE: Automatic
         CURRENT_PROJECT_VERSION: "1"
-        DEVELOPMENT_TEAM: ""
+        ENABLE_USER_SCRIPT_SANDBOXING: "NO"
         GENERATE_INFOPLIST_FILE: "YES"
         INFOPLIST_FILE: Config/Widgets-Info.plist
         INFOPLIST_KEY_CFBundleDisplayName: "Time Tracker"

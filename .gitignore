@@ -7,3 +7,5 @@ xcuserdata/
 
 # The Xcode project is generated from project.yml (make project).
 TimeTracker.xcodeproj/
+# Your signing team (make signing TEAM=…), on this Mac only
+Signing.xcconfig

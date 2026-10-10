@@ -6,11 +6,11 @@ A menu bar time tracker for the Mac, with an iPhone and iPad app. You start, swi
 
 You need Xcode 16 or later, and XcodeGen: the Xcode project is generated from [project.yml](project.yml) and isn't in git.
 
-1. `make bootstrap` installs XcodeGen if it's missing and generates `TimeTracker.xcodeproj`. Run `make project` again after a change to `project.yml`; a new source file needs nothing, since the folders are synchronized.
-2. Open `TimeTracker.xcodeproj` and pick your team under Signing & Capabilities. The app uses the iCloud container `iCloud.com.j23n.TimeTracker`; change it in the entitlements files, in `Config/TimeTracker-Info.plist` and in `AppEnvironment.live()` if you use a different one.
+1. `make bootstrap` installs XcodeGen if it's missing and generates `TimeTracker.xcodeproj`. Run `make project` (or `xcodegen`) again after a change to `project.yml`; a new source file needs nothing, since the folders are synchronized.
+2. Set your team once: `make signing TEAM=<your team ID>` writes it into `Signing.xcconfig`, which git ignores and every configuration reads, so pulls and `xcodegen` keep it (or set `J23N_TEAM` in your shell's profile, and `make project` writes it). Then open `TimeTracker.xcodeproj`. The app uses the iCloud container `iCloud.com.j23n.TimeTracker`; change it in the entitlements files, in `Config/TimeTracker-Info.plist` and in `AppEnvironment.live()` if you use a different one.
 3. Run the `TimeTracker` scheme with My Mac, an iPhone or an iPad as the destination. It's one target that builds the Mac app and the iPhone and iPad app, and on iOS the widget extension with the Live Activity and controls.
 
-The same commands as the other j23n apps ([j23n/apple-ci](https://github.com/j23n/apple-ci)) build it from the command line: `make build` (the app for the iOS Simulator and the Mac, unsigned), `make test`, and `make ci-linux` and `make ci-macos`, which CI runs. `.apple-ci/apple.mk` holds the shared rules; `make update-apple-ci` refreshes it.
+Each build's build number is the number of commits, set as the app and the widgets are built (`make build-number` prints it; j23n/apple-ci's README, "Build numbers"). The same commands as the other j23n apps ([j23n/apple-ci](https://github.com/j23n/apple-ci)) build it from the command line: `make build` (the app for the iOS Simulator and the Mac, unsigned), `make test`, and `make ci-linux` and `make ci-macos`, which CI runs. `.apple-ci/apple.mk` holds the shared rules; `make update-apple-ci` refreshes it.
 
 ## Tests
 
