@@ -1,17 +1,19 @@
 # Architecture
 
-Time Tracker is a menu bar app for the Mac, with an iPhone and iPad app that shares its data. Everything lives in readable JSON files in iCloud Drive or a local folder. The apps never use the network themselves: they're sandboxed without the outgoing-network entitlement, and the system syncs iCloud Drive.
+Time Tracker is a menu bar app for the Mac, with an iPhone and iPad app that shares its data. Everything lives in readable JSON files in iCloud Drive or a local folder. The apps never use the network themselves: they're sandboxed without the outgoing-network entitlement, and the system syncs iCloud Drive. (Debug builds are the exception: they can send in-app feedback, and the Mac's get the entitlement for it. See the README's Feedback.)
 
 ## Layout
 
 | Path | What it holds |
 | --- | --- |
-| `App/` | The app target, which builds for macOS and for iOS: the entry point, which opens the Mac's or iOS's scenes, the App Shortcuts, Info.plist, an entitlements file for each platform, and the assets. It contains almost no code. |
+| `App/` | The app target, which builds for macOS and for iOS: the entry point, which opens the Mac's or iOS's scenes, the App Shortcuts, an entitlements file for each platform (and the Mac's Debug builds, which may reach the network for in-app feedback), and the assets. It contains almost no code. |
 | `Shared/` | The App Intents, built into the app and into the widget extension: start a timer from a line, stop it, and open the command line. |
 | `Widgets/` | The iOS widget extension: the running timer's Live Activity, and the controls for Control Center, the Lock Screen and the Action button. |
 | `Packages/TrackerKit` | The app layer on Apple platforms. `TrackerKit` has the shared app model, storage, iCloud sync, the design's colors and parts, the screen logic every screen uses, and the views the Mac's and iOS's screens share. `WideUI` has the wide window's screens, which the Mac's main window and a wide iPad window both show. `MacUI` has the rest of the Mac app: the menu bar, the shortcut's panel, the main window around the wide screens, and Settings. `MobileUI` has the iPhone's screens and the iOS app around them. `TimerActivity` has the Live Activity's attributes, which the app and the extension share. Every screen has previews with the sample data in `PreviewData`. |
 | `Packages/TrackerCore` | The data model, file format, merging, reading the command line and carrying it out, what needs correcting and its fixes, the timer and overlap rules, reports and typed reports, CSV export and import, turning calendar events into entries, and backups. Plain Swift that also builds and tests on Linux. |
-| `TimeTracker.xcodeproj` | The Xcode project: one multiplatform app target and scheme, `TimeTracker`, for the Mac, iPhone and iPad, and the iOS widget extension it embeds, `TimeTrackerWidgets`. Settings that differ, such as the entitlements and the Info.plist keys of each platform, are set per SDK. |
+| `project.yml` | The Xcode project's XcodeGen spec (`make project` generates `TimeTracker.xcodeproj`, which isn't in git): one multiplatform app target and scheme, `TimeTracker`, for the Mac, iPhone and iPad, and the iOS widget extension it embeds, `TimeTrackerWidgets`. Settings that differ, such as the entitlements and the Info.plist keys of each platform, are set per SDK. |
+| `Config/` | The two Info.plists, outside the synchronized folders so neither is copied in as a resource. |
+| `Makefile` | The commands every j23n app has (j23n/apple-ci's build contract): `make project`, `test`, `build`, `ci-linux`, `ci-macos`. |
 | `docs/` | These documents. |
 
 ## How the pieces fit

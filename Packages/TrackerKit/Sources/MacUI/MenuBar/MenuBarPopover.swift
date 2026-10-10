@@ -40,6 +40,14 @@ struct MenuBarPopover: View {
                 Text("Settings…")
             }
             .keyboardShortcut(",")
+            #if FEEDBACK
+            Button("Feedback…") {
+                close()
+                Task { await Feedback.center.begin() }
+            }
+            .disabled(!Feedback.center.isEnabled)
+            .accessibilityIdentifier("menuBar.feedback")
+            #endif
             Spacer()
             Button("Quit") {
                 NSApp.terminate(nil)

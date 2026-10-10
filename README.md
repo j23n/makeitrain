@@ -1,29 +1,39 @@
 # Time Tracker
 
-A menu bar time tracker for the Mac, with an iPhone and iPad app. You start, switch, stop and log time by typing a line, such as `web #12 fix login from 9:30`, and the week shows what needs correcting, such as overlaps and timers left running, with a fix for each. It keeps everything in readable JSON files, in iCloud Drive or a local folder, and never touches the network.
+A menu bar time tracker for the Mac, with an iPhone and iPad app. You start, switch, stop and log time by typing a line, such as `web #12 fix login from 9:30`, and the week shows what needs correcting, such as overlaps and timers left running, with a fix for each. It keeps everything in readable JSON files, in iCloud Drive or a local folder, and never touches the network (Debug builds can send in-app feedback: see [Feedback](#feedback)).
 
 ## Building
 
-You need Xcode 16 or later.
+You need Xcode 16 or later, and XcodeGen: the Xcode project is generated from [project.yml](project.yml) and isn't in git.
 
-1. Open `TimeTracker.xcodeproj`.
-2. Pick your team under Signing & Capabilities. The app uses the iCloud container `iCloud.com.j23n.TimeTracker`; change it in both entitlements files, in `Info.plist` and in `AppEnvironment.live()` if you use a different one.
+1. `make bootstrap` installs XcodeGen if it's missing and generates `TimeTracker.xcodeproj`. Run `make project` again after a change to `project.yml`; a new source file needs nothing, since the folders are synchronized.
+2. Open `TimeTracker.xcodeproj` and pick your team under Signing & Capabilities. The app uses the iCloud container `iCloud.com.j23n.TimeTracker`; change it in the entitlements files, in `Config/TimeTracker-Info.plist` and in `AppEnvironment.live()` if you use a different one.
 3. Run the `TimeTracker` scheme with My Mac, an iPhone or an iPad as the destination. It's one target that builds the Mac app and the iPhone and iPad app, and on iOS the widget extension with the Live Activity and controls.
+
+The same commands as the other j23n apps ([j23n/apple-ci](https://github.com/j23n/apple-ci)) build it from the command line: `make build` (the app for the iOS Simulator and the Mac, unsigned), `make test`, and `make ci-linux` and `make ci-macos`, which CI runs. `.apple-ci/apple.mk` holds the shared rules; `make update-apple-ci` refreshes it.
 
 ## Tests
 
 ```sh
-swift test --package-path Packages/TrackerCore
-swift test --package-path Packages/TrackerKit
+make test          # TrackerCore and TrackerKit (swift test for each)
+make test-core     # TrackerCore alone, which runs on Linux too
 ```
 
-GitHub Actions runs both on macOS, runs TrackerCore on Linux too, and builds the app for macOS and iOS.
+GitHub Actions runs both on macOS, TrackerCore on Linux too, the packages again with Xcode 16 on macOS 15 (so the macOS 15 SDK still compiles them), and builds the app for macOS and iOS.
+
+## Feedback
+
+Debug builds include in-app feedback with [FeedbackKit](https://github.com/j23n/feedbackkit), j23n's own package, which `MacUI` and `MobileUI` compile in only in Debug (the `FEEDBACK` condition in `Packages/TrackerKit/Package.swift`):
+- On the Mac: Help › Send Feedback… in the main window, *Feedback…* in the menu bar popover, and the Feedback tab of Settings.
+- On iPhone and iPad: a shake, a screenshot (a banner offers to send it), Help › Send Feedback… with a keyboard, and Settings › Feedback.
+
+The form takes a screenshot of the window, which Quick Look's Markup can annotate on iPhone and iPad, and the report goes to the owner's private inbox, [j23n/feedback](https://github.com/j23n/feedback), where it's triaged before an issue is filed here. Settings › Feedback holds the GitHub token (a fine-grained token for j23n/feedback with Issues and Contents read and write, kept in the Keychain). Only the Mac's Debug builds get the outgoing-network entitlement it needs (`App/TimeTracker-macOS-Debug.entitlements`); release builds stay without the network.
 
 ## Previews
 
 Every screen has SwiftUI previews, in Debug builds only. They show a week of sample data, `PreviewData` in TrackerKit: two clients, a running timer, an overlap, an unassigned entry, an entry recorded in New York and an archived project, with "now" fixed at Wednesday, September 23, 2026, 15:40 in Berlin. Some also show a freelancer's three months, two clients with a project each, hundreds of hours and dozens of tags that refer to issues, written like `Core/#131`, to see long totals and long lists of tags. The previews read no files, and edits made in a live preview go to a temporary folder.
 
-To see them, open `TimeTracker.xcodeproj`, choose the `TimeTracker` scheme with My Mac as the destination for the Mac's screens or an iPhone or iPad for iOS's, open a view's file from the TrackerKit package, and show the canvas (Editor › Canvas, ⌥⌘↩). The wide screens in `WideUI` build for both; pick an iPad in landscape as the canvas's device to see them as a wide iPad window shows them.
+To see them, open `TimeTracker.xcodeproj` (`make project` generates it), choose the `TimeTracker` scheme with My Mac as the destination for the Mac's screens or an iPhone or iPad for iOS's, open a view's file from the TrackerKit package, and show the canvas (Editor › Canvas, ⌥⌘↩). The wide screens in `WideUI` build for both; pick an iPad in landscape as the canvas's device to see them as a wide iPad window shows them.
 
 ## Layout
 

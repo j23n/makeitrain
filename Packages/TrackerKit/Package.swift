@@ -2,6 +2,9 @@
 
 import PackageDescription
 
+/// In-app feedback in the builds run from Xcode (Debug), never in an archive.
+let feedbackInDebugBuilds = SwiftSetting.define("FEEDBACK", .when(configuration: .debug))
+
 /// The app layer on Apple platforms: the shared app model, storage and iCloud
 /// sync, and the screens for the Mac and iOS apps. The data model, file format
 /// and rules live in TrackerCore.
@@ -16,6 +19,9 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../TrackerCore"),
+        // In-app feedback (README.md, "Feedback"), compiled in only in Debug builds: the
+        // FEEDBACK condition below. Pinned to a commit of j23n's own package.
+        .package(url: "https://github.com/j23n/feedbackkit", revision: "dd4df0adebaa834e04679388e88ca791d17b1515"),
     ],
     targets: [
         .target(
@@ -32,13 +38,15 @@ let package = Package(
         ),
         .target(
             name: "MacUI",
-            dependencies: ["TrackerKit", "WideUI"],
-            swiftSettings: [.swiftLanguageMode(.v5)]
+            dependencies: ["TrackerKit", "WideUI", .product(name: "FeedbackKit", package: "feedbackkit")],
+            swiftSettings: [.swiftLanguageMode(.v5), feedbackInDebugBuilds]
         ),
         .target(
             name: "MobileUI",
-            dependencies: ["TrackerKit", "TimerActivity", "WideUI"],
-            swiftSettings: [.swiftLanguageMode(.v5)]
+            dependencies: [
+                "TrackerKit", "TimerActivity", "WideUI", .product(name: "FeedbackKit", package: "feedbackkit"),
+            ],
+            swiftSettings: [.swiftLanguageMode(.v5), feedbackInDebugBuilds]
         ),
         // The Live Activity's attributes, which the iOS app and its widget
         // extension share.

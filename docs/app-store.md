@@ -9,9 +9,9 @@ What's in place for submitting the Mac and iOS apps, and what's left to do by ha
 | App icons | `App/Assets.xcassets/AppIcon.appiconset`: the Mac's at 16 to 512 points at 1x and 2x, and iOS's at 1024 pixels |
 | Privacy manifest | `App/PrivacyInfo.xcprivacy`, for both platforms |
 | Sandbox, iCloud and calendars | `App/TimeTracker-macOS.entitlements` and `App/TimeTracker-iOS.entitlements`, picked per platform by `CODE_SIGN_ENTITLEMENTS` |
-| Calendar access | `NSCalendarsFullAccessUsageDescription` in `App/Info.plist`, shown when the app first asks to read calendars |
+| Calendar access | `NSCalendarsFullAccessUsageDescription` in `Config/TimeTracker-Info.plist`, shown when the app first asks to read calendars |
 | Live Activity and controls | The `TimeTrackerWidgets` extension, with the bundle identifier `com.j23n.TimeTracker.Widgets`, embedded in the iOS app; `NSSupportsLiveActivities` is set for iOS |
-| iCloud Drive folder | `NSUbiquitousContainers` in `App/Info.plist`, so the data shows as "Time Tracker" in Finder and Files |
+| iCloud Drive folder | `NSUbiquitousContainers` in `Config/TimeTracker-Info.plist`, so the data shows as "Time Tracker" in Finder and Files |
 | Category | Productivity (`LSApplicationCategoryType`, Mac) |
 | Encryption | `ITSAppUsesNonExemptEncryption` is `NO` in both apps, so App Store Connect doesn't ask about export compliance |
 | Launch at login | Off until the user turns it on in Settings, as guideline 2.4.5 requires |
@@ -22,7 +22,7 @@ The Mac and iOS apps are one target with the bundle identifier `com.j23n.TimeTra
 
 For App Store Connect's App Privacy section, answer that the app doesn't collect data. That gives the label **Data Not Collected**:
 
-- The apps never use the network. The Mac app's sandbox has no outgoing-network entitlement, and iCloud Drive syncs the data folder on its own.
+- The apps never use the network. The Mac app's sandbox has no outgoing-network entitlement, and iCloud Drive syncs the data folder on its own. (Only Debug builds, which aren't submitted, include in-app feedback and the entitlement it needs.)
 - Entries, projects and backups stay on the device or in the user's own iCloud Drive, where the developer can't see them.
 - Calendars are read on the device, only those the user links to projects, and only to add their events as entries in the same data folder.
 - There's no analytics, crash reporting SDK, advertising or tracking.
@@ -46,7 +46,7 @@ The privacy manifests say the same: no tracking, no tracking domains and no coll
 ## Left to do
 
 1. Pick a team for both targets under Signing & Capabilities, and check that the app shows iCloud for both platforms and the App Sandbox for macOS.
-2. Register the App ID and the iCloud container `iCloud.com.j23n.TimeTracker` in the developer account, and turn on iCloud Documents for the App ID. If the container name changes, change it in both entitlements files, `App/Info.plist` and `AppEnvironment.live()`.
+2. Register the App ID and the iCloud container `iCloud.com.j23n.TimeTracker` in the developer account, and turn on iCloud Documents for the App ID. If the container name changes, change it in the entitlements files, `Config/TimeTracker-Info.plist` and `AppEnvironment.live()`.
 3. Register the extension's App ID, `com.j23n.TimeTracker.Widgets`, too. Then create the app in App Store Connect with the Mac and iOS platforms, and fill in the description, keywords, support URL and privacy policy URL. A short privacy policy can say what the Privacy section above says.
 4. Take screenshots: the menu bar popover with a line typed, the week with its corrections, the month with its statement and a project's page on the Mac; Today, the week's corrections, the month and the command line on iPhone; the week and the month on iPad; and the Live Activity on the Lock Screen.
 5. Test iCloud on two devices before the first release. [Sync](sync.md) has a checklist.

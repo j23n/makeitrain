@@ -1,5 +1,8 @@
 #if os(macOS)
 import AppKit
+#if FEEDBACK
+import FeedbackKit
+#endif
 import ServiceManagement
 import SwiftUI
 import TrackerCore
@@ -16,6 +19,13 @@ struct SettingsView: View {
                 .tabItem { Label("General", systemImage: "gearshape") }
             DataSettings(model: model)
                 .tabItem { Label("Data", systemImage: "externaldrive") }
+            #if FEEDBACK
+            Form {
+                FeedbackSettingsSection(center: Feedback.center)
+            }
+            .formStyle(.grouped)
+            .tabItem { Label("Feedback", systemImage: "exclamationmark.bubble") }
+            #endif
         }
         .frame(width: 640, height: 680)
     }

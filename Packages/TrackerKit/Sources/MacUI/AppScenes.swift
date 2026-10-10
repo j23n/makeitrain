@@ -1,5 +1,8 @@
 #if os(macOS)
 import AppKit
+#if FEEDBACK
+import FeedbackKit
+#endif
 import SwiftUI
 import TrackerKit
 
@@ -25,6 +28,9 @@ public struct AppScenes: Scene {
         .defaultSize(width: 1320, height: 840)
         .commands {
             FileCommands()
+            #if FEEDBACK
+            FeedbackCommands(center: Feedback.center)
+            #endif
         }
 
         Settings {

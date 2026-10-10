@@ -1,40 +1,36 @@
+# The shared Linux and macOS jobs (j23n/apple-ci), which run `make ci-linux` and `make ci-macos`,
+# and one more: the packages built and tested with Xcode 16 on macOS 15, so the macOS 15 SDK
+# still compiles them while the apps build with Xcode 26.
 name: CI
 
 on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+# A newer push to the same branch or pull request cancels the run in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  core-linux:
-    name: TrackerCore on Linux
-    runs-on: ubuntu-latest
-    container: swift:6.2
-    steps:
-      - uses: actions/checkout@v5
-      - run: swift test --package-path Packages/TrackerCore
+  linux:
+    uses: j23n/apple-ci/.github/workflows/linux.yml@main
+    with:
+      name: Linux · TrackerCore
 
-  packages-macos:
-    name: Packages on macOS
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@v5
-      - run: swift --version
-      - run: swift test --package-path Packages/TrackerCore
-      - run: swift test --package-path Packages/TrackerKit
+  macos:
+    uses: j23n/apple-ci/.github/workflows/macos.yml@main
+    with:
+      name: macOS · packages and app (iOS Simulator and Mac)
 
-  # The packages build above uses Xcode 16; the apps build with Xcode 26, so
-  # both the macOS 15 and the macOS 26 SDK compile.
-  apps:
-    name: Mac and iOS apps
-    runs-on: macos-26
-    steps:
-      - uses: actions/checkout@v5
-      - run: xcodebuild -version
-      - name: Build the app for macOS
-        run: >
-          xcodebuild build -project TimeTracker.xcodeproj -scheme TimeTracker
-          -destination 'generic/platform=macOS' CODE_SIGNING_ALLOWED=NO
-      - name: Build the app for iOS
-        run: >
-          xcodebuild build -project TimeTracker.xcodeproj -scheme TimeTracker
-          -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
+  packages-xcode-16:
+    uses: j23n/apple-ci/.github/workflows/macos.yml@main
+    with:
+      name: macOS 15 · packages with Xcode 16
+      runner: macos-15
+      xcode: "16"
+      brew: ""
+      run: make test

@@ -4,3 +4,6 @@
 DerivedData/
 xcuserdata/
 *.xcuserstate
+
+# The Xcode project is generated from project.yml (make project).
+TimeTracker.xcodeproj/

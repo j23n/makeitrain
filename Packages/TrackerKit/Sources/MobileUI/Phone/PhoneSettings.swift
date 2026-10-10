@@ -1,4 +1,7 @@
 #if os(iOS)
+#if FEEDBACK
+import FeedbackKit
+#endif
 import SwiftUI
 import TrackerCore
 import TrackerKit
@@ -43,6 +46,10 @@ struct PhoneSettings: View {
                 Section("General") {
                     WeekStartPicker(model: model)
                 }
+
+                #if FEEDBACK
+                FeedbackSettingsSection(center: Feedback.center)
+                #endif
 
                 Section {
                     HStack(spacing: 12) {

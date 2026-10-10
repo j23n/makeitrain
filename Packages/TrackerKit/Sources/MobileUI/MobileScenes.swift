@@ -1,4 +1,7 @@
 #if os(iOS)
+#if FEEDBACK
+import FeedbackKit
+#endif
 import SwiftUI
 import TimerActivity
 import TrackerCore
@@ -19,6 +22,10 @@ public struct MobileScenes: Scene {
             MobileRoot(model: model)
                 .task { await model.start() }
         }
+        #if FEEDBACK
+        // Made at launch, so a shake or a screenshot can start a report from the first screen.
+        .commands { FeedbackCommands(center: Feedback.center) }
+        #endif
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .background:
