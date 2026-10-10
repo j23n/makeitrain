@@ -4,9 +4,10 @@ import TrackerKit
 
 /// A wide window, on the Mac or an iPad: a bar with the zoom, the running
 /// timer and the command line, over the day, week, month, year or
-/// projects, and while the command line is used, a sidebar with what it
-/// would do. The Mac's main window and the iPad's wide windows wrap it in
-/// what each does on its own, such as importing.
+/// projects. While the command line has the keyboard, what it would do
+/// shows under it, as in the menu bar. The Mac's main window and the
+/// iPad's wide windows wrap it in what each does on its own, such as
+/// importing.
 public struct WideRoot<Trailing: View>: View {
     let model: AppModel
     /// Room at the start of the bar, as for the Mac's window buttons.
@@ -41,39 +42,29 @@ public struct WideRoot<Trailing: View>: View {
                 submit: { submit(alternate: $0) },
                 cancel: cancel
             )
-            HStack(spacing: 0) {
-                ScreenView(model: model, navigator: navigator)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .environment(\.commandSidebarShown, showsCommandSidebar)
-                if showsCommandSidebar {
-                    CommandSidebar(
-                        line: line,
-                        submit: { submit(alternate: $0) },
-                        focus: { focusRequest += 1 },
-                        close: cancel,
-                        show: { show($0) }
-                    )
-                    .transition(.move(edge: .trailing))
-                }
-            }
-            .animation(.easeOut(duration: 0.15), value: showsCommandSidebar)
+            ScreenView(model: model, navigator: navigator)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .overlayPreferenceValue(CommandFieldBounds.self) { field in
+            CommandDropdown(line: line, field: commandFocused ? field : nil, select: show)
         }
         .background(Theme.background)
         .foregroundStyle(Theme.text)
         .background {
-            // ⌘K puts the keyboard in the command line; ⌘[ and ⌘] go back
-            // and forward.
-            Group {
-                Button("Command Line") { focusRequest += 1 }
-                    .keyboardShortcut("k")
-                Button("Back") { navigator.goBack() }
-                    .keyboardShortcut("[")
-                Button("Forward") { navigator.goForward() }
-                    .keyboardShortcut("]")
-            }
-            .opacity(0)
-            .accessibilityHidden(true)
+            // ⌘K puts the keyboard in the command line. The View menu has
+            // the zooms, Back and Forward.
+            Button("Command Line") { focusRequest += 1 }
+                .keyboardShortcut("k")
+                .opacity(0)
+                .accessibilityHidden(true)
         }
+        .focusedSceneValue(\.wideNavigation, WideNavigation(
+            canGoBack: navigator.canGoBack,
+            canGoForward: navigator.canGoForward,
+            show: { zoom in navigator.zoom(zoom, today: model.today) },
+            goBack: { navigator.goBack() },
+            goForward: { navigator.goForward() }
+        ))
         .background(LineRefresh(model: model, line: line))
         .onAppear {
             if let zoom = Zoom(rawValue: savedZoom), zoom != navigator.screen.zoom {
@@ -88,23 +79,20 @@ public struct WideRoot<Trailing: View>: View {
         }
     }
 
-    /// Whether the sidebar shows the command line: while it has the
-    /// keyboard, a line, today's entries or what went wrong.
-    private var showsCommandSidebar: Bool {
-        commandFocused || !line.text.isEmpty || line.showsToday || line.message != nil
-    }
-
-    /// Runs the line, as Return does, or Option-Return with `alternate`.
+    /// Runs the line, as Return does, or Option-Return with `alternate`,
+    /// and leaves it when Settings says the command line closes after
+    /// Return.
     private func submit(alternate: Bool) {
-        if line.submit(alternate: alternate, undoManager: undoManager) {
+        if line.submitClosing(alternate: alternate, undoManager: undoManager) {
             finish()
         }
     }
 
-    /// Clears the line and leaves it, as Escape does.
+    /// Clears the line, as Escape does, or leaves it with nothing typed.
     private func cancel() {
-        line.clear()
-        finish()
+        if line.cancel() {
+            finish()
+        }
     }
 
     /// Shows an entry on its week, or its day when a day is shown, selected.
@@ -112,7 +100,8 @@ public struct WideRoot<Trailing: View>: View {
         let day = entry.entry.day
         navigator.go(navigator.screen.zoom == .day ? .day(day) : .week(day))
         navigator.entryToSelect = entry.id
-        cancel()
+        line.clear()
+        finish()
     }
 
     /// Leaves the command line, so keys go back to the screen.
@@ -128,6 +117,50 @@ public struct WideRoot<Trailing: View>: View {
         line.text = text
         focusRequest += 1
         model.request = nil
+    }
+}
+
+/// Where the top bar's command line is, for what it would do to show under
+/// it.
+struct CommandFieldBounds: PreferenceKey {
+    static let defaultValue: Anchor<CGRect>? = nil
+
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = value ?? nextValue()
+    }
+}
+
+/// What the main window's command line would do, under it, as the menu
+/// bar's popover shows it under its line: the suggestions, what Return
+/// would do, the entries found or today's, and the keys. Clicking an entry
+/// shows it on its week.
+private struct CommandDropdown: View {
+    let line: CommandLineModel
+    /// Where the field is, or nil while it doesn't have the keyboard.
+    let field: Anchor<CGRect>?
+    let select: (ResolvedEntry) -> Void
+
+    /// As wide as the menu bar's popover, at least.
+    private static let minimumWidth: CGFloat = 410
+
+    var body: some View {
+        if let field {
+            GeometryReader { geometry in
+                let bounds = geometry[field]
+                let width = max(bounds.width, Self.minimumWidth)
+                // Centered under the field, inside the window.
+                let x = min(max(bounds.midX - width / 2, 8), max(geometry.size.width - width - 8, 8))
+                CommandDetails(line: line, continuesField: false, select: select)
+                    .frame(width: width)
+                    .background(Theme.popover)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Theme.strongLine))
+                    .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .offset(x: x, y: bounds.maxY + 6)
+                    .disabled(line.model.isReadOnly)
+            }
+        }
     }
 }
 
@@ -183,7 +216,7 @@ struct TopBar<Trailing: View>: View {
     let trailing: Trailing
     /// Runs the line, or with `alternate` what it could also mean.
     let submit: (_ alternate: Bool) -> Void
-    /// Clears the line and leaves it.
+    /// Clears the line, or leaves it with nothing typed.
     let cancel: () -> Void
     @Environment(\.undoManager) private var undoManager
 
@@ -240,7 +273,7 @@ struct TopBar<Trailing: View>: View {
             }
             CommandField(
                 line: line,
-                placeholder: "› " + CommandText.placeholder(running: model.running),
+                placeholder: CommandText.placeholder,
                 fontSize: 12.5,
                 focusRequest: focusRequest,
                 onSubmit: submit,
@@ -269,6 +302,7 @@ struct TopBar<Trailing: View>: View {
         .frame(height: 34)
         .background(RoundedRectangle(cornerRadius: 9).fill(Theme.field))
         .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(commandFocused ? Theme.accent : Theme.strongLine, lineWidth: commandFocused ? 1.5 : 1))
+        .anchorPreference(key: CommandFieldBounds.self, value: .bounds) { $0 }
         .disabled(model.isReadOnly)
     }
 }

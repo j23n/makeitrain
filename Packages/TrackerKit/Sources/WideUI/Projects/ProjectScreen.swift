@@ -4,7 +4,8 @@ import TrackerKit
 
 /// A project's page: its time this week, this month and in all, its last
 /// twelve weeks day by day, its tags with the issues they refer to by
-/// repository, and its settings beside them.
+/// repository, and its settings beside them. Single keys start its timer,
+/// and rename, color, archive or merge it, as on the projects table.
 struct ProjectScreen: View {
     let model: AppModel
     let navigator: Navigator
@@ -15,8 +16,8 @@ struct ProjectScreen: View {
     @State private var showsAllIssues: Set<String> = []
     @State private var removing: ProjectOverview.Tag?
     @FocusState private var renaming: Bool
+    @FocusState private var focused: Bool
     @Environment(\.undoManager) private var undoManager
-    @Environment(\.commandSidebarShown) private var commandSidebarShown
 
     private var project: Project? {
         model.ledger.projects[projectID].flatMap { $0.isDeleted ? nil : $0 }
@@ -41,12 +42,21 @@ struct ProjectScreen: View {
                         .padding(.horizontal, 28)
                         .padding(.vertical, 22)
                     }
-                    if !commandSidebarShown {
-                        ProjectSettingsPanel(model: model, project: project, navigator: navigator)
-                    }
+                    ProjectSettingsPanel(model: model, project: project, navigator: navigator)
                 }
             }
-            .onAppear(perform: load)
+            .focusable()
+            .focusEffectDisabled()
+            .focused($focused)
+            .onKeyPress(characters: CharacterSet(charactersIn: "sSrRcCaAmM")) { press in
+                guard !isEditingText() else { return .ignored }
+                return handleKey(press.characters.lowercased(), project: project)
+            }
+            .takesUnusedKeys(letters: "srcam")
+            .onAppear {
+                load()
+                focused = true
+            }
             .onChange(of: model.revision) { load() }
             .onChange(of: model.now) {
                 if overview?.isRunning == true {
@@ -74,6 +84,38 @@ struct ProjectScreen: View {
         overview = ProjectOverview(project: projectID, model: model)
     }
 
+    /// Whether S starts a timer for the project, or switches to it.
+    private func canStart(_ project: Project) -> Bool {
+        !project.archived && model.running?.entry.projectID != projectID
+    }
+
+    /// What a single key does: S starts the project's timer, and R, C, A
+    /// and M rename, color, archive or merge it, putting the line for it in
+    /// the command line, as the projects table does. A key that can't act
+    /// now, as while the data is read-only, is ignored, so it sounds.
+    private func handleKey(_ key: String, project: Project) -> KeyPress.Result {
+        guard !model.isReadOnly else { return .ignored }
+        let name = project.name.lowercased()
+        switch key {
+        case "s":
+            guard canStart(project) else { return .ignored }
+            model.startTimer(EntryDraft(projectID: projectID), undoManager: undoManager)
+        case "r":
+            model.request = .command("rename \(name) to ")
+        case "c":
+            model.request = .command("color \(name) ")
+        case "a":
+            model.updateProject(projectID, actionName: project.archived ? "Unarchive Project" : "Archive Project", undoManager: undoManager) {
+                $0.archived.toggle()
+            }
+        case "m":
+            model.request = .command("merge \(name) into ")
+        default:
+            return .ignored
+        }
+        return .handled
+    }
+
     private func breadcrumb(_ project: Project) -> some View {
         HStack(spacing: 8) {
             Button {
@@ -89,7 +131,17 @@ struct ProjectScreen: View {
             }
             Text(project.name).fontWeight(.semibold)
             Spacer()
-            KeyHint("⌘[", "back")
+            HStack(spacing: 18) {
+                if canStart(project) {
+                    KeyHint("S", model.running == nil ? "start" : "switch")
+                }
+                KeyHint("R", "rename")
+                KeyHint("C", "color")
+                KeyHint("A", project.archived ? "unarchive" : "archive")
+                KeyHint("M", "merge")
+                KeyHint("⌘[", "back")
+            }
+            .lineLimit(1)
         }
         .font(.system(size: 12.5))
         .padding(.horizontal, 28)

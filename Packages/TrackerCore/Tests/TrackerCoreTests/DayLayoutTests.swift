@@ -70,6 +70,81 @@ import Testing
         #expect(DayLayout.hours(blocks: overnight, additions: none, nowHour: 0) == 0..<24)
     }
 
+    @Test func aShortBlockEndsWhereItsEntryDoes() throws {
+        let result = blocks([
+            entry(1, "2026-09-23T09:00:00+02:00", "2026-09-23T09:10:00+02:00"),
+            entry(2, "2026-09-23T09:10:00+02:00", "2026-09-23T10:00:00+02:00"),
+        ])
+        // Back to back, they share a column: the first mustn't reach into
+        // the second.
+        #expect(result.map(\.column) == [0, 0])
+        let short = try #require(result.first)
+        #expect(DayLayout.nextStart(after: short, in: result) == 9 * 3600 + 600)
+        let hourHeight = 56.0
+        let height = DayLayout.height(
+            from: short.startSecond,
+            to: short.endSecond,
+            hourHeight: hourHeight,
+            nextStart: DayLayout.nextStart(after: short, in: result)
+        )
+        // Ten minutes' worth of points, so the next block starts at its
+        // bottom.
+        #expect(abs(height - hourHeight / 6) < 0.000_001)
+        let next = result[1]
+        let top = Double(next.startSecond - short.startSecond) / 3600 * hourHeight
+        #expect(abs(top - height) < 0.000_001)
+        #expect(DayLayout.nextStart(after: next, in: result) == nil)
+    }
+
+    @Test func aVeryShortBlockIsAHairlineWhereThereIsRoom() {
+        // A minute is less than a point: it's drawn as a hairline.
+        #expect(DayLayout.height(from: 0, to: 60, hourHeight: 56) == DayLayout.hairline)
+        // But not past the entry that starts when it ends.
+        #expect(abs(DayLayout.height(from: 0, to: 60, hourHeight: 56, nextStart: 60) - 56.0 / 60) < 0.000_001)
+        #expect(abs(DayLayout.height(from: 0, to: 0, hourHeight: 56, nextStart: 120) - 56.0 / 30) < 0.000_001)
+        // Blocks that start before this one ends sit beside it, not below.
+        let result = blocks([
+            entry(1, "2026-09-23T09:00:00+02:00", "2026-09-23T09:01:00+02:00"),
+            entry(2, "2026-09-23T09:00:30+02:00", "2026-09-23T09:30:00+02:00"),
+            entry(3, "2026-09-23T11:00:00+02:00", "2026-09-23T12:00:00+02:00"),
+        ])
+        #expect(DayLayout.nextStart(after: result[0], in: result) == 11 * 3600)
+    }
+
+    @Test func aShortBlockInARunCanStillBePicked() throws {
+        // As in the previews: 5 minutes, then 2, then 18, back to back.
+        let result = blocks([
+            entry(1, "2026-09-23T12:40:00+02:00", "2026-09-23T12:45:00+02:00"),
+            entry(2, "2026-09-23T12:45:00+02:00", "2026-09-23T12:47:00+02:00"),
+            entry(3, "2026-09-23T12:47:00+02:00", "2026-09-23T13:05:00+02:00"),
+        ])
+        let hourHeight = 56.0
+        let merge = result[1]
+        let top = Double(merge.startSecond) / 3600 * hourHeight
+        let height = DayLayout.height(
+            from: merge.startSecond,
+            to: merge.endSecond,
+            hourHeight: hourHeight,
+            nextStart: DayLayout.nextStart(after: merge, in: result)
+        )
+        // Drawn two minutes tall, under 2 points, so as not to cover the
+        // next entry...
+        #expect(abs(height - hourHeight / 30) < 0.000_001)
+        // ...but it can be clicked in 10, centered on it, over the edges of
+        // the blocks before and after.
+        let hit = DayLayout.hitSpan(top: top, height: height, minimum: 10)
+        #expect(hit.height == 10)
+        #expect(abs((hit.top + hit.height / 2) - (top + height / 2)) < 0.000_001)
+        let earlierBottom = Double(result[0].endSecond) / 3600 * hourHeight
+        let laterTop = Double(result[2].startSecond) / 3600 * hourHeight
+        #expect(hit.top < earlierBottom)
+        #expect(hit.top + hit.height > laterTop)
+        // A block that's tall enough is clicked where it's drawn.
+        let tall = DayLayout.hitSpan(top: 100, height: 16.8, minimum: 10)
+        #expect(tall.top == 100)
+        #expect(tall.height == 16.8)
+    }
+
     @Test func placesTimesOnTheDayAndOthersAtItsEnds() {
         #expect(DayLayout.second(of: t("2026-09-23T09:30:00+02:00"), on: day, zone: "Europe/Berlin") == 9 * 3600 + 1800)
         #expect(DayLayout.second(of: t("2026-09-23T09:30:00+02:00"), on: day, zone: "America/New_York") == 3 * 3600 + 1800)

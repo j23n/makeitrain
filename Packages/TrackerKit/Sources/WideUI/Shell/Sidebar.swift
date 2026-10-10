@@ -1,17 +1,10 @@
 import SwiftUI
 import TrackerKit
 
-/// The column at the right of a wide window: the command line while it's
-/// used, the selected entry, what needs correcting, or a screen's own panel,
-/// such as a month's statement.
+/// The column at the right of a wide window: the selected entry, what
+/// needs correcting, or a screen's own panel, such as a month's statement.
 enum Sidebar {
     static let width: CGFloat = 380
-}
-
-extension EnvironmentValues {
-    /// Whether the sidebar shows the command line, so a screen leaves its
-    /// own panel out meanwhile.
-    @Entry var commandSidebarShown: Bool = false
 }
 
 extension View {
@@ -57,6 +50,26 @@ struct SidebarTitle: View {
             .buttonStyle(.plain)
             .help("Close")
             .accessibilityLabel(Text("Close"))
+        }
+    }
+}
+
+/// Keys and what they do, such as "⏎ accept", as key caps under a sidebar.
+struct KeyCapHint: View {
+    let keys: [String]
+    let text: String
+
+    init(_ keys: String..., text: String) {
+        self.keys = keys
+        self.text = text
+    }
+
+    var body: some View {
+        HStack(spacing: 5) {
+            ForEach(keys, id: \.self) { key in
+                KeyCap(key)
+            }
+            Text(text)
         }
     }
 }

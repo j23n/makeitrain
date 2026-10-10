@@ -31,7 +31,7 @@ The form takes a screenshot of the window, which Quick Look's Markup can annotat
 
 ## Previews
 
-Every screen has SwiftUI previews, in Debug builds only. They show a week of sample data, `PreviewData` in TrackerKit: two clients, a running timer, an overlap, an unassigned entry, an entry recorded in New York and an archived project, with "now" fixed at Wednesday, September 23, 2026, 15:40 in Berlin. Some also show a freelancer's three months, two clients with a project each, hundreds of hours and dozens of tags that refer to issues, written like `Core/#131`, to see long totals and long lists of tags. The previews read no files, and edits made in a live preview go to a temporary folder.
+Every screen has SwiftUI previews, in Debug builds only. They show a week of sample data, `PreviewData` in TrackerKit: two clients, a running timer, an overlap, an unassigned entry, an entry recorded in New York, an archived project and a run of short entries back to back, with "now" fixed at Wednesday, September 23, 2026, 15:40 in Berlin. Some also show a freelancer's three months, two clients with a project each, hundreds of hours and dozens of tags that refer to issues, written like `Core/#131`, to see long totals and long lists of tags. The previews read no files, and edits made in a live preview go to a temporary folder.
 
 To see them, open `TimeTracker.xcodeproj` (`make project` generates it), choose the `TimeTracker` scheme with My Mac as the destination for the Mac's screens or an iPhone or iPad for iOS's, open a view's file from the TrackerKit package, and show the canvas (Editor › Canvas, ⌥⌘↩). The wide screens in `WideUI` build for both; pick an iPad in landscape as the canvas's device to see them as a wide iPad window shows them.
 

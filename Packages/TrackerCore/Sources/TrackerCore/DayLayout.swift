@@ -96,6 +96,42 @@ public enum DayLayout {
         return max(0, first)..<min(24, max(last, first + 1))
     }
 
+    /// The least height a block is drawn at on a grid, in points, so an
+    /// entry of a minute or two still shows.
+    public static let hairline = 3.0
+
+    /// How tall a block from `startSecond` to `endSecond` is on a grid
+    /// `hourHeight` points to the hour: as tall as its entry is long, so it
+    /// ends where its entry does at any length, and the entry that starts
+    /// then starts right below it. Shorter than a hairline, it's a hairline,
+    /// but only as far as `nextStart`, where the next block starts, so it
+    /// never covers it.
+    public static func height(from startSecond: Int, to endSecond: Int, hourHeight: Double, nextStart: Int? = nil) -> Double {
+        let length = Double(max(endSecond - startSecond, 0)) / 3600 * hourHeight
+        guard length < hairline else { return length }
+        let room = nextStart.map { Double(max($0 - startSecond, 0)) / 3600 * hourHeight } ?? hairline
+        return max(length, min(hairline, room))
+    }
+
+    /// Where a block drawn from `top`, `height` points tall, can be clicked
+    /// or tapped: the block itself, or for one shorter than `minimum`,
+    /// `minimum` points centered on it. That reaches over the edges of the
+    /// blocks before and after it, so the short block goes over them, and
+    /// it can be picked even in a run of entries back to back.
+    public static func hitSpan(top: Double, height: Double, minimum: Double) -> (top: Double, height: Double) {
+        guard height < minimum else { return (top, height) }
+        return (top - (minimum - height) / 2, minimum)
+    }
+
+    /// Where the first of `blocks` that starts once `block` has ended
+    /// starts, which a short block mustn't reach.
+    public static func nextStart(after block: DayBlock, in blocks: [DayBlock]) -> Int? {
+        blocks.lazy
+            .filter { $0.id != block.id && $0.startSecond >= block.endSecond }
+            .map(\.startSecond)
+            .min()
+    }
+
     /// Where a time falls on a day's grid, in seconds after midnight in
     /// `zone`: 0 for a time before the day, and 86 400 for one after it.
     public static func second(of time: Timestamp, on day: LocalDate, zone: String) -> Int {

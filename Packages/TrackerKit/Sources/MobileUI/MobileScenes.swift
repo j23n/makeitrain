@@ -7,6 +7,7 @@ import TimerActivity
 import TrackerCore
 import TrackerKit
 import UIKit
+import WideUI
 
 /// The iPhone and iPad app's scene. It saves when the app goes to the
 /// background and brings the clock up to date when it comes back. An iPad
@@ -26,6 +27,8 @@ public struct MobileScenes: Scene {
                 .feedbackRedaction(Feedback.center)
                 #endif
         }
+        // The screens of a wide window and Back and Forward, with a keyboard.
+        .commands { ViewCommands() }
         #if FEEDBACK
         // Made at launch, so a shake or a screenshot can start a report from the first screen.
         .commands { FeedbackCommands(center: Feedback.center) }

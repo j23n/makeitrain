@@ -57,7 +57,6 @@ private struct WeekContent: View {
     /// line.
     @State private var lineFocusRequest = 0
     @Environment(\.undoManager) private var undoManager
-    @Environment(\.commandSidebarShown) private var commandSidebarShown
 
     private var range: ClosedRange<LocalDate> {
         WeekScreen.range(anchor, span, model.firstWeekday)
@@ -76,9 +75,8 @@ private struct WeekContent: View {
     }
 
     /// What the sidebar shows: the selected entry, or else what needs
-    /// correcting when anything does. Nothing while the command line has it.
+    /// correcting when anything does.
     private var side: WeekSide? {
-        guard !commandSidebarShown else { return nil }
         if let id = week.selectedEntry, model.ledger.entries[id].map({ !$0.isDeleted }) == true {
             return .entry(id)
         }
@@ -92,6 +90,7 @@ private struct WeekContent: View {
                 WeekCanvas(model: model, week: week, days: shownDays) {
                     focused = true
                 }
+                keyHints
             }
             .padding(.top, 18)
             .padding(.horizontal, 24)
@@ -155,6 +154,12 @@ private struct WeekContent: View {
             step(1)
             return .handled
         }
+        .onKeyPress(characters: CharacterSet(charactersIn: "tT")) { _ in
+            guard !isEditingText() else { return .ignored }
+            showToday()
+            return .handled
+        }
+        .takesUnusedKeys([.return, .escape, .leftArrow, .rightArrow], letters: "jkt")
         .onChange(of: range) { _, days in
             week.show(days)
         }
@@ -186,10 +191,8 @@ private struct WeekContent: View {
                 stepButton("chevron.right", span == .day ? "Next day" : "Next week", 1)
             }
             if !range.contains(model.today) {
-                Button("Today") {
-                    navigator.replace(span == .day ? .day(model.today) : .week(model.today))
-                }
-                .buttonStyle(ChoiceButtonStyle(compact: true))
+                Button("Today", action: showToday)
+                    .buttonStyle(ChoiceButtonStyle(compact: true))
             }
             legend
             Spacer(minLength: 12)
@@ -216,6 +219,25 @@ private struct WeekContent: View {
     private func step(_ direction: Int) {
         let day = anchor.adding(days: (span == .day ? 1 : 7) * direction)
         navigator.replace(span == .day ? .day(day) : .week(day))
+    }
+
+    private func showToday() {
+        navigator.replace(span == .day ? .day(model.today) : .week(model.today))
+    }
+
+    /// The days' keys, as the month shows its keys: the arrows step, and
+    /// T comes back to today. The corrections and the selected entry show
+    /// their own keys beside the days; with an entry in the corrections'
+    /// place, J and K go back to them.
+    private var keyHints: some View {
+        HStack(spacing: 18) {
+            KeyHint("← →", span == .day ? "day" : "week")
+            KeyHint("T", "today")
+            if case .entry? = side, !week.previews.isEmpty {
+                KeyHint("J K", "corrections")
+            }
+        }
+        .lineLimit(1)
     }
 
     /// The projects on the days shown, and what the dashed blocks mean.

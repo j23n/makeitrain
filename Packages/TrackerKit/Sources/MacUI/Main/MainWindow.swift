@@ -165,6 +165,12 @@ struct WindowConfigurator: NSViewRepresentable {
         .frame(width: 1280, height: 820)
 }
 
+#Preview("Sample Week") {
+    // Tuesday has a run of short entries with tags, back to back.
+    MainWindow(model: PreviewData.model())
+        .frame(width: 1280, height: 820)
+}
+
 #Preview("No Data") {
     MainWindow(model: PreviewData.model(Ledger()))
         .frame(width: 1280, height: 820)

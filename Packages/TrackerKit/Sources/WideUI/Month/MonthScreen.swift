@@ -65,6 +65,16 @@ struct MonthScreen: View {
             navigator.go(.week(cursor))
             return .handled
         }
+        .onKeyPress(characters: CharacterSet(charactersIn: "tT")) { _ in
+            guard !isEditingText() else { return .ignored }
+            let today = model.today
+            navigator.replace(.month(today))
+            // Also when this month is already shown, with other days chosen.
+            state.show(ReportPeriod.month.range(containing: today, firstWeekday: model.firstWeekday), period: .month)
+            cursor = today
+            return .handled
+        }
+        .takesUnusedKeys([.leftArrow, .rightArrow, .upArrow, .downArrow, .return], letters: "wt")
         .onChange(of: anchor) { _, day in
             state.show(ReportPeriod.month.range(containing: day, firstWeekday: model.firstWeekday), period: .month)
             cursor = day
@@ -121,6 +131,7 @@ struct MonthScreen: View {
             KeyHint("⇧", "extend")
             KeyHint("⏎", "open day")
             KeyHint("W", "open week")
+            KeyHint("T", "today")
         }
     }
 }
@@ -229,36 +240,130 @@ struct MonthHeatGrid: View {
 }
 
 /// A year as a report: the weeks, a small month for each month, and the
-/// statement for the year.
+/// statement for the year. The arrows move between the months, into the
+/// year before or after past either end, Shift and ← or → step a year, and
+/// Return opens the month.
 struct YearScreen: View {
     let model: AppModel
     let navigator: Navigator
     let year: Int
     @State private var state: ReportState
+    /// The month the arrows are on, from 1 for January.
+    @State private var cursor: Int
+    @FocusState private var focused: Bool
+
+    /// The months in a row of the grid.
+    private static let columns = 4
 
     init(model: AppModel, navigator: Navigator, year: Int) {
         self.model = model
         self.navigator = navigator
         self.year = year
         _state = State(initialValue: ReportState(model: model, range: Self.range(year), period: .custom))
+        _cursor = State(initialValue: model.today.month)
     }
 
     static func range(_ year: Int) -> ClosedRange<LocalDate> {
         LocalDate(year: year, month: 1, day: 1)...LocalDate(year: year, month: 12, day: 31)
     }
 
+    /// The year the months are of.
+    private var shownYear: Int {
+        state.range.lowerBound.year
+    }
+
     var body: some View {
         ReportPage(model: model, state: state, navigator: navigator) {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: 4), spacing: 14) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: Self.columns), spacing: 14) {
                 ForEach(1...12, id: \.self) { month in
-                    MiniMonth(model: model, state: state, month: LocalDate(year: state.range.lowerBound.year, month: month, day: 1)) {
-                        navigator.go(.month(LocalDate(year: state.range.lowerBound.year, month: month, day: 1)))
+                    MiniMonth(model: model, state: state, month: LocalDate(year: shownYear, month: month, day: 1), isCursor: month == cursor) {
+                        cursor = month
+                        open()
                     }
                 }
             }
+            keyHints
         }
+        .focusable()
+        .focusEffectDisabled()
+        .focused($focused)
+        .onKeyPress(keys: [.leftArrow, .rightArrow, .upArrow, .downArrow]) { press in
+            guard !isEditingText() else { return .ignored }
+            let sideways = press.key == .leftArrow || press.key == .rightArrow
+            if press.modifiers.contains(.shift), sideways {
+                showYear(shownYear + (press.key == .leftArrow ? -1 : 1))
+                return .handled
+            }
+            let step = switch press.key {
+            case .leftArrow: -1
+            case .rightArrow: 1
+            case .upArrow: -Self.columns
+            default: Self.columns
+            }
+            move(by: step)
+            return .handled
+        }
+        .onKeyPress(.return) {
+            guard !isEditingText() else { return .ignored }
+            open()
+            return .handled
+        }
+        .onKeyPress(characters: CharacterSet(charactersIn: "tT")) { _ in
+            guard !isEditingText() else { return .ignored }
+            showYear(model.today.year)
+            cursor = model.today.month
+            return .handled
+        }
+        .takesUnusedKeys([.leftArrow, .rightArrow, .upArrow, .downArrow, .return], letters: "t")
         .onChange(of: year) { _, year in
             state.show(Self.range(year), period: .custom)
+        }
+        .onAppear {
+            focused = true
+        }
+    }
+
+    /// Moves the cursor by `step` months, into the year before or after
+    /// past either end.
+    private func move(by step: Int) {
+        let moved = Self.moved(cursor, of: shownYear, by: step)
+        if moved.year != shownYear {
+            showYear(moved.year)
+        }
+        cursor = moved.month
+    }
+
+    /// The month, from 1 for January, and the year `step` months from
+    /// `month` of `year`.
+    static func moved(_ month: Int, of year: Int, by step: Int) -> (month: Int, year: Int) {
+        let index = year * 12 + month - 1 + step
+        return (index % 12 + 1, index / 12)
+    }
+
+    /// The day a month of the year opens on: today in this month, and
+    /// otherwise its first.
+    static func day(opening month: Int, of year: Int, today: LocalDate) -> LocalDate {
+        let first = LocalDate(year: year, month: month, day: 1)
+        return today.monthKey == first.monthKey ? today : first
+    }
+
+    /// Shows another year in place of this one, as stepping a week does.
+    private func showYear(_ year: Int) {
+        navigator.replace(.year(year))
+        state.show(Self.range(year), period: .custom)
+    }
+
+    /// Opens the month at the cursor, on today when it's this month.
+    private func open() {
+        navigator.go(.month(Self.day(opening: cursor, of: shownYear, today: model.today)))
+    }
+
+    private var keyHints: some View {
+        HStack(spacing: 18) {
+            KeyHint("← → ↑ ↓", "move")
+            KeyHint("⇧← ⇧→", "year")
+            KeyHint("⏎", "open month")
+            KeyHint("T", "today")
         }
     }
 }
@@ -268,6 +373,8 @@ struct MiniMonth: View {
     let model: AppModel
     let state: ReportState
     let month: LocalDate
+    /// Whether the year's arrow keys are on it.
+    var isCursor = false
     let open: () -> Void
 
     var body: some View {
@@ -305,12 +412,12 @@ struct MiniMonth: View {
         }
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 12).fill(Theme.panel))
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.line))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(isCursor ? Theme.accent : Theme.line, lineWidth: isCursor ? 1.5 : 1))
         .contentShape(Rectangle())
         .onTapGesture(perform: open)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("\(Format.month(month)), \(total > 0 ? Format.duration(total) : "no time")"))
-        .accessibilityAddTraits(.isButton)
+        .accessibilityAddTraits(isCursor ? [.isButton, .isSelected] : .isButton)
     }
 
     private func shade(_ time: Int64) -> Color {

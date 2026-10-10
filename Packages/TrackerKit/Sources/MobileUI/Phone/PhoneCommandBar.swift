@@ -131,7 +131,7 @@ struct PhoneCommandSheet: View {
         }
         field(text: $line.text, CommandField(
             line: line,
-            placeholder: CommandText.placeholder(running: model.running),
+            placeholder: CommandText.placeholder,
             fontSize: 17,
             focusesWithWindow: true,
             focusRequest: router.focusRequest,

@@ -27,6 +27,18 @@ enum Zoom: String, CaseIterable {
         case .projects: "Projects"
         }
     }
+
+    /// The key that shows this zoom with ⌘, in the bar's order: 1 for Day
+    /// through 5 for Projects.
+    var shortcutKey: Character {
+        Character(String((Zoom.allCases.firstIndex(of: self) ?? 0) + 1))
+    }
+
+    /// The zoom ⌘ and `key` show, if any.
+    init?(shortcutKey key: Character) {
+        guard let zoom = Zoom.allCases.first(where: { $0.shortcutKey == key }) else { return nil }
+        self = zoom
+    }
 }
 
 /// What the main window shows.
@@ -48,12 +60,24 @@ enum Screen: Hashable {
         }
     }
 
-    /// A day in what the screen shows, for keeping the place when zooming.
-    var day: LocalDate? {
+    /// A day in what the screen shows, for keeping the place when zooming:
+    /// the screen's own day, or for a year, today when it's in that year and
+    /// otherwise today's date in it. The projects have no day, so zooming
+    /// in from them goes to today.
+    func day(today: LocalDate) -> LocalDate {
         switch self {
-        case let .day(day), let .week(day), let .month(day): day
-        case let .year(year): LocalDate(year: year, month: 1, day: 1)
-        case .projects, .project: nil
+        case let .day(day), let .week(day), let .month(day):
+            return day
+        case let .year(year):
+            var day = today
+            day.year = year
+            // February 29 in a year without one.
+            if LocalDate(daysSince1970: day.daysSince1970) != day {
+                day.day = 28
+            }
+            return day
+        case .projects, .project:
+            return today
         }
     }
 }
@@ -105,6 +129,6 @@ final class Navigator {
 
     /// Shows another zoom around the same day.
     func zoom(_ zoom: Zoom, today: LocalDate) {
-        go(zoom.screen(today: screen.day ?? today))
+        go(zoom.screen(today: screen.day(today: today)))
     }
 }

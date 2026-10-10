@@ -4,7 +4,9 @@ The rules the app follows, whichever screen or device an edit comes from. One ti
 
 ## The command line
 
-The command line is how time gets in. It's in the Mac's menu bar popover, in the panel a global shortcut opens over any app, and in the bar at the top of the Mac's main window, where ⌘K puts the keyboard in it. On iPhone it floats over the tab bar and opens over the screen when tapped; an iPad window that's wide enough has it in the bar at the top, as on the Mac.
+The command line is how time gets in. It's in the Mac's menu bar popover, in the panel a global shortcut opens over any app, and in the bar at the top of the Mac's main window, where ⌘K puts the keyboard in it. On iPhone it floats over the tab bar and opens over the screen when tapped; an iPad window that's wide enough has it in the bar at the top, as on the Mac. Empty, it says "Start, switch, stop or log time" everywhere.
+
+The menu bar's line, the shortcut's and the main window's read and work alike. Under the line, in the popover and the panel, and in a box that drops down from the main window's line while it has the keyboard, are the suggestions for the word being typed, what Return would do, what "find" found or, with nothing typed, today's entries, and the keys to know. The screen's own panel, such as the week's corrections or the month's statement, stays where it is.
 
 What a line can say:
 
@@ -26,15 +28,33 @@ What a line can say:
 | `merge acme2 into acme` | Moves everything to the second, then deletes the first |
 | `find export pdf` | Lists the entries with those words |
 
-- In a sidebar on the Mac and a wide iPad window, and under the line on iPhone and in the menu bar, the app says what Return would do and what that changes, before anything does: "Switch to Brand refresh, logo review. Website ends at 10:40, after 1:10. No gap, no overlap." A change that would make an overlap says so. A line that can't be done says why, such as a start after the running timer's or an end in the future. The sidebar has buttons for Return and for Option-Return, and while it shows, it takes the place of the screen's own panel, such as the week's corrections or the month's statement.
-- Option-Return does what the line could also mean: for a timer, log it as done instead, from when the last entry today ended to now; for a new project, add it and start a timer for it (the menu bar's hints show only the latter). On iPhone it's a second button.
-- While a word is typed, what could take its place shows in the sidebar, or under the line: projects whose name or client's name has a word starting with it, where the line's project goes; the project's tags after `#`, or every tag without one; the starts and ends of the day's other entries, and now, where a time goes, as after `from` or in `9:00-1`; and at the start, commands such as `stop` and `new project`, and after one, what it acts on. Tab takes the highlighted one, Up and Down move the highlight, and a click takes any. The word can be anywhere in the line.
-- Otherwise Tab finishes the line from the last entry like it, as "web #12 Fix login, from Wed", and Up and Down bring back earlier lines, which get no suggestions until they're changed; Down on an empty line lists today's entries in the sidebar, while the menu bar's popover and the shortcut's panel always list them under an empty line, the latest first, until something is typed, and clicking a found or listed entry shows it on its week. The suggestions, the lines run lately and the words to add, such as `from 10:30` (when the last entry today ended), `−15m` and `#`, are buttons in the sidebar, and under the line on iPhone.
+- Under the line, the app says what Return would do and what that changes, before anything does: "Switch to Brand refresh, logo review. Website ends at 10:40, after 1:10. No gap, no overlap." A change that would make an overlap says so. A line that can't be done says why, such as a start after the running timer's or an end in the future.
+- Option-Return does what the line could also mean: for a timer, log it as done instead, from when the last entry today ended to now; for a new project, add it and start a timer for it (the hints under the line show only the latter). On iPhone it's a second button.
+- While a word is typed, what could take its place shows under the line: projects whose name or client's name has a word starting with it, where the line's project goes; the project's tags after `#`, or every tag without one; the starts and ends of the day's other entries, and now, where a time goes, as after `from` or in `9:00-1`; and at the start, commands such as `stop` and `new project`, and after one, what it acts on. Tab takes the highlighted one, Up and Down move the highlight, and a click takes any. The word can be anywhere in the line.
+- Otherwise Tab finishes the line from the last entry like it, as "web #12 Fix login, from Wed", and Up and Down bring back earlier lines, which get no suggestions until they're changed. With nothing typed, today's entries are listed under the line, the latest first, until something is typed, and in the main window, clicking a found or listed entry shows it on its week. On iPhone, the lines run lately and the words to add, such as `from 10:30` (when the last entry today ended), `−15m` and `#`, are buttons under the line too.
 - The words are colored as they're read: a project underlined in its color, a client underlined, tags in blue, times in amber, words such as `stop` and `new project` in the accent color, a new name in bold, and a name that matches nothing dotted underneath.
 - A project is found by the start of its words or its client's: `web`, `acme web` and `ac we` all find Acme's Website, ignoring case and accents. When two match as well, the one used last wins. Short words such as "a", "the", "for" and "with" don't match a project on their own, so they stay part of the note.
 - A time typed without a day is today's, or yesterday's when today's hasn't come yet and yesterday's was in the last 12 hours, as when typing `from 23:30` just after midnight. A day counts only next to a time. An end hour below the start, as in `9-5`, is in the afternoon.
 - Tags are written with a `#` or as the project already has them. A tag typed in another case takes the project's spelling. `#daily` loses its `#`, unless the project has it with one; references such as `#227` and `api#12` keep it. Where the app writes tags into a line, as Tab, the suggestions and an entry's line do, each gets a `#` in front unless it starts with one or is a reference, and dashes for its spaces, so `C#` is written `#C#` and `code review` `#code-review`, and each reads back as the same tag.
-- After a line runs, the popover and the shortcut's panel close, unless Settings says to keep them open. Every line run is remembered on that device, the latest 100.
+- Escape clears the line, and with nothing typed, closes the popover or the panel, or in the main window gives the keys back to the screen. After a line runs, the popover and the shortcut's panel close, and the main window's line gives the keys back, unless Settings says to keep the command line open. Every line run is remembered on that device, the latest 100.
+
+## The main window
+
+The main window, and an iPad window wide enough, has a bar with Back and Forward, the zoom (Day, Week, Month, Year or Projects) and the command line, over the screen it shows.
+
+- ⌘1 to ⌘5 show the day, the week, the month, the year or the projects, around the day shown, and ⌘[ and ⌘] go back and forward. They're in the View menu on the Mac, and with a keyboard on iPad.
+- Zooming keeps the day shown. From a year, the month, week and day are today's when the year is this one, and otherwise today's date in that year; from the projects, they're today's.
+- Each screen shows its keys under it, or for a project, at the top. Keys a screen doesn't use do nothing, without the alert sound; a key it uses but can't act on now, such as Return on a week with nothing to accept, or any of them while the data is read-only, still sounds.
+
+| Screen | Keys |
+| --- | --- |
+| Day and week | ← and → step a day or a week, T comes back to today, J and K move between corrections, Return accepts the selected one's first fix or puts the keyboard in the selected entry's line, Tab skips a correction, and Escape closes the entry |
+| Month | The arrows move between days, with Shift to stretch the range, Return opens the day, W its week, and T comes back to today |
+| Year | The arrows move between months, into the year before or after past either end, Shift and ← or → step a year, Return opens the month, and T comes back to this year |
+| Projects | ↑ and ↓ move, Return opens a project's page, and R, C, A, M and N rename, color, archive, merge or add |
+| A project's page | S starts its timer, or switches to it, and R, C, A and M rename, color, archive or merge it |
+
+R, C, M and N put the line for it in the command line, such as `rename website to `, to finish typing.
 
 ## Timer
 
@@ -72,7 +92,9 @@ On the Mac's and the iPad's week, each correction is numbered and listed in the 
 
 ## Editing entries
 
-- The week, or a day, shows entries as blocks on an hour grid, from 7:00 to 19:00, widened to any entry and to the time now. Blocks show their times, title and tags in the project's color. A day with nothing on a weekend is left out of the week.
+- The week, or a day, shows entries as blocks on an hour grid, from 7:00 to 19:00, widened to any entry and to the time now. A day with nothing on a weekend is left out of the week.
+- A block is as tall as its entry is long, so it ends where the entry does and the entry after it starts right below; an entry of a minute or two is a hairline. A short block can still be clicked, or tapped on iPhone, a little above and below it, over the edges of the blocks next to it, and dragged by its middle or its edges.
+- Blocks show their times, tags and title in the project's color, the title being the note, or the project without one. Tags come before the title, since they say more about the entry. With room for one line, a block shows its start, its tags, and as much of the title as fits after them; a block too short for a line is a bar, and on the Mac its times, tags and title show when the pointer rests on it.
 - On the Mac and a wide iPad window, drag a block to move it, to another day too, or its top or bottom edge to change its start or end. Clicking an entry shows it in the sidebar, in place of the corrections, as the iPhone's entry sheet does: its line, such as `2 oct 13:30-16:30 web #12 Fix login`, to change by typing, what the line reads as (its day, times and length, project, tags and note, or why it isn't an entry), and Stop or Continue it now, Duplicate, Split in the middle and Delete. Return puts the keyboard in the line and applies it; Escape puts it back, and closes the entry when it's unchanged. While the line is edited, the same suggestions show under it. A line without times, such as `web Fix login`, keeps the entry's.
 - On iPhone, tap an entry to change it as a line, or to stop, continue, duplicate, split or delete it. Touching and holding an entry, or right-clicking one on the Mac, offers the same, and setting its project.
 - "Duplicate" puts a copy right after the entry, with the same project, tags, note and length, so it doesn't overlap the original. The running timer isn't copied.

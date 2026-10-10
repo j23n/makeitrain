@@ -3,8 +3,9 @@ import SwiftUI
 import TrackerCore
 
 /// The state behind a command line: what's typed, what it means, what it
-/// would change, and the earlier lines Up brings back. The Mac's and the
-/// iPhone's fields share it.
+/// would change, and the earlier lines Up brings back. The Mac's lines, in
+/// the menu bar, the shortcut's panel and the main window, and the
+/// iPhone's share it.
 @MainActor
 @Observable
 public final class CommandLineModel {
@@ -110,6 +111,30 @@ public final class CommandLineModel {
         case .nothing:
             return false
         }
+    }
+
+    /// Runs the line, as Return does in the Mac's command lines, or with
+    /// `alternate` as Option-Return does. Returns whether the line closes
+    /// after it: when it ran, and Settings says the command line closes
+    /// after Return.
+    public func submitClosing(alternate: Bool, undoManager: UndoManager?) -> Bool {
+        submit(alternate: alternate, undoManager: undoManager) && model.preferences.closesAfterReturn
+    }
+
+    /// What Escape does in the Mac's command lines: clears the line, or,
+    /// with nothing typed, returns true for the line to close.
+    public func cancel() -> Bool {
+        if text.isEmpty {
+            return true
+        }
+        clear()
+        return false
+    }
+
+    /// Whether there's something to say under the line: what Return would
+    /// do, what went wrong, or why the line can't be run.
+    public var hasPreview: Bool {
+        message != nil || preview != nil || (reading.problem != nil && !text.isEmpty)
     }
 
     /// Takes the completion Tab offers. Returns whether there was one.

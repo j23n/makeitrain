@@ -42,7 +42,7 @@ struct PhoneDayGrid: View {
                         ZStack(alignment: .topLeading) {
                             hourLines(hours, width: width)
                             ForEach(blocks) { block in
-                                blockView(block, hours: hours, width: width)
+                                blockView(block, in: blocks, hours: hours, width: width)
                             }
                             ghosts(hours, width: width)
                             overlaps(hours, width: width)
@@ -112,10 +112,25 @@ struct PhoneDayGrid: View {
 
     // MARK: Blocks
 
-    private func blockView(_ block: DayBlock, hours: Range<Int>, width: CGFloat) -> some View {
+    /// The least height a block can be tapped in.
+    private static let minimumHitHeight = 24.0
+
+    /// An entry's block, ending where the entry does however short it is,
+    /// so it never covers the entry after it. A short one can be tapped a
+    /// little above and below it, over the edges of its neighbors, so it
+    /// goes over them.
+    private func blockView(_ block: DayBlock, in blocks: [DayBlock], hours: Range<Int>, width: CGFloat) -> some View {
         let columnWidth = (width - 8) / CGFloat(max(block.columns, 1))
+        let blockWidth = columnWidth - (block.columns > 1 ? 2 : 0)
         let top = y(block.startSecond, hours)
-        let height = max(y(block.endSecond, hours) - top, 20)
+        let drawnHeight = DayLayout.height(
+            from: block.startSecond,
+            to: block.endSecond,
+            hourHeight: Double(hourHeight),
+            nextStart: DayLayout.nextStart(after: block, in: blocks)
+        )
+        let height = CGFloat(drawnHeight)
+        let hit = DayLayout.hitSpan(top: Double(top), height: drawnHeight, minimum: Self.minimumHitHeight)
         let entry = block.entry
         return PhoneEntryBlock(
             model: model,
@@ -125,8 +140,11 @@ struct PhoneDayGrid: View {
             change: week.suggestedChange(of: entry.id),
             overnight: week.ranLongNote(for: entry)
         )
-        .frame(width: columnWidth - (block.columns > 1 ? 2 : 0), height: height)
-        .offset(x: 4 + CGFloat(block.column) * columnWidth, y: top)
+        .frame(width: blockWidth, height: height)
+        .frame(width: blockWidth, height: CGFloat(hit.height))
+        .contentShape(Rectangle())
+        .offset(x: 4 + CGFloat(block.column) * columnWidth, y: CGFloat(hit.top))
+        .zIndex(CGFloat(hit.height) > height ? 1 : 0)
         .onTapGesture {
             week.selectedEntry = entry.id
             onSelect(entry)
@@ -286,9 +304,11 @@ struct PhoneDayGrid: View {
     }
 }
 
-/// One entry on the iPhone's grid: its title, times and tags in its
+/// One entry on the iPhone's grid: its times, tags and title in its
 /// project's tint, outlined when selected, dashed amber when a suggestion
-/// would change it.
+/// would change it. As on the week, the tags come before the title, which
+/// gets what's left of a one-line block, and a block too short for a line
+/// is a bar.
 struct PhoneEntryBlock: View {
     let model: AppModel
     let entry: ResolvedEntry
@@ -307,18 +327,32 @@ struct PhoneEntryBlock: View {
             .padding(.vertical, height < 34 ? 0 : 5)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: height < 34 ? .leading : .topLeading)
             .entryBlockChrome(shape, tint: tint, unassigned: unassigned, selected: selected, running: entry.isRunning, changed: change != nil)
-            .accessibilityElement(children: .combine)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(summary))
             .accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
     }
 
     /// A running entry's block stays open at the bottom, where it grows.
     private var shape: UnevenRoundedRectangle {
-        let bottom: CGFloat = entry.isRunning ? 0 : 9
-        return UnevenRoundedRectangle(topLeadingRadius: 9, bottomLeadingRadius: bottom, bottomTrailingRadius: bottom, topTrailingRadius: 9)
+        let radius = min(9, height / 2)
+        let bottom: CGFloat = entry.isRunning ? 0 : radius
+        return UnevenRoundedRectangle(topLeadingRadius: radius, bottomLeadingRadius: bottom, bottomTrailingRadius: bottom, topTrailingRadius: radius)
     }
 
     private var title: String {
         model.ledger.title(of: entry.entry)
+    }
+
+    private var tags: String {
+        entry.entry.tags.joined(separator: " ")
+    }
+
+    /// The block's times, tags and title, and how long it ran overnight,
+    /// for VoiceOver.
+    private var summary: String {
+        [Format.span(entry.start, entry.end, zone: zone), tags, title, overnight ?? ""]
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
     }
 
     private var project: String? {
@@ -328,12 +362,21 @@ struct PhoneEntryBlock: View {
 
     @ViewBuilder
     private var content: some View {
-        if height < 34 {
+        if height < 13 {
+            // Too short for a line of text: a bar. Not an EmptyView,
+            // which would take the block's fill away with it.
+            Color.clear
+        } else if height < 34 {
             HStack(spacing: 7) {
                 Text(Format.time(entry.start, zone: zone))
                     .font(.system(size: 11))
                     .monospacedDigit()
                     .foregroundStyle(Theme.text4)
+                    .layoutPriority(2)
+                if !tags.isEmpty {
+                    tagsText
+                        .layoutPriority(1)
+                }
                 Text(title)
                     .font(.system(size: 12.5, weight: .semibold))
                 Spacer(minLength: 0)
@@ -341,39 +384,46 @@ struct PhoneEntryBlock: View {
                     Text(Format.duration(model.duration(of: entry)))
                         .font(.system(size: 12, weight: .semibold))
                         .monospacedDigit()
+                        .layoutPriority(2)
                 }
             }
             .lineLimit(1)
         } else {
+            let hasTags = !tags.isEmpty
             VStack(alignment: .leading, spacing: 2) {
                 if entry.isRunning {
                     HStack(spacing: 8) {
+                        if hasTags {
+                            tagsText
+                                .layoutPriority(1)
+                        }
                         Text(title).fontWeight(.semibold)
                         Spacer(minLength: 0)
                         Text(Format.duration(model.duration(of: entry)))
                             .fontWeight(.semibold)
                             .monospacedDigit()
+                            .layoutPriority(2)
                     }
                     .font(.system(size: 13.5))
                     .lineLimit(1)
                 } else {
                     times
-                    HStack(spacing: 5) {
-                        Text(title).fontWeight(.semibold)
-                        if let project {
-                            Text("· \(project)").foregroundStyle(Theme.text2)
-                        }
+                    if hasTags {
+                        tagsText
                     }
-                    .font(.system(size: 13.5))
-                    .lineLimit(height > 64 ? 2 : 1)
+                    // Under the tags, the title needs a third line.
+                    if !hasTags || height >= 54 {
+                        HStack(spacing: 5) {
+                            Text(title).fontWeight(.semibold)
+                            if let project {
+                                Text("· \(project)").foregroundStyle(Theme.text2)
+                            }
+                        }
+                        .font(.system(size: 13.5))
+                        .lineLimit(height > (hasTags ? 82 : 64) ? 2 : 1)
+                    }
                 }
-                if !entry.entry.tags.isEmpty, height > 44 {
-                    Text(entry.entry.tags.joined(separator: " "))
-                        .font(.system(size: 11.5))
-                        .foregroundStyle(Theme.tag)
-                        .lineLimit(1)
-                }
-                if let overnight, height > 76 {
+                if let overnight, height > (hasTags && !entry.isRunning ? 94 : 76) {
                     Text(overnight)
                         .font(.system(size: 11.5, weight: .semibold))
                         .foregroundStyle(Theme.amberText)
@@ -384,6 +434,13 @@ struct PhoneEntryBlock: View {
                 }
             }
         }
+    }
+
+    private var tagsText: some View {
+        Text(tags)
+            .font(.system(size: 11.5))
+            .foregroundStyle(Theme.tag)
+            .lineLimit(1)
     }
 
     /// "09:00–12:40", or with a suggestion "09:00–12:40 11:00", the old end

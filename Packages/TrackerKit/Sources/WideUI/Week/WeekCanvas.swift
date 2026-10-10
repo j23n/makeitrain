@@ -257,29 +257,49 @@ struct DayColumn: View {
 
     // MARK: Blocks
 
+    /// The least height a block can be clicked and dragged in.
+    private static let minimumHitHeight = 10.0
+
     /// Where a block goes in a column `width` wide, from `start` to `end`
-    /// seconds, moved sideways while it's dragged.
-    private func frame(of block: DayBlock, start: Int, end: Int, width: CGFloat) -> CGRect {
+    /// seconds, moved sideways while it's dragged, and where it can be
+    /// clicked: the same, or for a short block, a little more above and
+    /// below it. It's drawn ending where its entry does, however short, so
+    /// it never covers the entry after it.
+    private func frame(of block: DayBlock, start: Int, end: Int, width: CGFloat) -> (drawn: CGRect, hit: CGRect) {
         let columnWidth = (width - 8) / CGFloat(max(block.columns, 1))
         var dx: CGFloat = 0
         if let drag, drag.id == block.id, drag.kind == .move {
             dx = drag.translation.width
         }
-        let top = y(start)
-        let bottom = y(end)
-        return CGRect(
-            x: 4 + CGFloat(block.column) * columnWidth + dx,
-            y: top,
-            width: columnWidth - (block.columns > 1 ? 2 : 0),
-            height: max(bottom - top, 18)
+        var placed = block
+        placed.startSecond = start
+        placed.endSecond = end
+        let drawnHeight = DayLayout.height(
+            from: start,
+            to: end,
+            hourHeight: Double(height),
+            nextStart: DayLayout.nextStart(after: placed, in: blocks)
+        )
+        let hit = DayLayout.hitSpan(top: Double(y(start)), height: drawnHeight, minimum: Self.minimumHitHeight)
+        let x = 4 + CGFloat(block.column) * columnWidth + dx
+        let blockWidth = columnWidth - (block.columns > 1 ? 2 : 0)
+        return (
+            CGRect(x: x, y: y(start), width: blockWidth, height: CGFloat(drawnHeight)),
+            CGRect(x: x, y: CGFloat(hit.top), width: blockWidth, height: CGFloat(hit.height))
         )
     }
 
     private func blockView(_ block: DayBlock, width: CGFloat) -> some View {
         let (start, end) = dragTimes(block)
-        let rect = frame(of: block, start: start, end: end, width: width)
+        let (rect, hit) = frame(of: block, start: start, end: end, width: width)
         let entry = block.entry
         let selected = week.selectedEntry == entry.id
+        // A short block can be clicked a little above and below it, over
+        // the edges of its neighbors, so it goes over them.
+        let short = hit.height > rect.height
+        // The edges take a third each of where a short block can be
+        // clicked, so its middle still moves it.
+        let handle = min(6, hit.height / 3)
         return EntryBlock(
             model: model,
             entry: entry,
@@ -291,10 +311,12 @@ struct DayColumn: View {
             overnight: week.ranLongNote(for: entry)
         )
         .frame(width: rect.width, height: rect.height)
-        .overlay(alignment: .top) { edgeHandle(block, kind: .start, width: width) }
-        .overlay(alignment: .bottom) { edgeHandle(block, kind: .end, width: width) }
-        .offset(x: rect.minX, y: rect.minY)
-        .zIndex(drag?.id == block.id ? 2 : (selected ? 1 : 0))
+        .frame(width: hit.width, height: hit.height)
+        .overlay(alignment: .top) { edgeHandle(block, kind: .start, height: handle, width: width) }
+        .overlay(alignment: .bottom) { edgeHandle(block, kind: .end, height: handle, width: width) }
+        .contentShape(Rectangle())
+        .offset(x: hit.minX, y: hit.minY)
+        .zIndex(drag?.id == block.id ? 3 : (selected ? 2 : (short ? 1 : 0)))
         .onTapGesture {
             week.selectedEntry = entry.id
             onSelect()
@@ -323,9 +345,9 @@ struct DayColumn: View {
     }
 
     /// A thin strip along a block's top or bottom that drags its start or end.
-    private func edgeHandle(_ block: DayBlock, kind: HourGrid.DragKind, width: CGFloat) -> some View {
+    private func edgeHandle(_ block: DayBlock, kind: HourGrid.DragKind, height: CGFloat, width: CGFloat) -> some View {
         Color.clear
-            .frame(height: 6)
+            .frame(height: height)
             .contentShape(Rectangle())
             .resizeCursor()
             .gesture(dragGesture(block, kind: kind, width: width))
@@ -526,9 +548,12 @@ struct DayColumn: View {
     }
 }
 
-/// One entry on the grid: its times, title and tags in its project's tint,
+/// One entry on the grid: its times, tags and title in its project's tint,
 /// selected with an outline, changed by a suggestion with a dashed amber
-/// edge and the times it would get.
+/// edge and the times it would get. The tags come before the title, which
+/// is the note or else the project, since they say more about the entry;
+/// with room for one line, the title gets what's left of it, and a block
+/// too short for a line is a bar that shows its text on hover.
 struct EntryBlock: View {
     let model: AppModel
     let entry: ResolvedEntry
@@ -548,8 +573,10 @@ struct EntryBlock: View {
             .padding(.horizontal, 8)
             .padding(.vertical, height < 34 ? 0 : 5)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: height < 34 ? .leading : .topLeading)
-            .entryBlockChrome(RoundedRectangle(cornerRadius: 7), tint: tint, unassigned: unassigned, selected: selected, running: entry.isRunning, changed: change != nil)
-            .accessibilityElement(children: .combine)
+            .entryBlockChrome(RoundedRectangle(cornerRadius: min(7, height / 2)), tint: tint, unassigned: unassigned, selected: selected, running: entry.isRunning, changed: change != nil)
+            .help(summary)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(summary))
             .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
@@ -557,9 +584,30 @@ struct EntryBlock: View {
         model.ledger.title(of: entry.entry)
     }
 
+    private var tags: String {
+        entry.entry.tags.joined(separator: " ")
+    }
+
+    /// The block's times, tags and title, and how long it ran overnight,
+    /// for hovering and VoiceOver.
+    private var summary: String {
+        // A block ends at midnight when its entry does or runs on past it,
+        // so the entry's own end says which.
+        let end = entry.isRunning
+            ? "now"
+            : (endSecond >= 86400 ? (entry.end.map { Format.time($0, zone: zone) } ?? "24:00") : Format.time(secondOfDay: endSecond))
+        return [Format.time(secondOfDay: startSecond) + "–" + end, tags, title, overnight ?? ""]
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+
     @ViewBuilder
     private var content: some View {
-        if height < 34 {
+        if height < 12 {
+            // Too short for a line of text: a bar. Not an EmptyView,
+            // which would take the block's fill away with it.
+            Color.clear
+        } else if height < 34 {
             HStack(spacing: 6) {
                 if unassigned {
                     Circle().strokeBorder(Theme.text3, lineWidth: 1.5).frame(width: 8, height: 8)
@@ -568,23 +616,29 @@ struct EntryBlock: View {
                     .font(.system(size: 10.5))
                     .monospacedDigit()
                     .foregroundStyle(Theme.text4)
+                    .layoutPriority(2)
+                if !tags.isEmpty {
+                    tagsText
+                        .layoutPriority(1)
+                }
                 Text(title)
                     .font(.system(size: 11.5, weight: .semibold))
                     .lineLimit(1)
             }
         } else {
+            let hasTags = !tags.isEmpty
             VStack(alignment: .leading, spacing: 1) {
                 times
-                Text(title)
-                    .font(.system(size: 11.5, weight: .semibold))
-                    .lineLimit(height > 60 ? 2 : 1)
-                if !entry.entry.tags.isEmpty, height > 52 {
-                    Text(entry.entry.tags.joined(separator: " "))
-                        .font(.system(size: 10.5))
-                        .foregroundStyle(Theme.tag)
-                        .lineLimit(1)
+                if hasTags {
+                    tagsText
                 }
-                if let overnight, height > 70 {
+                // Under the tags, the title needs a third line.
+                if !hasTags || height >= 48 {
+                    Text(title)
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .lineLimit(height > (hasTags ? 74 : 60) ? 2 : 1)
+                }
+                if let overnight, height > (hasTags ? 84 : 70) {
                     Text(overnight)
                         .font(.system(size: 10.5, weight: .semibold))
                         .foregroundStyle(Theme.amberText)
@@ -595,6 +649,13 @@ struct EntryBlock: View {
                 }
             }
         }
+    }
+
+    private var tagsText: some View {
+        Text(tags)
+            .font(.system(size: 10.5))
+            .foregroundStyle(Theme.tag)
+            .lineLimit(1)
     }
 
     /// "09:30–12:30", or with a suggestion "09:00–12:40 11:00", the old end
