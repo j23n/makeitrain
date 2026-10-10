@@ -21,7 +21,7 @@ let package = Package(
         .package(path: "../TrackerCore"),
         // In-app feedback (README.md, "Feedback"), compiled in only in Debug builds: the
         // FEEDBACK condition below. Pinned to a commit of j23n's own package.
-        .package(url: "https://github.com/j23n/feedbackkit", revision: "1fb400a5bd8064749135a762a1c91c69578e0a48"),
+        .package(url: "https://github.com/j23n/feedbackkit", revision: "47902b322188462f383aafab00494d66de59e48c"),
     ],
     targets: [
         .target(
