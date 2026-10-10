@@ -74,6 +74,25 @@ import TrackerCore
         #expect(line.showsToday)
     }
 
+    @Test func listsTodaysEntriesForAnEmptyLineWithoutDown() async throws {
+        let (harness, model) = await Harness.started()
+        defer { harness.cleanUp() }
+        let line = CommandLineModel(model: model)
+        #expect(line.listedEntries(alwaysListsToday: true).isEmpty)
+
+        let start = model.now.adding(seconds: -60)
+        let today = TimeEntry(start: start, end: model.now, timeZone: "Europe/Berlin", note: "Standup", updated: start)
+        model.addEntry(today, undoManager: nil)
+        #expect(line.listedEntries(alwaysListsToday: true).map(\.entry.id) == [today.id])
+        // Without the option, only Down lists them, as in the main window.
+        #expect(line.listedEntries(alwaysListsToday: false).isEmpty)
+
+        line.text = "web"
+        #expect(line.listedEntries(alwaysListsToday: true).isEmpty)
+        line.text = ""
+        #expect(line.listedEntries(alwaysListsToday: true).count == 1)
+    }
+
     @Test func offersLinesRunLatelyThenWordsToAdd() async throws {
         let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }

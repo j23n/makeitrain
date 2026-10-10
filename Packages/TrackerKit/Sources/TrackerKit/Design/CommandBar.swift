@@ -195,6 +195,16 @@ public final class CommandLineModel {
         showsToday = false
     }
 
+    /// What is listed under the line: what "find" found, or else today's
+    /// entries, when `alwaysListsToday` is set or Down listed them, and
+    /// only while nothing is typed.
+    public func listedEntries(alwaysListsToday: Bool) -> [ResolvedEntry] {
+        if case .find? = reading.primary {
+            return Array(found.prefix(12))
+        }
+        return text.isEmpty && (alwaysListsToday || showsToday) ? Array(todaysEntries.prefix(12)) : []
+    }
+
     /// Today's entries, the latest first, as Down lists them.
     public var todaysEntries: [ResolvedEntry] {
         let today = model.today
