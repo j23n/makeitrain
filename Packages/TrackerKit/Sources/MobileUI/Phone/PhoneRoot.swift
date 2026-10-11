@@ -7,7 +7,7 @@ import UIKit
 
 /// The iPhone's tabs.
 enum PhoneTab: Hashable {
-    case today, week, month, projects
+    case week, month, projects
 }
 
 /// A page pushed on the Projects tab.
@@ -28,10 +28,9 @@ enum PhoneCommandMode: Hashable {
 @MainActor
 @Observable
 final class PhoneRouter {
-    var tab: PhoneTab = .today
-    /// Today's entries and what needs correcting on them.
-    let today: WeekModel
-    /// The week the Week tab shows, and the day picked in it.
+    var tab: PhoneTab = .week
+    /// The week the Week tab shows, and the day picked in it, which starts
+    /// as today.
     let week: WeekModel
     var weekDay: LocalDate
     /// The report the Month tab shows.
@@ -46,7 +45,6 @@ final class PhoneRouter {
 
     init(model: AppModel) {
         let today = model.today
-        self.today = WeekModel(model: model, days: today...today)
         week = WeekModel(model: model, days: ReportPeriod.week.range(containing: today, firstWeekday: model.firstWeekday))
         weekDay = today
         month = ReportState(model: model, range: ReportPeriod.month.range(containing: today, firstWeekday: model.firstWeekday), period: .month)
@@ -70,16 +68,22 @@ final class PhoneRouter {
         }
         tab = .week
     }
+
+    /// Moves the Week tab to the new day when the date changes, unless
+    /// another day is picked.
+    func followDate(from previous: LocalDate, to today: LocalDate, firstWeekday: Int) {
+        weekDay = week.follow(weekDay, from: previous, to: today, firstWeekday: firstWeekday)
+    }
 }
 
-/// The iPhone app: Today, Week, Month and Projects, with the command line
-/// floating over the tab bar, opening over everything when tapped.
+/// The iPhone app: Week, Month and Projects, with the command line floating
+/// over the tab bar, opening over everything when tapped.
 struct PhoneRoot: View {
     let model: AppModel
-    /// Where the app is, with today's and the week's corrections. It's made
-    /// once, as the app appears, and the tabs wait for it: made in an
-    /// initializer, a new one would be built, and thrown away, whenever the
-    /// view around it redraws.
+    /// Where the app is, with the week's corrections. It's made once, as
+    /// the app appears, and the tabs wait for it: made in an initializer, a
+    /// new one would be built, and thrown away, whenever the view around it
+    /// redraws.
     @State private var router: PhoneRouter?
 
     var body: some View {
@@ -114,9 +118,6 @@ private struct PhoneTabs: View {
     var body: some View {
         ZStack(alignment: .top) {
             TabView(selection: $router.tab) {
-                PhoneToday(model: model, router: router)
-                    .tabItem { Label("Today", systemImage: "clock") }
-                    .tag(PhoneTab.today)
                 PhoneWeek(model: model, router: router)
                     .tabItem { Label("Week", systemImage: "calendar.day.timeline.left") }
                     .badge(weekCorrections)
@@ -147,17 +148,15 @@ private struct PhoneTabs: View {
         .onAppear(perform: countCorrections)
         .onChange(of: model.revision) {
             line.refresh()
-            router.today.refresh()
             router.week.refresh()
             countCorrections()
         }
         .onChange(of: model.preferences.skippedCorrections) {
-            router.today.refresh()
             router.week.refresh()
             countCorrections()
         }
-        .onChange(of: model.today) { _, today in
-            router.today.show(today...today)
+        .onChange(of: model.today) { previous, today in
+            router.followDate(from: previous, to: today, firstWeekday: model.firstWeekday)
             countCorrections()
         }
         .onChange(of: model.request, initial: true) { _, request in

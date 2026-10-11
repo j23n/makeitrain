@@ -24,8 +24,8 @@ extension FocusedValues {
     }
 }
 
-/// The View menu's screens, Day, Week, Month, Year and Projects with ⌘1 to
-/// ⌘5, and Back (⌘[) and Forward (⌘]), for the focused wide window: the
+/// The View menu's screens, Week, Month, Year and Projects with ⌘1 to ⌘4,
+/// and Back (⌘[) and Forward (⌘]), for the focused wide window: the
 /// Mac's main window, or an iPad's wide window with a keyboard.
 public struct ViewCommands: Commands {
     @FocusedValue(\.wideNavigation) private var navigation

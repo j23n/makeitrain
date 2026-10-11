@@ -3,11 +3,10 @@ import TrackerCore
 import TrackerKit
 
 /// A wide window, on the Mac or an iPad: a bar with the zoom, the running
-/// timer and the command line, over the day, week, month, year or
-/// projects. While the command line has the keyboard, what it would do
-/// shows under it, as in the menu bar. The Mac's main window and the
-/// iPad's wide windows wrap it in what each does on its own, such as
-/// importing.
+/// timer and the command line, over the week, month, year or projects.
+/// While the command line has the keyboard, what it would do shows under
+/// it, as in the menu bar. The Mac's main window and the iPad's wide
+/// windows wrap it in what each does on its own, such as importing.
 public struct WideRoot<Trailing: View>: View {
     let model: AppModel
     /// Room at the start of the bar, as for the Mac's window buttons.
@@ -67,7 +66,8 @@ public struct WideRoot<Trailing: View>: View {
         ))
         .background(LineRefresh(model: model, line: line))
         .onAppear {
-            if let zoom = Zoom(rawValue: savedZoom), zoom != navigator.screen.zoom {
+            let zoom = Zoom(saved: savedZoom)
+            if zoom != navigator.screen.zoom {
                 navigator.replace(zoom.screen(today: model.today))
             }
         }
@@ -95,10 +95,9 @@ public struct WideRoot<Trailing: View>: View {
         }
     }
 
-    /// Shows an entry on its week, or its day when a day is shown, selected.
+    /// Shows an entry on its week, selected.
     private func show(_ entry: ResolvedEntry) {
-        let day = entry.entry.day
-        navigator.go(navigator.screen.zoom == .day ? .day(day) : .week(day))
+        navigator.go(.week(entry.entry.day))
         navigator.entryToSelect = entry.id
         line.clear()
         finish()
@@ -173,10 +172,8 @@ private struct ScreenView: View {
 
     var body: some View {
         switch navigator.screen {
-        case let .day(day):
-            WeekScreen(model: model, navigator: navigator, anchor: day, span: .day)
         case let .week(day):
-            WeekScreen(model: model, navigator: navigator, anchor: day, span: .week)
+            WeekScreen(model: model, navigator: navigator, anchor: day)
         case let .month(day):
             MonthScreen(model: model, navigator: navigator, anchor: day)
         case let .year(year):
