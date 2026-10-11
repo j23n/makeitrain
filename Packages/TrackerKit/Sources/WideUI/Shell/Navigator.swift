@@ -5,12 +5,11 @@ import TrackerKit
 
 /// How much time a screen shows, or the projects, as the top bar picks.
 enum Zoom: String, CaseIterable {
-    case day, week, month, year, projects
+    case week, month, year, projects
 
     /// The screen of this zoom around a day.
     func screen(today day: LocalDate) -> Screen {
         switch self {
-        case .day: .day(day)
         case .week: .week(day)
         case .month: .month(day)
         case .year: .year(day.year)
@@ -20,7 +19,6 @@ enum Zoom: String, CaseIterable {
 
     var title: String {
         switch self {
-        case .day: "Day"
         case .week: "Week"
         case .month: "Month"
         case .year: "Year"
@@ -28,8 +26,8 @@ enum Zoom: String, CaseIterable {
         }
     }
 
-    /// The key that shows this zoom with ⌘, in the bar's order: 1 for Day
-    /// through 5 for Projects.
+    /// The key that shows this zoom with ⌘, in the bar's order: 1 for Week
+    /// through 4 for Projects.
     var shortcutKey: Character {
         Character(String((Zoom.allCases.firstIndex(of: self) ?? 0) + 1))
     }
@@ -39,11 +37,16 @@ enum Zoom: String, CaseIterable {
         guard let zoom = Zoom.allCases.first(where: { $0.shortcutKey == key }) else { return nil }
         self = zoom
     }
+
+    /// The zoom a window saved, or the week for one the bar no longer has,
+    /// such as the day.
+    init(saved rawValue: String) {
+        self = Zoom(rawValue: rawValue) ?? .week
+    }
 }
 
 /// What the main window shows.
 enum Screen: Hashable {
-    case day(LocalDate)
     case week(LocalDate)
     case month(LocalDate)
     case year(Int)
@@ -52,7 +55,6 @@ enum Screen: Hashable {
 
     var zoom: Zoom {
         switch self {
-        case .day: .day
         case .week: .week
         case .month: .month
         case .year: .year
@@ -66,7 +68,7 @@ enum Screen: Hashable {
     /// in from them goes to today.
     func day(today: LocalDate) -> LocalDate {
         switch self {
-        case let .day(day), let .week(day), let .month(day):
+        case let .week(day), let .month(day):
             return day
         case let .year(year):
             var day = today

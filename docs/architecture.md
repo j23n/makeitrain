@@ -46,12 +46,12 @@ Screens and intents talk only to the app model; only the file store touches disk
 The Mac app:
 
 - **Menu bar:** the stopwatch icon with the running timer's time, and its project if chosen, marked when something needs correcting. Its popover is the command line, with the running timer over it and what the line would do under it. A shortcut chosen in Settings opens the same command line in a panel over any app.
-- **Main window:** a bar with Back and Forward, the zoom, and the command line with the running timer, which shows what it would do under it as the popover does, over the **day** or **week**, with what needs correcting drawn in place and listed beside it, the **month** or **year** as a report with its statement, and the **projects**, each with a page. File › Import CSV… and Import Calendar Events… add entries, and Export CSV… saves them all. The View menu has the zooms, ⌘1 to ⌘5, and Back and Forward.
+- **Main window:** a bar with Back and Forward, the zoom, and the command line with the running timer, which shows what it would do under it as the popover does, over the **week**, with what needs correcting drawn in place and listed beside it, the **month** or **year** as a report with its statement, and the **projects**, each with a page. File › Import CSV… and Import Calendar Events… add entries, and Export CSV… saves them all. The View menu has the zooms, ⌘1 to ⌘4, and Back and Forward.
 - **Settings:** General, for the appearance, the shortcut, the command line and the menu bar, and Data, for where the data is, its files, backups, calendars, and importing and exporting.
 
 The iOS app is one app for iPhone and iPad:
 
-- **iPhone:** four tabs, **Today**, **Week** with its corrections one at a time in a panel at the bottom, **Month** as a report, and **Projects**, each with a page and its settings, and the app's Settings behind the gear. The command line floats over the tab bar and opens over the screen.
+- **iPhone:** three tabs, **Week**, which opens on today, with its days in a strip over the day picked and its corrections one at a time in a panel at the bottom, **Month** as a report, and **Projects**, each with a page and its settings, and the app's Settings behind the gear. The command line floats over the tab bar and opens over the screen.
 - **iPad:** a window at least 960 points wide shows the Mac's main window, from `WideUI`, with Settings at the end of the bar; a narrower one, as in Split View or Slide Over, shows the iPhone's tabs. The layout follows the window, so each window of the app picks its own.
 - **Outside the app:** the Live Activity, the controls, and the intents Siri and Shortcuts offer.
 

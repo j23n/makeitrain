@@ -26,9 +26,9 @@ public struct CorrectionPreview: Identifiable, Hashable {
     public var id: String { correction.id }
 }
 
-/// The days a week, day or month screen shows, with what needs correcting
-/// on them and what accepting the suggestions would make of them. It's
-/// worked out once when the data or the days change, not on every redraw.
+/// The days a week screen shows, with what needs correcting on them and
+/// what accepting the suggestions would make of them. It's worked out once
+/// when the data or the days change, not on every redraw.
 @MainActor
 @Observable
 public final class WeekModel {
@@ -63,6 +63,16 @@ public final class WeekModel {
         guard days != self.days else { return }
         self.days = days
         reload()
+    }
+
+    /// Follows the date as it changes from `previous` to `today`, for a
+    /// screen with `day` picked: when that was the day that was today, it
+    /// shows today's week and returns today. Another day picked stays, on
+    /// its week.
+    public func follow(_ day: LocalDate, from previous: LocalDate, to today: LocalDate, firstWeekday: Int) -> LocalDate {
+        guard day == previous else { return day }
+        show(ReportPeriod.week.range(containing: today, firstWeekday: firstWeekday))
+        return today
     }
 
     /// Works everything out again if the data or the skipped corrections

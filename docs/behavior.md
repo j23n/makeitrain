@@ -40,16 +40,16 @@ What a line can say:
 
 ## The main window
 
-The main window, and an iPad window wide enough, has a bar with Back and Forward, the zoom (Day, Week, Month, Year or Projects) and the command line, over the screen it shows.
+The main window, and an iPad window wide enough, has a bar with Back and Forward, the zoom (Week, Month, Year or Projects) and the command line, over the screen it shows. A window opens on the zoom it last showed.
 
-- ⌘1 to ⌘5 show the day, the week, the month, the year or the projects, around the day shown, and ⌘[ and ⌘] go back and forward. They're in the View menu on the Mac, and with a keyboard on iPad.
-- Zooming keeps the day shown. From a year, the month, week and day are today's when the year is this one, and otherwise today's date in that year; from the projects, they're today's.
+- ⌘1 to ⌘4 show the week, the month, the year or the projects, around the day shown, and ⌘[ and ⌘] go back and forward. They're in the View menu on the Mac, and with a keyboard on iPad.
+- Zooming keeps the day shown. From a year, the month and week are today's when the year is this one, and otherwise today's date in that year; from the projects, they're today's.
 - Each screen shows its keys under it, or for a project, at the top. Keys a screen doesn't use do nothing, without the alert sound; a key it uses but can't act on now, such as Return on a week with nothing to accept, or any of them while the data is read-only, still sounds.
 
 | Screen | Keys |
 | --- | --- |
-| Day and week | ← and → step a day or a week, T comes back to today, J and K move between corrections, Return accepts the selected one's first fix or puts the keyboard in the selected entry's line, Tab skips a correction, and Escape closes the entry |
-| Month | The arrows move between days, with Shift to stretch the range, Return opens the day, W its week, and T comes back to today |
+| Week | ← and → step a week, T comes back to today, J and K move between corrections, Return accepts the selected one's first fix or puts the keyboard in the selected entry's line, Tab skips a correction, and Escape closes the entry |
+| Month | The arrows move between days, with Shift to stretch the range, Return and W open the day's week, and T comes back to today |
 | Year | The arrows move between months, into the year before or after past either end, Shift and ← or → step a year, Return opens the month, and T comes back to this year |
 | Projects | ↑ and ↓ move, Return opens a project's page, and R, C, A, M and N rename, color, archive, merge or add |
 | A project's page | S starts its timer, or switches to it, and R, C, A and M rename, color, archive or merge it |
@@ -75,7 +75,7 @@ What needs correcting is found when the days are shown and never stored:
 - **Entries without a project.**
 - **Calendar events not logged:** events of a project's calendar that no entry covers. An event counts as logged when at least half of it is logged to its project.
 
-On the Mac's and the iPad's week, each correction is numbered and listed in the sidebar while there are any, and drawn in place: the times a fix would change struck through with the new ones beside them, entries a fix would add as dashed outlines, time counted twice hatched, and the end a long timer likely had as a line. On iPhone, the week's corrections are a panel at the bottom, one at a time, and Today says how many there are.
+On the Mac's and the iPad's week, each correction is numbered and listed in the sidebar while there are any, and drawn in place: the times a fix would change struck through with the new ones beside them, entries a fix would add as dashed outlines, time counted twice hatched, and the end a long timer likely had as a line. On iPhone, the week's corrections are a panel at the bottom, one at a time, and the Week tab's badge says how many this week has.
 
 - Each correction offers its fixes, the likeliest first, and nothing changes until one is chosen. Return accepts the selected one's first fix, J and K move between them, and Tab skips one. A skipped correction isn't offered again on that device.
 - **Overlaps:** trim the earlier entry to end where the later starts, trim the later to start where the earlier ends, or, when one contains the other, split the outer one around the inner. Entries that start together offer to trim the longer. Where the earlier one ends inside the later, dragging the seam between them moves the end of one and the start of the other together.
@@ -92,7 +92,8 @@ On the Mac's and the iPad's week, each correction is numbered and listed in the 
 
 ## Editing entries
 
-- The week, or a day, shows entries as blocks on an hour grid, from 7:00 to 19:00, widened to any entry and to the time now. A day with nothing on a weekend is left out of the week.
+- The week shows entries as blocks on an hour grid, from 7:00 to 19:00, widened to any entry and to the time now. A day with nothing on a weekend is left out of the week.
+- On iPhone, the week shows one day on the grid, picked in a strip of the week's days with each one's time. It opens on today, and when the date changes with today picked, it moves to the new day, and to its week; another day picked stays.
 - A block is as tall as its entry is long, so it ends where the entry does and the entry after it starts right below; an entry of a minute or two is a hairline. A short block can still be clicked, or tapped on iPhone, a little above and below it, over the edges of the blocks next to it, and dragged by its middle or its edges.
 - Blocks show their times, tags and title in the project's color, the title being the note, or the project without one. Tags come before the title, since they say more about the entry. With room for one line, a block shows its start, its tags, and as much of the title as fits after them; a block too short for a line is a bar, and on the Mac its times, tags and title show when the pointer rests on it.
 - On the Mac and a wide iPad window, drag a block to move it, to another day too, or its top or bottom edge to change its start or end. Clicking an entry shows it in the sidebar, in place of the corrections, as the iPhone's entry sheet does: its line, such as `2 oct 13:30-16:30 web #12 Fix login`, to change by typing, what the line reads as (its day, times and length, project, tags and note, or why it isn't an entry), and Stop or Continue it now, Duplicate, Split in the middle and Delete. Return puts the keyboard in the line and applies it; Escape puts it back, and closes the entry when it's unchanged. While the line is edited, the same suggestions show under it. A line without times, such as `web Fix login`, keeps the entry's.
@@ -103,7 +104,7 @@ On the Mac's and the iPad's week, each correction is numbered and listed in the 
 
 ## Month, year and reports
 
-- The month shows its days with each one's time as a bar by project and a mark where entries overlap, the year's weeks above them, and the statement beside them. Clicking a day shows it alone; Shift-clicking, or Shift and the arrows, stretches the range; Return opens the day and W its week. On iPhone, tap a day to show it alone, and hold and drag across days for a range. The year shows its weeks and a small month for each month.
+- The month shows its days with each one's time as a bar by project and a mark where entries overlap, the year's weeks above them, and the statement beside them. Clicking a day shows it alone; Shift-clicking, or Shift and the arrows, stretches the range; Return or W opens the day's week, as double-clicking a day does. On iPhone, tap a day to show it alone, and hold and drag across days for a range. The year shows its weeks and a small month for each month.
 - What a report covers reads as a sentence of choices, "Acme in September 2026 by tag", and can be typed: ⌘L on the Mac, and the command line on iPhone's Month. A typed report takes clients, projects and tags by name; a period such as `today`, `yesterday`, `this week`, `last month`, `sep`, `sep 2026`, `sep-oct`, `1-15 sep`, `q3`, `2026`, `ytd` or `2026-09-01 to 2026-09-15`; and `by client`, `by project` or `by tag`. A month without a year is the last one up to today. Words it doesn't know are marked and left out.
 - The statement has the figures: the total, the average day worked, which leaves out days without time, how many days had time out of the weekdays, and the change from the period before, with the same filters. While a period is under way, its days so far are compared with as many days at the start of the period before. Then the time by client, project or tag, with each line's share; tags that refer to issues link to them.
 - Before sending, the statement shows time counted twice and on which days, with a link to fix them in the week, whether a timer is running, which isn't included until it stops, and whether all data is downloaded.

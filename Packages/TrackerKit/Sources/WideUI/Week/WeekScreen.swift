@@ -2,44 +2,34 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 
-/// One day or a week of entries.
-enum WeekSpan {
-    case day, week
-}
-
 /// What the week's sidebar shows.
 private enum WeekSide: Equatable {
     case entry(UUID)
     case corrections
 }
 
-/// A week, or a day, on an hour grid, with what needs correcting shown in
-/// place, and beside it the selected entry or, when there's no selection,
-/// what needs correcting.
+/// A week on an hour grid, with what needs correcting shown in place, and
+/// beside it the selected entry or, when there's no selection, what needs
+/// correcting.
 struct WeekScreen: View {
     let model: AppModel
     let navigator: Navigator
     let anchor: LocalDate
-    let span: WeekSpan
     /// The days' entries and corrections, worked out as the screen appears
     /// rather than in an initializer, which runs again whenever the view
     /// around it redraws. The rest of the screen waits for them, so the
     /// grid's first scroll and an entry "find" asked to select see them.
     @State private var week: WeekModel?
 
-    static func range(_ anchor: LocalDate, _ span: WeekSpan, _ firstWeekday: Int) -> ClosedRange<LocalDate> {
-        span == .day ? anchor...anchor : ReportPeriod.week.range(containing: anchor, firstWeekday: firstWeekday)
-    }
-
     var body: some View {
         if let week {
-            WeekContent(model: model, navigator: navigator, anchor: anchor, span: span, week: week)
+            WeekContent(model: model, navigator: navigator, anchor: anchor, week: week)
         } else {
             // onAppear runs before the first frame is drawn, so this is
             // never seen.
             Color.clear
                 .onAppear {
-                    week = WeekModel(model: model, days: Self.range(anchor, span, model.firstWeekday))
+                    week = WeekModel(model: model, days: ReportPeriod.week.range(containing: anchor, firstWeekday: model.firstWeekday))
                 }
         }
     }
@@ -50,7 +40,6 @@ private struct WeekContent: View {
     let model: AppModel
     let navigator: Navigator
     let anchor: LocalDate
-    let span: WeekSpan
     let week: WeekModel
     @FocusState private var focused: Bool
     /// Changes when Return should put the keyboard in the selected entry's
@@ -59,14 +48,13 @@ private struct WeekContent: View {
     @Environment(\.undoManager) private var undoManager
 
     private var range: ClosedRange<LocalDate> {
-        WeekScreen.range(anchor, span, model.firstWeekday)
+        ReportPeriod.week.range(containing: anchor, firstWeekday: model.firstWeekday)
     }
 
     /// The days shown: the week's, leaving out a weekend day with nothing
     /// on it.
     private var shownDays: [LocalDate] {
         let days = range.days
-        guard span == .week else { return days }
         let corrected = Set(week.corrections.map(\.day))
         return days.filter { day in
             let weekend = day.weekday == 1 || day.weekday == 7
@@ -187,8 +175,8 @@ private struct WeekContent: View {
                 .font(.system(size: 19, weight: .semibold))
                 .lineLimit(1)
             HStack(spacing: 2) {
-                stepButton("chevron.left", span == .day ? "Previous day" : "Previous week", -1)
-                stepButton("chevron.right", span == .day ? "Next day" : "Next week", 1)
+                stepButton("chevron.left", "Previous week", -1)
+                stepButton("chevron.right", "Next week", 1)
             }
             if !range.contains(model.today) {
                 Button("Today", action: showToday)
@@ -217,12 +205,11 @@ private struct WeekContent: View {
     }
 
     private func step(_ direction: Int) {
-        let day = anchor.adding(days: (span == .day ? 1 : 7) * direction)
-        navigator.replace(span == .day ? .day(day) : .week(day))
+        navigator.replace(.week(anchor.adding(days: 7 * direction)))
     }
 
     private func showToday() {
-        navigator.replace(span == .day ? .day(model.today) : .week(model.today))
+        navigator.replace(.week(model.today))
     }
 
     /// The days' keys, as the month shows its keys: the arrows step, and
@@ -231,7 +218,7 @@ private struct WeekContent: View {
     /// place, J and K go back to them.
     private var keyHints: some View {
         HStack(spacing: 18) {
-            KeyHint("← →", span == .day ? "day" : "week")
+            KeyHint("← →", "week")
             KeyHint("T", "today")
             if case .entry? = side, !week.previews.isEmpty {
                 KeyHint("J K", "corrections")
@@ -256,7 +243,7 @@ private struct WeekContent: View {
             default: false
             }
         }
-        let hidesWeekend = span == .week && days.count < 7
+        let hidesWeekend = days.count < 7
         return HStack(spacing: 12) {
             ForEach(Array(shown), id: \.self) { projectID in
                 HStack(spacing: 5) {
