@@ -34,6 +34,8 @@ struct MonthScreen: View {
         ReportPage(model: model, state: state, navigator: navigator) {
             ScreenHeader(
                 Format.days(state.range),
+                year: state.range.upperBound.year,
+                firstWeekday: model.firstWeekday,
                 previous: "Previous",
                 next: "Next",
                 showsToday: !state.range.contains(model.today),
@@ -265,6 +267,8 @@ struct YearScreen: View {
         ReportPage(model: model, state: state, navigator: navigator) {
             ScreenHeader(
                 state.range == Self.range(shownYear) ? String(shownYear) : Format.days(state.range),
+                year: shownYear,
+                firstWeekday: model.firstWeekday,
                 previous: "Previous year",
                 next: "Next year",
                 showsToday: !state.range.contains(model.today),
