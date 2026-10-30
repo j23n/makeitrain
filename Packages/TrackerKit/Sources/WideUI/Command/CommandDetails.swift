@@ -279,10 +279,12 @@ public struct CommandDetails: View {
         HStack(spacing: 16) {
             if line.text.isEmpty {
                 KeyHint("↑", "earlier lines")
-            } else if line.recalledEntry != nil {
+            } else if let entry = line.recalledEntry {
                 KeyHint("⏎", "start again")
                 KeyHint("↑↓", "choose")
-                KeyHint("⇥", "copy to the line")
+                if model.startLine(for: entry.entry) != nil {
+                    KeyHint("⇥", "copy to the line")
+                }
             } else if !line.recalled.isEmpty {
                 KeyHint("↑↓", "choose")
             } else if let completion = line.reading.completion {
