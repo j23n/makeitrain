@@ -90,8 +90,11 @@ extension CommandContext {
             return !ledger.isArchived(project: projectID)
         }
         if let latest, let projectID = latest.entry.projectID, let project = ledger.projects[projectID] {
-            let words = ProjectSearch.words(ProjectSearch.fold(project.name))
-            let name = words.first { !CommandReader.notProjects.contains($0) } ?? project.name.lowercased()
+            // The first word of the name that finds the project on its own,
+            // or else the whole name.
+            let name = ProjectSearch.words(ProjectSearch.fold(project.name)).first { word in
+                CommandReading("\(word) -15m", in: self).draft?.projectID == projectID
+            } ?? project.name
             lines.append((startLine(for: latest.entry) ?? name, running == nil ? "start again" : "switch"))
             if running != nil {
                 lines.append(("stop -10m", "stop, 10 minutes ago"))

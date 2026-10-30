@@ -81,6 +81,34 @@ import TrackerCore
         #expect(model.running?.entry.note == "")
     }
 
+    @Test func theHighlightStaysWhenTheDataChanges() async throws {
+        let (harness, model) = await Harness.started()
+        defer { harness.cleanUp() }
+        let website = model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
+        model.addEntry(harness.finished(website, note: "Review", hoursAgo: 3), undoManager: nil)
+        model.addEntry(harness.finished(website, note: "Launch", hoursAgo: 2), undoManager: nil)
+        let line = CommandLineModel(model: model)
+
+        line.text = "web"
+        #expect(line.down())
+        #expect(line.recalledEntry?.entry.note == "Review")
+        // As after a sync: a new entry comes first, and Review stays.
+        model.addEntry(harness.finished(website, note: "Copy", hoursAgo: 1), undoManager: nil)
+        line.refresh()
+        #expect(line.recalled.map(\.entry.note) == ["Copy", "Launch", "Review"])
+        #expect(line.recalledEntry?.entry.note == "Review")
+
+        // The line as typed stays chosen too.
+        #expect(line.down())
+        #expect(line.recallIndex == nil)
+        line.refresh()
+        #expect(line.recallIndex == nil)
+
+        // A changed line starts at the first again.
+        line.text = "webs"
+        #expect(line.recallIndex == 0)
+    }
+
     @Test func tabUpAndDownGoThroughTheEarlierEntriesFirst() async throws {
         let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }

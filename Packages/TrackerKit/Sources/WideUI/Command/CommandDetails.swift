@@ -65,13 +65,7 @@ public struct CommandDetails: View {
                 asTyped
             } else {
                 if line.hasPreview {
-                    CommandPreviewView(line: line, showsKey: !touch)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            if touch {
-                                submit(false)
-                            }
-                        }
+                    preview
                 }
                 if !listed.isEmpty {
                     if line.hasPreview {
@@ -202,11 +196,7 @@ public struct CommandDetails: View {
     @ViewBuilder
     private var asTyped: some View {
         if line.recallIndex == nil {
-            CommandPreviewView(line: line, showsKey: !touch)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    submit(false)
-                }
+            preview
         } else {
             Button {
                 line.recallIndex = nil
@@ -228,6 +218,23 @@ public struct CommandDetails: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+        }
+    }
+
+    /// What Return would do. On touch, where there's no Return key to
+    /// point to, it's a button that does it.
+    @ViewBuilder
+    private var preview: some View {
+        if touch {
+            Button {
+                submit(false)
+            } label: {
+                CommandPreviewView(line: line, showsKey: false)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } else {
+            CommandPreviewView(line: line, showsKey: true)
         }
     }
 

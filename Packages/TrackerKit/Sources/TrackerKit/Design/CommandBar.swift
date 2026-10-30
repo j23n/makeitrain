@@ -44,6 +44,8 @@ public final class CommandLineModel {
     /// A line Up or Down brought back. It lists no earlier entries until
     /// it's changed, so the keys keep going through the earlier lines.
     @ObservationIgnored private var recalledLine: String?
+    /// The text the earlier entries were listed for.
+    @ObservationIgnored private var recalledText: String?
 
     public init(model: AppModel) {
         self.model = model
@@ -66,8 +68,17 @@ public final class CommandLineModel {
         if !text.isEmpty {
             showsToday = false
         }
+        // When only the data changed, as after a sync, the highlight stays
+        // on the same entry, or on the line as typed.
+        let sameText = text == recalledText && !recalled.isEmpty
+        let highlighted = recalledEntry?.id
         recalled = text != recalledLine && reading.recallsEntries ? model.recall(text) : []
-        recallIndex = recalled.isEmpty ? nil : 0
+        recalledText = text
+        if recalled.isEmpty || (sameText && highlighted == nil) {
+            recallIndex = nil
+        } else {
+            recallIndex = sameText ? (recalled.firstIndex { $0.id == highlighted } ?? 0) : 0
+        }
     }
 
     /// The earlier entry Return starts again, if one is highlighted.

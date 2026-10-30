@@ -92,6 +92,9 @@ import Testing
         ])
         for example in idle.examples {
             #expect(example.reading.primary != nil, "\(example.line)")
+            if let draft = example.reading.draft {
+                #expect(draft.projectID == F.inHouse, "\(example.line)")
+            }
         }
 
         let running = F.context(F.ledger(F.switchedToHarbor), now: "12:20")
@@ -99,6 +102,24 @@ import Testing
         #expect(running.examples.map(\.line).contains("find export"))
         for example in running.examples {
             #expect(example.reading.primary != nil, "\(example.line)")
+        }
+    }
+
+    @Test func examplesNameTheProjectByAWordThatFindsIt() {
+        let stamp = t("2026-06-01T09:00:00+02:00")
+        let xray = uuid(30)
+        let ledger = Ledger(
+            clients: [],
+            projects: [Project(id: xray, name: "X-Ray", color: "#4F7CAC", updated: stamp)],
+            entries: [F.entry(130, xray, "2026-10-05", "08:00", "09:00", note: "Scan")]
+        )
+        // "x" alone is too short to find a project.
+        let examples = F.context(ledger).examples
+        #expect(examples.contains { $0.line == "ray -15m" })
+        for example in examples {
+            if let draft = example.reading.draft {
+                #expect(draft.projectID == xray, "\(example.line)")
+            }
         }
     }
 
