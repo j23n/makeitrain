@@ -72,9 +72,11 @@ struct PhoneCommandBar: View {
     }
 }
 
-/// The command line, open over the screen: the field, what Return would
-/// do, a button for it, and words to add to the line. On the Month tab it
-/// can read a report instead, such as "acme sep by tag".
+/// The command line, open over the screen at its bottom, with the field
+/// right above the keyboard and over it what the line lists: lines to try
+/// and today's entries, the earlier entries it could start again, what it
+/// does as typed, or what "find" found. On the Month tab it can read a
+/// report instead, such as "acme sep by tag".
 struct PhoneCommandSheet: View {
     let model: AppModel
     let router: PhoneRouter
@@ -128,7 +130,17 @@ struct PhoneCommandSheet: View {
             .foregroundStyle(Theme.text2)
             .padding(.horizontal, 16)
             .padding(.top, 12)
+            .padding(.bottom, 4)
         }
+        // As tall as what's listed, scrolling when the keyboard leaves too
+        // little room for it.
+        ViewThatFits(in: .vertical) {
+            details
+            ScrollView {
+                details
+            }
+        }
+        Divider().overlay(Theme.line)
         field(text: $line.text, CommandField(
             line: line,
             placeholder: CommandText.placeholder,
@@ -138,14 +150,17 @@ struct PhoneCommandSheet: View {
             onSubmit: { alternate in submit(alternate: alternate) },
             onCancel: close
         ))
-        if case .find? = line.reading.primary {
-            foundEntries
-        } else {
-            CommandPreviewView(line: line, showsKey: false)
-                .font(.system(size: 15))
-        }
-        actions
-        additions
+    }
+
+    private var details: some View {
+        CommandDetails(
+            line: line,
+            continuesField: false,
+            size: .touch,
+            select: show,
+            submit: { submit(alternate: $0) },
+            refocus: { router.focusRequest += 1 }
+        )
     }
 
     private func runningTitle(_ running: ResolvedEntry) -> String {
@@ -195,119 +210,17 @@ struct PhoneCommandSheet: View {
         .padding(.trailing, 6)
     }
 
-    /// The button for what Return does, and for what the line could also
-    /// mean, such as logging it as done.
-    @ViewBuilder
-    private var actions: some View {
-        if let command = line.reading.primary, line.preview != nil {
-            VStack(alignment: .leading, spacing: 8) {
-                Button {
-                    submit(alternate: false)
-                } label: {
-                    Text(CommandText.verb(command, running: model.running))
-                        .font(.system(size: 16, weight: .semibold))
-                        .frame(maxWidth: .infinity, minHeight: 50)
-                        .foregroundStyle(Theme.inverseText)
-                        .background(RoundedRectangle(cornerRadius: 14).fill(Theme.inverse))
-                }
-                .buttonStyle(.plain)
-                .disabled(model.isReadOnly)
-                if let alternate = line.reading.alternate {
-                    Button {
-                        submit(alternate: true)
-                    } label: {
-                        Text(CommandText.title(alternate, running: model.running, now: model.environment.now(), zone: model.environment.timeZone()))
-                            .font(.system(size: 14, weight: .medium))
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                            .foregroundStyle(Theme.text)
-                            .background(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.strongLine))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(model.isReadOnly)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-        }
-    }
-
     private func submit(alternate: Bool) {
         if line.submit(alternate: alternate, undoManager: undoManager) {
             close()
         }
     }
 
-    /// What "find" turned up, the latest first. Tapping one shows its day.
-    private var foundEntries: some View {
-        VStack(spacing: 0) {
-            ForEach(line.found.prefix(8)) { entry in
-                Button {
-                    router.showWeek(entry.entry.day, firstWeekday: model.firstWeekday)
-                    router.week.selectedEntry = entry.id
-                    close()
-                } label: {
-                    HStack(spacing: 10) {
-                        TintDot(model.ledger.tint(ofProject: entry.entry.projectID), size: 8)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(model.ledger.title(of: entry.entry))
-                                .lineLimit(1)
-                            Text("\(Format.day(entry.entry.day)) · \(Format.time(entry.start, zone: entry.entry.timeZone))")
-                                .font(.system(size: 12))
-                                .foregroundStyle(Theme.text3)
-                        }
-                        Spacer(minLength: 8)
-                        Text(Format.duration(model.duration(of: entry)))
-                            .monospacedDigit()
-                            .foregroundStyle(Theme.text2)
-                    }
-                    .font(.system(size: 14))
-                    .padding(.horizontal, 16)
-                    .frame(minHeight: 48)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .overlay(alignment: .top) { Rectangle().fill(Theme.line).frame(height: 1) }
-            }
-            if line.found.isEmpty, !line.text.isEmpty {
-                Text("Nothing found.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Theme.text3)
-                    .padding(16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-    }
-
-    /// Words to add to the line: what could replace the word being typed,
-    /// a start, a time ago, a tag, and the completion of a project's name.
-    /// With nothing typed, the lines run lately.
-    private var additions: some View {
-        let chips = line.chips
-        return Group {
-            if !chips.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(line.text.isEmpty ? "Run again" : "Add to the line")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.text3)
-                    FlowLayout(spacing: 8) {
-                        ForEach(chips) { chip in
-                            Button {
-                                line.apply(chip)
-                                router.focusRequest += 1
-                            } label: {
-                                ChipLabel(chip, size: .touch)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 10)
-                .padding(.bottom, 14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .overlay(alignment: .top) { Rectangle().fill(Theme.line).frame(height: 1) }
-            }
-        }
+    /// Shows an entry the line listed on its day of the week.
+    private func show(_ entry: ResolvedEntry) {
+        router.showWeek(entry.entry.day, firstWeekday: model.firstWeekday)
+        router.week.selectedEntry = entry.id
+        close()
     }
 
     // MARK: Report

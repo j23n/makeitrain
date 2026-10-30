@@ -56,9 +56,11 @@ struct ProjectsScreen: View {
                 KeyHint("N", "new project")
             }
         }
-        .padding(.horizontal, 28)
-        .padding(.top, 22)
-        .padding(.bottom, 24)
+        // As the week's, month's and year's, so the header stays put
+        // moving between them.
+        .padding(.horizontal, 24)
+        .padding(.top, 18)
+        .padding(.bottom, 20)
         .focusable()
         .focusEffectDisabled()
         .focused($focused)
@@ -92,7 +94,7 @@ struct ProjectsScreen: View {
         let clients = tree.clients.count
         let projects = tree.clients.reduce(0) { $0 + $1.projects.count } + tree.unfiled.count
         let archived = tree.archivedClients.count + tree.archivedProjects.count
-        return HStack(spacing: 16) {
+        return HStack(alignment: .center, spacing: 12) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text("Clients and projects")
                     .font(.system(size: 19, weight: .semibold))
@@ -108,9 +110,9 @@ struct ProjectsScreen: View {
             }
             .font(.system(size: 12.5))
             .padding(.horizontal, 10)
-            .frame(width: 200, height: 30)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Theme.field))
-            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Theme.strongLine))
+            .frame(width: 200, height: 28)
+            .background(RoundedRectangle(cornerRadius: 7).fill(Theme.field))
+            .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Theme.strongLine))
             Toggle("Show archived", isOn: $showsArchived)
                 .checkbox()
                 .font(.system(size: 12.5))

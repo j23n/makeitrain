@@ -48,6 +48,24 @@ import TrackerCore
         #expect(state.comparison.previousRange == day(7, 1)...day(7, 31))
     }
 
+    @Test func titlesSomeClientsAndProjectsByName() {
+        let now = Timestamp(milliseconds: 0)
+        let acme = Client(name: "Acme", updated: now)
+        let globex = Client(name: "Globex", updated: now)
+        let website = Project(clientID: acme.id, name: "Website", color: Palette.colors[0], updated: now)
+        var ledger = Ledger()
+        ledger.addClient(acme, now: now)
+        ledger.addClient(globex, now: now)
+        ledger.addProject(website, now: now)
+
+        #expect(ReportState.title(clients: [], projects: [], in: ledger) == nil)
+        #expect(ReportState.title(clients: [acme.id], projects: [], in: ledger) == "Acme")
+        #expect(ReportState.title(clients: [], projects: [website.id], in: ledger) == "Website")
+        #expect(ReportState.title(clients: [acme.id, globex.id], projects: [], in: ledger) == ["Acme", "Globex"].formatted(.list(type: .and)))
+        // Clients and projects no longer in the ledger, as after a sync.
+        #expect(ReportState.title(clients: [UUID()], projects: [UUID()], in: ledger) == nil)
+    }
+
     @Test func comparesWithTheDaysBeforeUpToToday() async throws {
         let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }

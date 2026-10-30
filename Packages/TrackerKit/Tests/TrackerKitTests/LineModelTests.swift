@@ -3,75 +3,160 @@ import Testing
 import TrackerCore
 @testable import TrackerKit
 
-/// The command line's and an entry's line as the fields use them: taking
-/// suggestions, going through earlier lines, and applying a line.
+/// The command line's and an entry's line as the fields use them: listing
+/// earlier entries and taking suggestions, going through earlier lines, and
+/// applying a line.
 @Suite @MainActor struct LineModelTests {
-    @Test func takesASuggestionInTheMiddleOfTheLine() async throws {
+    @Test func listsEarlierEntriesThatMatchTheLine() async throws {
         let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
+        let website = model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
+        model.addEntry(harness.finished(website, note: "Review", hoursAgo: 3), undoManager: nil)
+        model.addEntry(harness.finished(website, tags: ["#12"], note: "Fix login", hoursAgo: 2), undoManager: nil)
+        model.addEntry(harness.finished(nil, note: "Website copy", hoursAgo: 1), undoManager: nil)
         let line = CommandLineModel(model: model)
 
-        line.text = "web review"
-        line.cursor = 3
-        #expect(line.suggestions.items.map(\.title) == ["Website"])
-        #expect(line.acceptSuggestion())
-        #expect(line.text == "Website review")
-        #expect(line.cursor == 8)
-        #expect(line.suggestions.requestedCursor == 8)
-        #expect(line.suggestions.isEmpty)
-    }
-
-    @Test func aLineBroughtBackHasNoSuggestionsUntilItsChanged() async throws {
-        let (harness, model) = await Harness.started()
-        defer { harness.cleanUp() }
-        model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
-        model.preferences.remember("web")
-        let line = CommandLineModel(model: model)
-
-        // So Up and Down go on through the earlier lines.
-        #expect(line.previousLine())
-        #expect(line.text == "web")
-        #expect(line.suggestions.isEmpty)
-        #expect(line.up())
-        #expect(line.text == "web")
-
-        line.text = "webs"
-        #expect(line.suggestions.items.map(\.title) == ["Website"])
+        // The project, a tag or a note's words; the latest first.
         line.text = "web"
-        #expect(line.suggestions.items.map(\.title) == ["Website"])
+        #expect(line.recalled.map(\.entry.note) == ["Website copy", "Fix login", "Review"])
+        #expect(line.recallIndex == 0)
+        line.text = "login"
+        #expect(line.recalled.map(\.entry.note) == ["Fix login"])
+
+        // Not with times or a command.
+        line.text = "web 9-10"
+        #expect(line.recalled.isEmpty)
+        #expect(line.recallIndex == nil)
+        line.text = "find login"
+        #expect(line.recalled.isEmpty)
+
+        // "Website copy" has no project. Written as a line it would read as
+        // Website, so Tab leaves it out of the line, and starting it doesn't
+        // remember it, but Return starts it as it was.
+        line.text = "web"
+        #expect(line.recalledEntry?.entry.note == "Website copy")
+        _ = line.tab()
+        #expect(line.text != "Website copy ")
+        line.text = "web"
+        #expect(line.submit(alternate: false, undoManager: nil))
+        #expect(model.running?.entry.projectID == nil)
+        #expect(model.running?.entry.note == "Website copy")
+        #expect(!model.preferences.history.contains("Website copy"))
     }
 
-    @Test func tabUpAndDownGoThroughTheSuggestionsFirst() async throws {
+    @Test func returnStartsTheHighlightedEntryAgain() async throws {
         let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
-        model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
-        model.addProject(named: "Webinar", client: nil, color: Palette.colors[1], undoManager: nil)
-        model.preferences.remember("web review")
+        let website = model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
+        model.addEntry(harness.finished(website, note: "Review", hoursAgo: 3), undoManager: nil)
+        model.addEntry(harness.finished(website, tags: ["#12"], note: "Fix login", hoursAgo: 2), undoManager: nil)
         let line = CommandLineModel(model: model)
 
-        line.text = "we"
-        let titles = line.suggestions.items.map(\.title)
-        try #require(titles.count == 2)
-        #expect(line.down())
-        #expect(line.suggestions.highlighted == 1)
-        #expect(line.up())
-        #expect(line.up())
-        #expect(line.suggestions.highlighted == 1)
-        #expect(line.tab())
-        #expect(line.text == titles[1] + " ")
-        // No suggestion is left, and no earlier entry finishes the line.
-        #expect(!line.tab())
+        line.text = "web"
+        #expect(line.submit(alternate: false, undoManager: nil))
+        #expect(model.running?.entry.projectID == website)
+        #expect(model.running?.entry.tags == ["#12"])
+        #expect(model.running?.entry.note == "Fix login")
+        #expect(line.text.isEmpty)
+        // Remembered as the line that starts it, for Up.
+        #expect(model.preferences.history.last == "Website #12 Fix login")
 
-        // Without suggestions, Up and Down go through the earlier lines,
-        // and Down on an empty line lists today's entries.
+        // The running timer's own entry isn't offered again.
+        line.text = "web"
+        #expect(line.recalled.map(\.entry.note) == ["Review"])
+    }
+
+    @Test func theLineAsTypedRunsWhenNothingIsHighlighted() async throws {
+        let (harness, model) = await Harness.started()
+        defer { harness.cleanUp() }
+        let website = model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
+        model.addEntry(harness.finished(website, note: "Review", hoursAgo: 3), undoManager: nil)
+        let line = CommandLineModel(model: model)
+
+        line.text = "web"
+        #expect(line.down())
+        #expect(line.recallIndex == nil)
+        #expect(line.submit(alternate: false, undoManager: nil))
+        #expect(model.running?.entry.projectID == website)
+        #expect(model.running?.entry.note == "")
+    }
+
+    @Test func theHighlightStaysWhenTheDataChanges() async throws {
+        let (harness, model) = await Harness.started()
+        defer { harness.cleanUp() }
+        let website = model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
+        model.addEntry(harness.finished(website, note: "Review", hoursAgo: 3), undoManager: nil)
+        model.addEntry(harness.finished(website, note: "Launch", hoursAgo: 2), undoManager: nil)
+        let line = CommandLineModel(model: model)
+
+        line.text = "web"
+        #expect(line.down())
+        #expect(line.recalledEntry?.entry.note == "Review")
+        // As after a sync: a new entry comes first, and Review stays.
+        model.addEntry(harness.finished(website, note: "Copy", hoursAgo: 1), undoManager: nil)
+        line.refresh()
+        #expect(line.recalled.map(\.entry.note) == ["Copy", "Launch", "Review"])
+        #expect(line.recalledEntry?.entry.note == "Review")
+
+        // The line as typed stays chosen too.
+        #expect(line.down())
+        #expect(line.recallIndex == nil)
+        line.refresh()
+        #expect(line.recallIndex == nil)
+
+        // A changed line starts at the first again.
+        line.text = "webs"
+        #expect(line.recallIndex == 0)
+    }
+
+    @Test func tabUpAndDownGoThroughTheEarlierEntriesFirst() async throws {
+        let (harness, model) = await Harness.started()
+        defer { harness.cleanUp() }
+        let website = model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
+        model.addEntry(harness.finished(website, note: "Review", hoursAgo: 3), undoManager: nil)
+        model.addEntry(harness.finished(website, note: "Launch", hoursAgo: 2), undoManager: nil)
+        model.preferences.remember("web planning")
+        let line = CommandLineModel(model: model)
+
+        // Launch, Review, then the line as typed, and round again.
+        line.text = "web"
+        #expect(line.down())
+        #expect(line.recallIndex == 1)
+        #expect(line.down())
+        #expect(line.recallIndex == nil)
+        #expect(line.down())
+        #expect(line.recallIndex == 0)
+        #expect(line.up())
+        #expect(line.recallIndex == nil)
+        #expect(line.up())
+        #expect(line.recallIndex == 1)
+        #expect(line.tab())
+        #expect(line.text == "Website Review ")
+
+        // Without earlier entries, Up and Down go through the earlier
+        // lines, and Down on an empty line lists today's entries.
         line.text = ""
         #expect(line.up())
-        #expect(line.text == "web review")
+        #expect(line.text == "web planning")
+        // A line brought back lists no earlier entries, so the keys go on
+        // through the earlier lines.
+        #expect(line.recalled.isEmpty)
         #expect(line.down())
         #expect(line.text == "")
         #expect(line.down())
         #expect(line.showsToday)
+    }
+
+    @Test func offersLinesToTryWithTheLastProject() async throws {
+        let (harness, model) = await Harness.started()
+        defer { harness.cleanUp() }
+        #expect(model.commandExamples.map(\.line) == ["new project Website"])
+
+        let website = model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
+        model.addEntry(harness.finished(website, note: "Review", hoursAgo: 2), undoManager: nil)
+        let examples = model.commandExamples
+        #expect(examples.first?.line == "Website Review")
+        #expect(examples.contains { $0.line == "website 9-10:30" })
     }
 
     @Test func listsTodaysEntriesForAnEmptyLineWithoutDown() async throws {
@@ -91,28 +176,6 @@ import TrackerCore
         #expect(line.listedEntries(alwaysListsToday: true).isEmpty)
         line.text = ""
         #expect(line.listedEntries(alwaysListsToday: true).count == 1)
-    }
-
-    @Test func offersLinesRunLatelyThenWordsToAdd() async throws {
-        let (harness, model) = await Harness.started()
-        defer { harness.cleanUp() }
-        model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
-        model.preferences.remember("web review")
-        let line = CommandLineModel(model: model)
-
-        #expect(line.chips.map(\.title) == ["web review"])
-        line.apply(line.chips[0])
-        #expect(line.text == "web review")
-
-        line.text = "web"
-        let chips = line.chips
-        #expect(chips.map(\.title) == ["Website", "−15m", "#"])
-        #expect(chips[0].isHighlighted)
-        #expect(chips[2].isTag)
-        line.apply(chips[0])
-        #expect(line.text == "Website ")
-        line.apply(line.chips.first { $0.title == "#" }!)
-        #expect(line.text == "Website #")
     }
 
     @Test func everyCommandLineSaysTheSameWhenEmpty() {
@@ -316,5 +379,14 @@ import TrackerCore
         #expect(edited?.entry.note == "Client call")
         #expect(edited?.start == visit.start)
         #expect(edited?.end == visit.end)
+    }
+}
+
+extension Harness {
+    /// An hour's entry that ended `hoursAgo` hours before the clock's time,
+    /// minus one.
+    func finished(_ projectID: UUID?, tags: [String] = [], note: String, hoursAgo: Int64) -> TimeEntry {
+        let start = clock.now.adding(seconds: -hoursAgo * 3600)
+        return TimeEntry(projectID: projectID, start: start, end: start.adding(seconds: 3600), timeZone: "Europe/Berlin", tags: tags, note: note, updated: start)
     }
 }

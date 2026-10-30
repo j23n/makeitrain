@@ -73,7 +73,7 @@ public struct CommandField {
     }
 
     /// The field of a command line: its keys do what the line's Tab, Up
-    /// and Down do, and the insertion point follows the line's.
+    /// and Down do.
     @MainActor
     public init(
         line: CommandLineModel,
@@ -93,8 +93,6 @@ public struct CommandField {
             fontSize: fontSize,
             focusesWithWindow: focusesWithWindow,
             focusRequest: focusRequest,
-            cursorRequest: line.suggestions.cursorRequest,
-            cursor: line.suggestions.requestedCursor,
             onSubmit: onSubmit,
             onTab: { line.tab() },
             onUp: { line.up() },
