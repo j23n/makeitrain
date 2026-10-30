@@ -35,7 +35,7 @@ import TrackerCore
         }
         let lunch = entry(note: "Lunch", at: "2026-09-22T12:00:00+02:00")
         model.addEntry(lunch, undoManager: nil)
-        // Two screens show the week, as the iPhone's Today and Week can.
+        // Two screens show the week, as two of an iPad's windows can.
         let shown = WeekModel(model: model, days: days)
         let other = WeekModel(model: model, days: days)
         #expect(other.corrections.map(\.id) == ["project \(lunch.id)"])
@@ -45,5 +45,61 @@ import TrackerCore
         #expect(model.preferences.skippedCorrections.count == Preferences.skippedLimit)
         other.refresh()
         #expect(other.corrections.isEmpty)
+    }
+
+    @Test func todayPickedFollowsTheDate() async throws {
+        let (harness, model) = await Harness.started()
+        defer { harness.cleanUp() }
+        let wednesday = LocalDate(year: 2026, month: 9, day: 23)
+        let thursday = LocalDate(year: 2026, month: 9, day: 24)
+        let sunday = LocalDate(year: 2026, month: 9, day: 27)
+        let nextMonday = LocalDate(year: 2026, month: 9, day: 28)
+        let week = WeekModel(model: model, days: days)
+
+        // Within the week, only the day moves.
+        #expect(week.follow(wednesday, from: wednesday, to: thursday, firstWeekday: 2) == thursday)
+        #expect(week.days == days)
+        // Into the next week, the week moves too.
+        #expect(week.follow(sunday, from: sunday, to: nextMonday, firstWeekday: 2) == nextMonday)
+        #expect(week.days == nextMonday...LocalDate(year: 2026, month: 10, day: 4))
+    }
+
+    @Test func anotherDayPickedStaysWhenTheDateChanges() async throws {
+        let (harness, model) = await Harness.started()
+        defer { harness.cleanUp() }
+        let wednesday = LocalDate(year: 2026, month: 9, day: 23)
+        let sunday = LocalDate(year: 2026, month: 9, day: 27)
+        let nextMonday = LocalDate(year: 2026, month: 9, day: 28)
+        let week = WeekModel(model: model, days: days)
+
+        #expect(week.follow(wednesday, from: sunday, to: nextMonday, firstWeekday: 2) == wednesday)
+        #expect(week.days == days)
+    }
+
+    @Test func aDayWithOnlyAnEventToLogIsNotEmpty() async throws {
+        let harness = Harness()
+        defer { harness.cleanUp() }
+        let calendars = FakeCalendars()
+        calendars.list = [CalendarInfo(id: "acme", title: "Calendar", account: "jo@acme.example")]
+        calendars.sample = [
+            CalendarImport.Event(
+                entryID: UUID(), calendarID: "acme", title: "Kickoff",
+                start: DateTimeFormat.parse("2026-09-22T09:00:00+02:00")!,
+                end: DateTimeFormat.parse("2026-09-22T10:00:00+02:00")!
+            ),
+        ]
+        let model = harness.model(calendars: calendars)
+        await model.start()
+        model.refreshCalendars()
+        let website = model.addProject(named: "Website", client: nil, color: "#4F7CAC", undoManager: nil)
+        model.setCalendar("acme", forProject: website)
+        model.addEntry(entry(note: "Call", at: "2026-09-21T09:00:00+02:00"), undoManager: nil)
+        let week = WeekModel(model: model, days: days)
+
+        // Monday has an entry, Tuesday only the event a suggestion would
+        // log, and Wednesday nothing.
+        #expect(!week.isEmpty(on: LocalDate(year: 2026, month: 9, day: 21)))
+        #expect(!week.isEmpty(on: LocalDate(year: 2026, month: 9, day: 22)))
+        #expect(week.isEmpty(on: LocalDate(year: 2026, month: 9, day: 23)))
     }
 }

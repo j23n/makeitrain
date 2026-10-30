@@ -5,11 +5,11 @@ import TrackerKit
 import UIKit
 import WideUI
 
-/// One day on an hour grid, as Today and the Week tab show it: the
-/// entries as blocks in their projects' colors, and what the corrections
-/// would change drawn over them, as on the Mac: changed times struck
-/// through, what would be added as dashed outlines, time counted twice
-/// hatched, and numbered markers.
+/// One day on an hour grid, as the Week tab shows it: the entries as
+/// blocks in their projects' colors, and what the corrections would change
+/// drawn over them, as on the Mac: changed times struck through, what would
+/// be added as dashed outlines, time counted twice hatched, and numbered
+/// markers.
 struct PhoneDayGrid: View {
     let model: AppModel
     let week: WeekModel

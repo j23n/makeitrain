@@ -47,7 +47,7 @@ struct MonthScreen: View {
             }
         } content: {
             MonthHeatGrid(model: model, state: state, month: shownMonth, cursor: $cursor) { day in
-                navigator.go(.day(day))
+                navigator.go(.week(day))
             }
             keyHints
         }
@@ -74,7 +74,7 @@ struct MonthScreen: View {
         }
         .onKeyPress(.return) {
             guard !isEditingText() else { return .ignored }
-            navigator.go(.day(cursor))
+            navigator.go(.week(cursor))
             return .handled
         }
         .onKeyPress(characters: CharacterSet(charactersIn: "wW")) { _ in
@@ -116,8 +116,7 @@ struct MonthScreen: View {
         HStack(spacing: 18) {
             KeyHint("← → ↑ ↓", "move")
             KeyHint("⇧", "extend")
-            KeyHint("⏎", "open day")
-            KeyHint("W", "open week")
+            KeyHint("⏎ W", "open week")
             KeyHint("T", "today")
         }
     }
