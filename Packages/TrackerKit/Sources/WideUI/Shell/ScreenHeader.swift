@@ -76,6 +76,8 @@ struct ScreenHeader<Content: View, Trailing: View>: View {
 struct FilterMenu: View {
     let model: AppModel
     let title: String
+    /// Whether the screen leaves anything out, which the button shows.
+    let isFiltered: Bool
     @Binding var clients: Set<UUID>
     @Binding var projects: Set<UUID>
     /// What "Everything" does.
@@ -105,10 +107,6 @@ struct FilterMenu: View {
         .fixedSize()
         .help("Clients and projects shown")
     }
-
-    private var isFiltered: Bool {
-        !clients.isEmpty || !projects.isEmpty
-    }
 }
 
 extension FilterMenu {
@@ -118,6 +116,7 @@ extension FilterMenu {
         self.init(
             model: model,
             title: ReportState.title(clients: navigator.clients, projects: navigator.projects, in: model.ledger) ?? "Everything",
+            isFiltered: !navigator.clients.isEmpty || !navigator.projects.isEmpty,
             clients: Bindable(navigator).clients,
             projects: Bindable(navigator).projects
         ) {
@@ -131,6 +130,7 @@ extension FilterMenu {
         self.init(
             model: state.model,
             title: state.title,
+            isFiltered: !state.clients.isEmpty || !state.projects.isEmpty || !state.tags.isEmpty,
             clients: Bindable(state).clients,
             projects: Bindable(state).projects
         ) {
