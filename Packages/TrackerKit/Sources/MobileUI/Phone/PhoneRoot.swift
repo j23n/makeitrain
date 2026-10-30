@@ -73,7 +73,8 @@ final class PhoneRouter {
 }
 
 /// The iPhone app: Today, Week, Month and Projects, with the command line
-/// floating over the tab bar, opening over everything when tapped.
+/// floating over the tab bar, opening over everything from the bottom when
+/// tapped.
 struct PhoneRoot: View {
     let model: AppModel
     /// Where the app is, with today's and the week's corrections. It's made
@@ -135,9 +136,13 @@ private struct PhoneTabs: View {
                     .onTapGesture(perform: closeCommandLine)
                     .transition(.opacity)
                     .accessibilityHidden(true)
+                // At the bottom, where the bar was tapped, above the
+                // keyboard.
                 PhoneCommandSheet(model: model, router: router, line: line, close: closeCommandLine)
+                    .frame(maxHeight: .infinity, alignment: .bottom)
                     .padding(.top, 6)
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .padding(.bottom, 8)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .animation(.easeOut(duration: 0.2), value: router.commandOpen)

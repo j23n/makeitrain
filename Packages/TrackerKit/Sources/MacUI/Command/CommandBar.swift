@@ -41,7 +41,7 @@ struct CommandBar: View {
             .padding(.leading, 14)
             .padding(.trailing, 12)
             .frame(height: 54)
-            CommandDetails(line: line)
+            CommandDetails(line: line, submit: { submit(alternate: $0) })
         }
         .disabled(line.model.isReadOnly)
         .onChange(of: line.model.revision) {
