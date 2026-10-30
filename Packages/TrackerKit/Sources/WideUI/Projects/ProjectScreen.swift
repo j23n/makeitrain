@@ -39,8 +39,9 @@ struct ProjectScreen: View {
                                 tags(overview, project: project)
                             }
                         }
-                        .padding(.horizontal, 28)
-                        .padding(.vertical, 22)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 18)
+                        .padding(.bottom, 20)
                     }
                     ProjectSettingsPanel(model: model, project: project, navigator: navigator)
                 }
@@ -144,7 +145,7 @@ struct ProjectScreen: View {
             .lineLimit(1)
         }
         .font(.system(size: 12.5))
-        .padding(.horizontal, 28)
+        .padding(.horizontal, 24)
         .frame(height: 38)
         .background(Theme.sunken)
         .overlay(alignment: .bottom) { Rectangle().fill(Theme.line).frame(height: 1) }
