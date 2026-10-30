@@ -4,9 +4,9 @@ import TrackerCore
 import TrackerKit
 import UIKit
 
-/// A week: its days in a strip with their time, the chosen day on an hour
-/// grid with what needs correcting drawn in place, and the corrections one
-/// at a time in a panel at the bottom.
+/// A week: its days in a strip with their time, the chosen day's date and
+/// time, the day on an hour grid with what needs correcting drawn in place,
+/// and the corrections one at a time in a panel at the bottom.
 struct PhoneWeek: View {
     let model: AppModel
     let router: PhoneRouter
@@ -22,12 +22,17 @@ struct PhoneWeek: View {
         VStack(alignment: .leading, spacing: 12) {
             header
             dayStrip
-            PhoneDayGrid(model: model, week: week, day: router.weekDay, gutter: 44) { entry in
-                editing = entry
-            } onCorrection: { preview in
-                week.selectedCorrection = preview.id
+            dayLine
+            if isEmpty(router.weekDay) {
+                PhoneEmptyDay(isToday: router.weekDay == model.today)
+            } else {
+                PhoneDayGrid(model: model, week: week, day: router.weekDay, gutter: 44) { entry in
+                    editing = entry
+                } onCorrection: { preview in
+                    week.selectedCorrection = preview.id
+                }
+                .id(router.weekDay)
             }
-            .id(router.weekDay)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Theme.background)
@@ -170,12 +175,53 @@ struct PhoneWeek: View {
         .padding(.horizontal, 12)
     }
 
+    /// "Monday 5 October · 3:00 so far" for today, and the day's time for
+    /// another day.
+    private var dayLine: some View {
+        let day = router.weekDay
+        return (
+            Text("\(Format.fullDay(day)) · ")
+                + Text(Format.duration(week.total(on: day))).foregroundColor(Theme.text)
+                + Text(day == model.today ? " so far" : "")
+        )
+        .font(.system(size: 14))
+        .foregroundStyle(Theme.text2)
+        .monospacedDigit()
+        .padding(.horizontal, 20)
+    }
+
+    /// Whether a day has no entries and no entries a correction would add.
+    private func isEmpty(_ day: LocalDate) -> Bool {
+        week.entries(on: day).isEmpty && !week.suggestedAdditions.contains { $0.entry.day == day }
+    }
+
     private func dayLabel(_ day: LocalDate, total: Int64, corrections: Int) -> String {
         var label = "\(Format.fullDay(day)), \(total > 0 ? Format.duration(total) : "nothing logged")"
         if corrections > 0 {
             label += ", \(corrections) \(corrections == 1 ? "correction" : "corrections")"
         }
         return label
+    }
+}
+
+/// A day with nothing on it.
+struct PhoneEmptyDay: View {
+    let isToday: Bool
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "clock")
+                .font(.system(size: 30))
+                .foregroundStyle(Theme.text3)
+            Text(isToday ? "Nothing logged yet" : "Nothing logged")
+                .font(.system(size: 15, weight: .semibold))
+            Text(isToday ? "Type a project in the line below to start a timer." : "Type a project, the day and the times in the line below to log time.")
+                .font(.system(size: 13))
+                .foregroundStyle(Theme.text2)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24)
     }
 }
 

@@ -51,7 +51,7 @@ The Mac app:
 
 The iOS app is one app for iPhone and iPad:
 
-- **iPhone:** three tabs, **Week**, which opens on today, with its days in a strip over the day picked and its corrections one at a time in a panel at the bottom, **Month** as a report, and **Projects**, each with a page and its settings, and the app's Settings behind the gear. The command line floats over the tab bar and opens over the screen.
+- **iPhone:** three tabs, **Week**, which opens on today, with its days in a strip over the day picked, its date and time and its corrections one at a time in a panel at the bottom, **Month** as a report, and **Projects**, each with a page and its settings, and the app's Settings behind the gear. The command line floats over the tab bar and opens over the screen.
 - **iPad:** a window at least 960 points wide shows the Mac's main window, from `WideUI`, with Settings at the end of the bar; a narrower one, as in Split View or Slide Over, shows the iPhone's tabs. The layout follows the window, so each window of the app picks its own.
 - **Outside the app:** the Live Activity, the controls, and the intents Siri and Shortcuts offer.
 
