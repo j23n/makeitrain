@@ -81,7 +81,9 @@ public final class CommandLineModel {
     @discardableResult
     public func submit(alternate: Bool, undoManager: UndoManager?) -> Bool {
         if !alternate, let entry = recalledEntry {
-            model.preferences.remember(model.ledger.startLine(for: entry.entry))
+            if let line = model.startLine(for: entry.entry) {
+                model.preferences.remember(line)
+            }
             model.continueEntry(entry, undoManager: undoManager)
             historyIndex = nil
             text = ""
@@ -129,11 +131,12 @@ public final class CommandLineModel {
     }
 
     /// Puts the highlighted earlier entry in the line, to change it before
-    /// it runs. Returns whether one was highlighted.
+    /// it runs. Returns whether it did: one is highlighted, and a line
+    /// reads back as it.
     public func copyRecalled() -> Bool {
-        guard let entry = recalledEntry else { return false }
+        guard let entry = recalledEntry, let line = model.startLine(for: entry.entry) else { return false }
         historyIndex = nil
-        text = model.ledger.startLine(for: entry.entry) + " "
+        text = line + " "
         cursor = nil
         return true
     }

@@ -29,6 +29,19 @@ import TrackerCore
         #expect(line.recallIndex == nil)
         line.text = "find login"
         #expect(line.recalled.isEmpty)
+
+        // "Website copy" has no project. Written as a line it would read as
+        // Website, so Tab leaves it out of the line, and starting it doesn't
+        // remember it, but Return starts it as it was.
+        line.text = "web"
+        #expect(line.recalledEntry?.entry.note == "Website copy")
+        _ = line.tab()
+        #expect(line.text != "Website copy ")
+        line.text = "web"
+        #expect(line.submit(alternate: false, undoManager: nil))
+        #expect(model.running?.entry.projectID == nil)
+        #expect(model.running?.entry.note == "Website copy")
+        #expect(!model.preferences.history.contains("Website copy"))
     }
 
     @Test func returnStartsTheHighlightedEntryAgain() async throws {

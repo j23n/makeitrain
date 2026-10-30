@@ -58,15 +58,24 @@ import Testing
     }
 
     @Test func writesAnEntryAsALineThatStartsItAgain() throws {
-        let ledger = F.ledger()
+        let ledger = F.ledger([
+            // Would read as Bookings, with the note "copy".
+            F.entry(108, nil, "2026-10-01", "09:00", "10:00", note: "Bookings copy"),
+            // Would take 101's note.
+            F.entry(109, F.bookings, "2026-10-01", "10:00", "11:00", tags: ["#227"]),
+        ])
+        let context = F.context(ledger)
         for id in [uuid(101), uuid(104), uuid(105)] {
             let entry = try #require(ledger.entries[id])
-            let line = ledger.startLine(for: entry)
-            let reading = F.read(line, ledger)
-            #expect(reading.draft?.matches(entry) == true, "\(line)")
+            let line = try #require(context.startLine(for: entry))
+            #expect(F.read(line, ledger).draft?.matches(entry) == true, "\(line)")
         }
         let export = try #require(ledger.entries[uuid(101)])
-        #expect(ledger.startLine(for: export) == "Bookings #227 Export to PDF")
+        #expect(context.startLine(for: export) == "Bookings #227 Export to PDF")
+        for id in [uuid(108), uuid(109)] {
+            let entry = try #require(ledger.entries[id])
+            #expect(context.startLine(for: entry) == nil)
+        }
     }
 
     @Test func examplesNameTheLastProjectAndAllRead() {

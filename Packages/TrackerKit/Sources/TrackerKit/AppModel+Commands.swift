@@ -70,6 +70,12 @@ extension AppModel {
         ledger.recall(line, in: resolved, running: running)
     }
 
+    /// The line that starts an entry's project, tags and note again, or nil
+    /// when no line reads back as them (`CommandContext.startLine(for:)`).
+    public func startLine(for entry: TimeEntry) -> String? {
+        commandContext.startLine(for: entry)
+    }
+
     /// Lines to try in an empty command line, naming the last project
     /// used.
     public var commandExamples: [CommandExample] {

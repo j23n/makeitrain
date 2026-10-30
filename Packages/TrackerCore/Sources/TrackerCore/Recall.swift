@@ -40,9 +40,10 @@ extension Ledger {
         return result
     }
 
-    /// What starts an entry's project, tags and note again when typed, such
-    /// as "Website redesign #12 Fix login".
-    public func startLine(for entry: TimeEntry) -> String {
+    /// An entry's project, tags and note written as a line, such as
+    /// "Website redesign #12 Fix login". It doesn't always read back as
+    /// them: `CommandContext.startLine(for:)` checks that it does.
+    func writtenLine(for entry: TimeEntry) -> String {
         var parts: [String] = []
         if let projectID = entry.projectID, let project = projects[projectID] {
             parts.append(project.name)
@@ -52,6 +53,18 @@ extension Ledger {
             parts.append(entry.note)
         }
         return parts.joined(separator: " ")
+    }
+}
+
+extension CommandContext {
+    /// What starts an entry's project, tags and note again when typed, such
+    /// as "Website redesign #12 Fix login", or nil when no line reads back
+    /// as them: an unassigned note that starts with a project's name would
+    /// read as that project, and tags without a note take another entry's.
+    public func startLine(for entry: TimeEntry) -> String? {
+        let line = ledger.writtenLine(for: entry)
+        guard CommandReading(line, in: self).draft?.matches(entry) == true else { return nil }
+        return line
     }
 }
 
@@ -79,8 +92,7 @@ extension CommandContext {
         if let latest, let projectID = latest.entry.projectID, let project = ledger.projects[projectID] {
             let words = ProjectSearch.words(ProjectSearch.fold(project.name))
             let name = words.first { !CommandReader.notProjects.contains($0) } ?? project.name.lowercased()
-            let again = ledger.startLine(for: latest.entry)
-            lines.append((again.isEmpty ? name : again, running == nil ? "start again" : "switch"))
+            lines.append((startLine(for: latest.entry) ?? name, running == nil ? "start again" : "switch"))
             if running != nil {
                 lines.append(("stop -10m", "stop, 10 minutes ago"))
             }
