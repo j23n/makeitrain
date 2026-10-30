@@ -10,6 +10,8 @@ struct WeekCanvas: View {
     let model: AppModel
     let week: WeekModel
     let days: [LocalDate]
+    /// Whether an entry is in the window's filter; the others are faded.
+    var isShown: (ResolvedEntry) -> Bool = { _ in true }
     /// When a block is clicked, so the screen takes the keyboard back.
     let onSelect: () -> Void
 
@@ -46,6 +48,7 @@ struct WeekCanvas: View {
                                 index: index,
                                 blocks: layouts[index],
                                 hours: hours,
+                                isShown: isShown,
                                 onSelect: onSelect
                             )
                         }
@@ -159,6 +162,7 @@ struct DayColumn: View {
     let index: Int
     let blocks: [DayBlock]
     let hours: Range<Int>
+    let isShown: (ResolvedEntry) -> Bool
     let onSelect: () -> Void
     @State private var drag: BlockDrag?
     @State private var seamDrag: (id: String, offset: CGFloat)?
@@ -311,6 +315,7 @@ struct DayColumn: View {
             overnight: week.ranLongNote(for: entry)
         )
         .frame(width: rect.width, height: rect.height)
+        .opacity(isShown(entry) || selected ? 1 : 0.3)
         .frame(width: hit.width, height: hit.height)
         .overlay(alignment: .top) { edgeHandle(block, kind: .start, height: handle, width: width) }
         .overlay(alignment: .bottom) { edgeHandle(block, kind: .end, height: handle, width: width) }

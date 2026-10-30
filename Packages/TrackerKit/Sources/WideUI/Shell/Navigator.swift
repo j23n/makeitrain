@@ -89,6 +89,11 @@ final class Navigator {
     private(set) var screen: Screen
     /// An entry for the week shown next to select, as one "find" turned up.
     var entryToSelect: UUID?
+    /// Clients the week, month and year show, or all when empty. The
+    /// filter stays as the window moves between them.
+    var clients: Set<UUID> = []
+    /// Projects the week, month and year show, or all when empty.
+    var projects: Set<UUID> = []
     private var back: [Screen] = []
     private var forward: [Screen] = []
 

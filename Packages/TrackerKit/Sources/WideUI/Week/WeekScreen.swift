@@ -87,7 +87,7 @@ private struct WeekContent: View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 14) {
                 header
-                WeekCanvas(model: model, week: week, days: shownDays) {
+                WeekCanvas(model: model, week: week, days: shownDays, isShown: isShown) {
                     focused = true
                 }
                 keyHints
@@ -182,38 +182,27 @@ private struct WeekContent: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Text(Format.days(range))
-                .font(.system(size: 19, weight: .semibold))
-                .lineLimit(1)
-            HStack(spacing: 2) {
-                stepButton("chevron.left", span == .day ? "Previous day" : "Previous week", -1)
-                stepButton("chevron.right", span == .day ? "Next day" : "Next week", 1)
-            }
-            if !range.contains(model.today) {
-                Button("Today", action: showToday)
-                    .buttonStyle(ChoiceButtonStyle(compact: true))
-            }
+        ScreenHeader(
+            Format.days(range),
+            previous: span == .day ? "Previous day" : "Previous week",
+            next: span == .day ? "Next day" : "Next week",
+            showsToday: !range.contains(model.today),
+            step: step,
+            today: showToday
+        ) {
+            FilterMenu(model: model, navigator: navigator)
             legend
-            Spacer(minLength: 12)
+        } trailing: {
             totals
         }
     }
 
-    private func stepButton(_ systemImage: String, _ title: String, _ direction: Int) -> some View {
-        Button {
-            step(direction)
-        } label: {
-            Image(systemName: systemImage)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Theme.text2)
-                .frame(width: 28, height: 28)
-                .background(RoundedRectangle(cornerRadius: 6).fill(Theme.fill))
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help(title)
-        .accessibilityLabel(Text(title))
+    /// Whether an entry is in the window's filter. Entries outside it stay
+    /// on the grid, faded, so the days still read in full.
+    private var isShown: (ResolvedEntry) -> Bool {
+        guard !navigator.clients.isEmpty || !navigator.projects.isEmpty else { return { _ in true } }
+        let days = range.lowerBound.adding(days: -1)...range.upperBound
+        return EntryFilter(range: days, clients: navigator.clients, projects: navigator.projects).matcher(in: model.ledger)
     }
 
     private func step(_ direction: Int) {
@@ -249,7 +238,10 @@ private struct WeekContent: View {
                 projects[projectID, default: 0] += time
             }
         }
-        let shown = projects.keys.compactMap { $0 }.sorted { (projects[$0] ?? 0) > (projects[$1] ?? 0) }.prefix(4)
+        let shown = projects.keys.compactMap { $0 }
+            .filter(isInFilter)
+            .sorted { (projects[$0] ?? 0) > (projects[$1] ?? 0) }
+            .prefix(4)
         let dashed = week.corrections.contains { correction in
             switch correction.kind {
             case .noProject, .notLogged: true
@@ -283,11 +275,31 @@ private struct WeekContent: View {
         .lineLimit(1)
     }
 
-    /// The days' total, and what it would be with the corrections.
+    /// Whether a project is in the window's filter, as its entries are.
+    private func isInFilter(_ projectID: UUID) -> Bool {
+        EntryFilter(range: range, clients: navigator.clients, projects: navigator.projects).includes(project: projectID, in: model.ledger)
+    }
+
+    /// The days' total, and what it would be with the corrections; with a
+    /// filter, the time in it out of the days' total.
     @ViewBuilder
     private var totals: some View {
         let totals = week.totals
-        if let corrected = totals.corrected {
+        if !navigator.clients.isEmpty || !navigator.projects.isEmpty {
+            let shown = isShown
+            let time = range.days.reduce(Int64(0)) { sum, day in
+                sum + week.entries(on: day).filter(shown).reduce(0) { $0 + model.duration(of: $1) }
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(Format.duration(time))
+                    .font(.system(size: 17, weight: .semibold))
+                Text("of \(Format.duration(totals.total))")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.text2)
+            }
+            .monospacedDigit()
+            .fixedSize()
+        } else if let corrected = totals.corrected {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(Format.duration(totals.total))
                     .font(.system(size: 13.5))

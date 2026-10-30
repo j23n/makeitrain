@@ -3,99 +3,91 @@ import TrackerCore
 import TrackerKit
 import UniformTypeIdentifiers
 
-/// A report's page: what it covers, the year's weeks over the screen's
-/// own content, and the statement beside them.
-struct ReportPage<Content: View>: View {
+/// A report's page: its header, the year's weeks over the screen's own
+/// content, and the statement beside them. The report's clients and
+/// projects are the window's filter, so they carry over to the week.
+struct ReportPage<Header: View, Content: View>: View {
     let model: AppModel
     let state: ReportState
     let navigator: Navigator
+    let header: Header
     let content: Content
 
-    init(model: AppModel, state: ReportState, navigator: Navigator, @ViewBuilder content: () -> Content) {
+    init(
+        model: AppModel,
+        state: ReportState,
+        navigator: Navigator,
+        @ViewBuilder header: () -> Header,
+        @ViewBuilder content: () -> Content
+    ) {
         self.model = model
         self.state = state
         self.navigator = navigator
+        self.header = header()
         self.content = content()
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            QueryBar(model: model, state: state)
-            HStack(spacing: 0) {
+        HStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 14) {
+                header
+                    .padding(.horizontal, 24)
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         YearRibbon(state: state)
                         content
                     }
                     .padding(.horizontal, 24)
-                    .padding(.top, 20)
                     .padding(.bottom, 28)
                 }
-                StatementPanel(model: model, state: state, navigator: navigator)
             }
+            .padding(.top, 18)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            StatementPanel(model: model, state: state, navigator: navigator)
+        }
+        .onChange(of: state.clients) { _, clients in
+            navigator.clients = clients
+        }
+        .onChange(of: state.projects) { _, projects in
+            navigator.projects = projects
         }
     }
 }
 
-/// What the report covers, as a sentence of choices: "Acme in September
-/// 2026 by tag", and the same typed, which ⌘L focuses.
-struct QueryBar: View {
+/// What the report covers, typed, which ⌘L focuses: "acme sep 2026 by
+/// tag".
+struct ReportTypeField: View {
     let model: AppModel
     let state: ReportState
     @State private var typed = ""
     @State private var focusRequest = 0
 
     var body: some View {
-        HStack(alignment: .center, spacing: 24) {
-            HStack(alignment: .firstTextBaseline, spacing: 9) {
-                filterMenu
-                Text("in")
-                HStack(alignment: .firstTextBaseline, spacing: 2) {
-                    stepButton("chevron.left", "Previous", -1)
-                    periodMenu
-                    stepButton("chevron.right", "Next", 1)
+        HStack(spacing: 8) {
+            CommandField(
+                text: $typed,
+                placeholder: state.typed,
+                reading: query.reading,
+                ledger: model.ledger,
+                fontSize: 12.5,
+                focusRequest: focusRequest,
+                onSubmit: { _ in
+                    state.apply(query)
+                    typed = ""
+                    endTextEditing()
+                },
+                onCancel: {
+                    typed = ""
+                    endTextEditing()
                 }
-                Text("by")
-                groupingMenu
-            }
-            .font(.system(size: 20))
-            .foregroundStyle(Theme.text2)
-            .lineLimit(1)
-            Spacer(minLength: 12)
-            HStack(spacing: 8) {
-                Text("or type")
-                    .font(.system(size: 12.5))
-                    .foregroundStyle(Theme.text2)
-                CommandField(
-                    text: $typed,
-                    placeholder: state.typed,
-                    reading: query.reading,
-                    ledger: model.ledger,
-                    fontSize: 12.5,
-                    focusRequest: focusRequest,
-                    onSubmit: { _ in
-                        state.apply(query)
-                        typed = ""
-                        endTextEditing()
-                    },
-                    onCancel: {
-                        typed = ""
-                        endTextEditing()
-                    }
-                )
-                .frame(width: 230, height: 18)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 5)
-                .background(RoundedRectangle(cornerRadius: 6).fill(Theme.fill))
-                KeyCap("⌘L")
-            }
+            )
+            .frame(width: 200, height: 18)
+            KeyCap("⌘L")
         }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 14)
-        .background(Theme.sunken)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(Theme.line).frame(height: 1)
-        }
+        .padding(.leading, 9)
+        .padding(.trailing, 4)
+        .frame(height: 28)
+        .background(RoundedRectangle(cornerRadius: 7).fill(Theme.fill))
         .background {
             Button("Type a Report") { focusRequest += 1 }
                 .keyboardShortcut("l")
@@ -107,77 +99,38 @@ struct QueryBar: View {
     private var query: ReportQuery {
         ReportQuery.read(typed, ledger: model.ledger, today: model.today, firstWeekday: model.firstWeekday)
     }
+}
 
-    /// A word of the sentence that's a choice, dotted underneath.
-    private func choice(_ title: String) -> some View {
-        Text(title)
-            .fontWeight(.semibold)
-            .foregroundStyle(Theme.tag)
-            .overlay(alignment: .bottom) {
-                Rectangle()
-                    .fill(Theme.accentLine)
-                    .frame(height: 2)
-                    .offset(y: 2)
+/// The projects in a report, what the overlap mark means, and how many
+/// projects the filter leaves out.
+struct ReportLegend: View {
+    let model: AppModel
+    let state: ReportState
+
+    var body: some View {
+        let projects = Set(state.report.entries.compactMap(\.entry.projectID))
+        let shown = projects.sorted { model.ledger.projectTitle($0) < model.ledger.projectTitle($1) }.prefix(3)
+        let filteredOut = model.ledger.pickerProjects().filter { !projects.contains($0.id) }.count
+        HStack(spacing: 12) {
+            ForEach(Array(shown), id: \.self) { projectID in
+                HStack(spacing: 5) {
+                    RoundedRectangle(cornerRadius: 2).fill(model.ledger.tint(ofProject: projectID).bar).frame(width: 8, height: 8)
+                    Text(model.ledger.projects[projectID]?.name ?? "")
+                }
             }
-    }
-
-    private var filterMenu: some View {
-        Menu {
-            ReportFilterItems(state: state)
-        } label: {
-            choice(state.title)
-        }
-        .plainMenu()
-        .menuIndicator(.hidden)
-        .fixedSize()
-    }
-
-    private var periodMenu: some View {
-        Menu {
-            let today = model.today
-            let first = model.firstWeekday
-            Button("This Week") { state.show(ReportPeriod.week.range(containing: today, firstWeekday: first), period: .week) }
-            Button("Last Week") { state.show(ReportPeriod.week.range(containing: today.adding(days: -7), firstWeekday: first), period: .week) }
-            Button("This Month") { state.show(ReportPeriod.month.range(containing: today, firstWeekday: first), period: .month) }
-            Button("Last Month") {
-                let thisMonth = ReportPeriod.month.range(containing: today, firstWeekday: first)
-                state.show(ReportPeriod.month.shift(thisMonth, by: -1), period: .month)
+            if !state.overlapDaysInRange.isEmpty {
+                HStack(spacing: 5) {
+                    OverlapSwatch(size: 10)
+                    Text("overlap")
+                }
             }
-            Button("This Year") { state.show(YearScreen.range(today.year), period: .custom) }
-        } label: {
-            choice(Format.days(state.range))
-        }
-        .plainMenu()
-        .menuIndicator(.hidden)
-        .fixedSize()
-    }
-
-    private var groupingMenu: some View {
-        Menu {
-            ForEach(ReportRequest.Grouping.allCases, id: \.self) { grouping in
-                Button(grouping.rawValue) { state.grouping = grouping }
+            if !state.clients.isEmpty || !state.projects.isEmpty, filteredOut > 0 {
+                Text("\(filteredOut) \(filteredOut == 1 ? "project" : "projects") filtered out")
             }
-        } label: {
-            choice(state.grouping.rawValue)
         }
-        .plainMenu()
-        .menuIndicator(.hidden)
-        .fixedSize()
-    }
-
-    private func stepButton(_ systemImage: String, _ title: String, _ direction: Int) -> some View {
-        Button {
-            state.step(direction)
-        } label: {
-            Image(systemName: systemImage)
-                .font(.system(size: 14))
-                .foregroundStyle(Theme.text3)
-                .padding(.horizontal, 4)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help(title)
-        .accessibilityLabel(Text(title))
+        .font(.system(size: 12))
+        .foregroundStyle(Theme.text2)
+        .lineLimit(1)
     }
 }
 

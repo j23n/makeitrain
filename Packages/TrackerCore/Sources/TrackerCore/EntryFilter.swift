@@ -35,17 +35,26 @@ public struct EntryFilter: Hashable, Sendable {
             if !days.contains(entry.entry) {
                 return false
             }
-            if !projects.isEmpty {
-                guard let projectID = entry.entry.projectID, projects.contains(projectID) else { return false }
-            }
-            if !clients.isEmpty {
-                guard let client = ledger.client(forProject: entry.entry.projectID), clients.contains(client.id) else { return false }
+            if !includes(project: entry.entry.projectID, in: ledger) {
+                return false
             }
             if !wantedTags.isEmpty, !entry.entry.tags.contains(where: { wantedTags.contains($0.lowercased()) }) {
                 return false
             }
             return true
         }
+    }
+
+    /// Whether the clients and projects take in a project's entries, or
+    /// those without a project for nil.
+    public func includes(project projectID: UUID?, in ledger: Ledger) -> Bool {
+        if !projects.isEmpty {
+            guard let projectID, projects.contains(projectID) else { return false }
+        }
+        if !clients.isEmpty {
+            guard let client = ledger.client(forProject: projectID), clients.contains(client.id) else { return false }
+        }
+        return true
     }
 }
 

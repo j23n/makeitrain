@@ -5,8 +5,9 @@ import AppKit
 #endif
 import TrackerKit
 
-/// A month as a report: what it covers as a sentence, the year's weeks,
-/// the days of the month with their time, and the statement beside them.
+/// A month as a report: its days and filter in the header, the year's
+/// weeks, the days of the month with their time, and the statement beside
+/// them.
 /// Days can be chosen for another range by clicking and Shift-clicking
 /// them, or with the arrow keys.
 struct MonthScreen: View {
@@ -22,13 +23,29 @@ struct MonthScreen: View {
         self.navigator = navigator
         self.anchor = anchor
         let range = ReportPeriod.month.range(containing: anchor, firstWeekday: model.firstWeekday)
-        _state = State(initialValue: ReportState(model: model, range: range, period: .month))
+        let state = ReportState(model: model, range: range, period: .month)
+        state.clients = navigator.clients
+        state.projects = navigator.projects
+        _state = State(initialValue: state)
         _cursor = State(initialValue: anchor)
     }
 
     var body: some View {
         ReportPage(model: model, state: state, navigator: navigator) {
-            rangeLine
+            ScreenHeader(
+                Format.days(state.range),
+                previous: "Previous",
+                next: "Next",
+                showsToday: !state.range.contains(model.today),
+                step: { state.step($0) },
+                today: showToday
+            ) {
+                FilterMenu(state: state)
+                ReportLegend(model: model, state: state)
+            } trailing: {
+                ReportTypeField(model: model, state: state)
+            }
+        } content: {
             MonthHeatGrid(model: model, state: state, month: shownMonth, cursor: $cursor) { day in
                 navigator.go(.day(day))
             }
@@ -67,11 +84,7 @@ struct MonthScreen: View {
         }
         .onKeyPress(characters: CharacterSet(charactersIn: "tT")) { _ in
             guard !isEditingText() else { return .ignored }
-            let today = model.today
-            navigator.replace(.month(today))
-            // Also when this month is already shown, with other days chosen.
-            state.show(ReportPeriod.month.range(containing: today, firstWeekday: model.firstWeekday), period: .month)
-            cursor = today
+            showToday()
             return .handled
         }
         .takesUnusedKeys([.leftArrow, .rightArrow, .upArrow, .downArrow, .return], letters: "wt")
@@ -90,39 +103,13 @@ struct MonthScreen: View {
         state.range.upperBound.monthKey == state.range.lowerBound.monthKey ? state.range.lowerBound : cursor
     }
 
-    private var rangeLine: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 16) {
-            Text(Format.days(state.range))
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Theme.text)
-            Spacer()
-            legend
-        }
-    }
-
-    private var legend: some View {
-        let projects = Set(state.report.entries.compactMap(\.entry.projectID))
-        let shown = projects.sorted { model.ledger.projectTitle($0) < model.ledger.projectTitle($1) }.prefix(3)
-        let filteredOut = model.ledger.pickerProjects().filter { !projects.contains($0.id) }.count
-        return HStack(spacing: 12) {
-            ForEach(Array(shown), id: \.self) { projectID in
-                HStack(spacing: 5) {
-                    RoundedRectangle(cornerRadius: 2).fill(model.ledger.tint(ofProject: projectID).bar).frame(width: 8, height: 8)
-                    Text(model.ledger.projects[projectID]?.name ?? "")
-                }
-            }
-            if !state.overlapDaysInRange.isEmpty {
-                HStack(spacing: 5) {
-                    OverlapSwatch(size: 10)
-                    Text("overlap")
-                }
-            }
-            if !state.clients.isEmpty || !state.projects.isEmpty, filteredOut > 0 {
-                Text("\(filteredOut) \(filteredOut == 1 ? "project" : "projects") filtered out")
-            }
-        }
-        .font(.system(size: 12))
-        .foregroundStyle(Theme.text2)
+    /// Shows this month, also when it's already shown with other days
+    /// chosen.
+    private func showToday() {
+        let today = model.today
+        navigator.replace(.month(today))
+        state.show(ReportPeriod.month.range(containing: today, firstWeekday: model.firstWeekday), period: .month)
+        cursor = today
     }
 
     private var keyHints: some View {
@@ -259,7 +246,10 @@ struct YearScreen: View {
         self.model = model
         self.navigator = navigator
         self.year = year
-        _state = State(initialValue: ReportState(model: model, range: Self.range(year), period: .custom))
+        let state = ReportState(model: model, range: Self.range(year), period: .custom)
+        state.clients = navigator.clients
+        state.projects = navigator.projects
+        _state = State(initialValue: state)
         _cursor = State(initialValue: model.today.month)
     }
 
@@ -274,6 +264,20 @@ struct YearScreen: View {
 
     var body: some View {
         ReportPage(model: model, state: state, navigator: navigator) {
+            ScreenHeader(
+                state.range == Self.range(shownYear) ? String(shownYear) : Format.days(state.range),
+                previous: "Previous year",
+                next: "Next year",
+                showsToday: !state.range.contains(model.today),
+                step: { showYear(shownYear + $0) },
+                today: showToday
+            ) {
+                FilterMenu(state: state)
+                ReportLegend(model: model, state: state)
+            } trailing: {
+                ReportTypeField(model: model, state: state)
+            }
+        } content: {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: Self.columns), spacing: 14) {
                 ForEach(1...12, id: \.self) { month in
                     MiniMonth(model: model, state: state, month: LocalDate(year: shownYear, month: month, day: 1), isCursor: month == cursor) {
@@ -310,8 +314,7 @@ struct YearScreen: View {
         }
         .onKeyPress(characters: CharacterSet(charactersIn: "tT")) { _ in
             guard !isEditingText() else { return .ignored }
-            showYear(model.today.year)
-            cursor = model.today.month
+            showToday()
             return .handled
         }
         .takesUnusedKeys([.leftArrow, .rightArrow, .upArrow, .downArrow, .return], letters: "t")
@@ -351,6 +354,12 @@ struct YearScreen: View {
     private func showYear(_ year: Int) {
         navigator.replace(.year(year))
         state.show(Self.range(year), period: .custom)
+    }
+
+    /// Shows this year, with the cursor on this month.
+    private func showToday() {
+        showYear(model.today.year)
+        cursor = model.today.month
     }
 
     /// Opens the month at the cursor, on today when it's this month.

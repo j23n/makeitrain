@@ -149,7 +149,18 @@ public final class ReportState {
     /// What the report covers, as a title: the client, or the project, or
     /// "Everything".
     public var title: String {
-        let ledger = model.ledger
+        if let title = Self.title(clients: clients, projects: projects, in: model.ledger) {
+            return title
+        }
+        if !tags.isEmpty {
+            return tags.sorted(by: Tags.order).formatted(.list(type: .and))
+        }
+        return "Everything"
+    }
+
+    /// Some clients and projects as a title: the client, or the project, or
+    /// their names; nil for none.
+    public static func title(clients: Set<UUID>, projects: Set<UUID>, in ledger: Ledger) -> String? {
         if clients.count == 1, let id = clients.first, let client = ledger.clients[id] {
             return client.name
         }
@@ -158,12 +169,9 @@ public final class ReportState {
         }
         if !clients.isEmpty || !projects.isEmpty {
             let names = clients.compactMap { ledger.clients[$0]?.name } + projects.compactMap { ledger.projects[$0]?.name }
-            return names.sorted().formatted(.list(type: .and))
+            return names.isEmpty ? nil : names.sorted().formatted(.list(type: .and))
         }
-        if !tags.isEmpty {
-            return tags.sorted(by: Tags.order).formatted(.list(type: .and))
-        }
-        return "Everything"
+        return nil
     }
 
     /// How many weekdays the range has, for "21 of 22 weekdays".
