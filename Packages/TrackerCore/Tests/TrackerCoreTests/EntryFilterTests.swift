@@ -33,6 +33,29 @@ import Testing
         #expect(Set(resolved.filter(matches).map(\.id)) == onThoseDays)
     }
 
+    @Test func takesInProjectsByClientAndByProject() {
+        var ledger = Ledger()
+        ledger.addClient(Client(id: uuid(20), name: "Acme", updated: now), now: now)
+        ledger.addProject(Project(id: uuid(10), clientID: uuid(20), name: "Website", color: Palette.colors[0], updated: now), now: now)
+        ledger.addProject(Project(id: uuid(11), clientID: uuid(20), name: "App", color: Palette.colors[1], updated: now), now: now)
+        ledger.addProject(Project(id: uuid(12), clientID: nil, name: "Admin", color: Palette.colors[2], updated: now), now: now)
+
+        let everything = EntryFilter(range: day(1)...day(30))
+        #expect(everything.includes(project: uuid(12), in: ledger))
+        #expect(everything.includes(project: nil, in: ledger))
+
+        let acme = EntryFilter(range: day(1)...day(30), clients: [uuid(20)])
+        #expect(acme.includes(project: uuid(10), in: ledger))
+        #expect(acme.includes(project: uuid(11), in: ledger))
+        #expect(!acme.includes(project: uuid(12), in: ledger))
+        #expect(!acme.includes(project: nil, in: ledger))
+
+        // Both must hold, as for entries.
+        let website = EntryFilter(range: day(1)...day(30), clients: [uuid(20)], projects: [uuid(10)])
+        #expect(website.includes(project: uuid(10), in: ledger))
+        #expect(!website.includes(project: uuid(11), in: ledger))
+    }
+
     @Test func findsTheSameDaysAsLookingUpEachZone() {
         var generator = SeededGenerator(seed: 7)
         let zones = ["Pacific/Kiritimati", "Etc/GMT+12", "America/New_York", "Europe/Berlin", "Asia/Kolkata", "UTC"]

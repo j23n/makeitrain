@@ -277,14 +277,7 @@ private struct WeekContent: View {
 
     /// Whether a project is in the window's filter, as its entries are.
     private func isInFilter(_ projectID: UUID) -> Bool {
-        if !navigator.projects.isEmpty, !navigator.projects.contains(projectID) {
-            return false
-        }
-        if !navigator.clients.isEmpty {
-            guard let client = model.ledger.client(forProject: projectID) else { return false }
-            return navigator.clients.contains(client.id)
-        }
-        return true
+        EntryFilter(range: range, clients: navigator.clients, projects: navigator.projects).includes(project: projectID, in: model.ledger)
     }
 
     /// The days' total, and what it would be with the corrections; with a

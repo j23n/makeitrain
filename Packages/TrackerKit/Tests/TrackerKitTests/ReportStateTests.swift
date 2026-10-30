@@ -62,6 +62,8 @@ import TrackerCore
         #expect(ReportState.title(clients: [acme.id], projects: [], in: ledger) == "Acme")
         #expect(ReportState.title(clients: [], projects: [website.id], in: ledger) == "Website")
         #expect(ReportState.title(clients: [acme.id, globex.id], projects: [], in: ledger) == ["Acme", "Globex"].formatted(.list(type: .and)))
+        // Clients and projects no longer in the ledger, as after a sync.
+        #expect(ReportState.title(clients: [UUID()], projects: [UUID()], in: ledger) == nil)
     }
 
     @Test func comparesWithTheDaysBeforeUpToToday() async throws {

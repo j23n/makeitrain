@@ -169,7 +169,7 @@ public final class ReportState {
         }
         if !clients.isEmpty || !projects.isEmpty {
             let names = clients.compactMap { ledger.clients[$0]?.name } + projects.compactMap { ledger.projects[$0]?.name }
-            return names.sorted().formatted(.list(type: .and))
+            return names.isEmpty ? nil : names.sorted().formatted(.list(type: .and))
         }
         return nil
     }
