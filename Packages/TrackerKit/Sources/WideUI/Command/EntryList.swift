@@ -2,16 +2,19 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 
-/// Entries in a short list, as "find" and Down show them. With `select`,
-/// clicking one picks it.
+/// Entries in a short list, as "find" and an empty command line show
+/// them. With `select`, clicking one picks it. `.touch` makes the rows tall
+/// enough for a finger.
 public struct EntryList: View {
     let model: AppModel
     let entries: [ResolvedEntry]
+    var size: ChipLabel.Size
     var select: ((ResolvedEntry) -> Void)?
 
-    public init(model: AppModel, entries: [ResolvedEntry], select: ((ResolvedEntry) -> Void)? = nil) {
+    public init(model: AppModel, entries: [ResolvedEntry], size: ChipLabel.Size = .regular, select: ((ResolvedEntry) -> Void)? = nil) {
         self.model = model
         self.entries = entries
+        self.size = size
         self.select = select
     }
 
@@ -49,9 +52,9 @@ public struct EntryList: View {
                 .monospacedDigit()
                 .foregroundStyle(entry.isRunning ? Theme.now : Theme.text2)
         }
-        .font(.system(size: 12))
-        .padding(.horizontal, 14)
-        .frame(height: 26)
+        .font(.system(size: size == .touch ? 14.5 : 12))
+        .padding(.horizontal, size == .touch ? 16 : 14)
+        .frame(height: size == .touch ? 44 : 26)
         .contentShape(Rectangle())
     }
 

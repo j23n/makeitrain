@@ -3,9 +3,9 @@ import SwiftUI
 import TrackerCore
 
 /// The state behind a command line: what's typed, what it means, what it
-/// would change, and the earlier lines Up brings back. The Mac's lines, in
-/// the menu bar, the shortcut's panel and the main window, and the
-/// iPhone's share it.
+/// would change, the earlier entries it could start again, and the earlier
+/// lines Up brings back. The Mac's lines, in the menu bar, the shortcut's
+/// panel and the main window, and the iPhone's share it.
 @MainActor
 @Observable
 public final class CommandLineModel {
@@ -31,21 +31,18 @@ public final class CommandLineModel {
     /// The entries "find" lists.
     public private(set) var found: [ResolvedEntry] = []
     /// Where the insertion point is, as a UTF-16 offset; nil for the end.
-    public var cursor: Int? {
-        didSet {
-            if cursor != oldValue {
-                refreshSuggestions()
-            }
-        }
-    }
-    /// What could replace the word at the insertion point.
-    public private(set) var suggestions = LineSuggestionState()
+    public var cursor: Int?
+    /// Earlier entries the line could start again, the latest first, while
+    /// it names only a project, tags or a note.
+    public private(set) var recalled: [ResolvedEntry] = []
+    /// The one of them Return starts again, or nil for the line as typed.
+    public var recallIndex: Int?
 
     public let model: AppModel
     @ObservationIgnored private var historyIndex: Int?
     @ObservationIgnored private var draftBeforeHistory = ""
-    /// A line Up or Down brought back. It gets no suggestions until it's
-    /// changed, so the keys keep going through the earlier lines.
+    /// A line Up or Down brought back. It lists no earlier entries until
+    /// it's changed, so the keys keep going through the earlier lines.
     @ObservationIgnored private var recalledLine: String?
 
     public init(model: AppModel) {
@@ -69,34 +66,28 @@ public final class CommandLineModel {
         if !text.isEmpty {
             showsToday = false
         }
-        refreshSuggestions()
+        recalled = text != recalledLine && reading.recallsEntries ? model.recall(text) : []
+        recallIndex = recalled.isEmpty ? nil : 0
     }
 
-    /// Works out what could replace the word at the insertion point.
-    private func refreshSuggestions() {
-        if text.isEmpty || text == recalledLine {
-            suggestions.reset(to: [])
-        } else {
-            suggestions.reset(to: model.suggestions(for: text, cursor: cursor ?? text.utf16.count))
-        }
+    /// The earlier entry Return starts again, if one is highlighted.
+    public var recalledEntry: ResolvedEntry? {
+        guard let recallIndex, recalled.indices.contains(recallIndex) else { return nil }
+        return recalled[recallIndex]
     }
 
-    /// Puts the highlighted suggestion, or the one at `index`, in place of
-    /// the word. Returns whether there was one.
-    @discardableResult
-    public func acceptSuggestion(at index: Int? = nil) -> Bool {
-        guard let suggestion = suggestions.suggestion(at: index) else { return false }
-        suggestions.requestCursor(after: suggestion)
-        historyIndex = nil
-        text = suggestion.text
-        cursor = suggestion.cursor
-        return true
-    }
-
-    /// Runs the line. Returns whether something was done, so the field
-    /// can close.
+    /// Runs the line, or starts the highlighted earlier entry again.
+    /// Returns whether something was done, so the field can close.
     @discardableResult
     public func submit(alternate: Bool, undoManager: UndoManager?) -> Bool {
+        if !alternate, let entry = recalledEntry {
+            model.preferences.remember(model.ledger.startLine(for: entry.entry))
+            model.continueEntry(entry, undoManager: undoManager)
+            historyIndex = nil
+            text = ""
+            cursor = nil
+            return true
+        }
         switch model.run(text, alternate: alternate, undoManager: undoManager) {
         case .done(.find):
             return false
@@ -135,6 +126,16 @@ public final class CommandLineModel {
     /// do, what went wrong, or why the line can't be run.
     public var hasPreview: Bool {
         message != nil || preview != nil || (reading.problem != nil && !text.isEmpty)
+    }
+
+    /// Puts the highlighted earlier entry in the line, to change it before
+    /// it runs. Returns whether one was highlighted.
+    public func copyRecalled() -> Bool {
+        guard let entry = recalledEntry else { return false }
+        historyIndex = nil
+        text = model.ledger.startLine(for: entry.entry) + " "
+        cursor = nil
+        return true
     }
 
     /// Takes the completion Tab offers. Returns whether there was one.
@@ -183,33 +184,32 @@ public final class CommandLineModel {
         return true
     }
 
-    /// What Tab does: takes the highlighted suggestion, or else the
-    /// completion. Returns whether it did, so the key otherwise does what
-    /// it does.
+    /// What Tab does: puts the highlighted earlier entry in the line, or
+    /// else takes the completion. Returns whether it did, so the key
+    /// otherwise does what it does.
     public func tab() -> Bool {
-        acceptSuggestion() || complete()
+        copyRecalled() || complete()
     }
 
-    /// What Up does: moves the highlight through the suggestions, or else
-    /// brings back the line before.
+    /// What Up does: moves the highlight through the earlier entries, or
+    /// else brings back the line before.
     public func up() -> Bool {
-        moveHighlight(by: -1) || previousLine()
+        moveRecall(by: -1) || previousLine()
     }
 
     /// What Down does: moves the highlight the other way, or else goes
     /// forward through the earlier lines, or lists today's entries.
     public func down() -> Bool {
-        moveHighlight(by: 1) || nextLine()
+        moveRecall(by: 1) || nextLine()
     }
 
-    /// Moves the highlight through the suggestions, or returns false when
-    /// there are none. It writes the suggestions only when the highlight
-    /// moves, so a key that moves nothing redraws nothing.
-    private func moveHighlight(by step: Int) -> Bool {
-        guard let index = suggestions.highlight(movedBy: step) else { return false }
-        if index != suggestions.highlighted {
-            suggestions.highlight(index)
-        }
+    /// Moves the highlight through the earlier entries and the line as
+    /// typed after them, or returns false when there are none.
+    private func moveRecall(by step: Int) -> Bool {
+        guard !recalled.isEmpty else { return false }
+        let count = recalled.count + 1
+        let next = ((recallIndex ?? recalled.count) + step + count) % count
+        recallIndex = next == recalled.count ? nil : next
         return true
     }
 
@@ -304,13 +304,9 @@ public struct LineSuggestionState {
 }
 
 /// Something to add to a line with a click or a tap: what could replace
-/// the word being typed, a start, a time ago, a tag, or the completion of a
-/// project's name; or, with nothing typed, a line run lately.
+/// the word being typed in an entry's line.
 public struct LineChip: Identifiable {
     public enum Action {
-        case append(String)
-        case replace(String)
-        case complete
         /// Takes the line's suggestion at this index.
         case suggestion(Int)
     }
@@ -334,57 +330,6 @@ extension LineSuggestion {
             ProjectTint(hex: hex)
         default:
             nil
-        }
-    }
-}
-
-extension CommandLineModel {
-    /// What to offer under the line: the suggestions for the word being
-    /// typed, a start from when today's last entry ended, a time ago, a tag
-    /// and the completion; with nothing typed, the lines run lately.
-    public var chips: [LineChip] {
-        guard !text.isEmpty else {
-            var seen: Set<String> = []
-            return model.preferences.history.reversed()
-                .filter { seen.insert($0.lowercased()).inserted }
-                .prefix(4)
-                .map { LineChip(id: "again " + $0, title: $0, action: .replace($0)) }
-        }
-        var chips = suggestions.chips(ledger: model.ledger)
-        let words = text.lowercased().split(separator: " ")
-        if !words.contains("from"), let end = model.commandContext.lastEndToday {
-            let time = Format.time(end, zone: model.environment.timeZone())
-            chips.append(LineChip(id: "from", title: "from \(time)", action: .append("from \(time)")))
-        }
-        if !text.contains("-") {
-            chips.append(LineChip(id: "ago", title: "−15m", action: .append("-15m")))
-        }
-        chips.append(LineChip(id: "tag", title: "#", action: .append("#"), isTag: true))
-        if let completion = reading.completion {
-            let projectID = model.resolved.first { $0.id == completion.entryID }?.entry.projectID
-            chips.append(LineChip(
-                id: "complete",
-                title: "\(completion.text), from \(Format.weekday(completion.day))",
-                action: .complete,
-                tint: projectID.map { model.ledger.tint(ofProject: $0) }
-            ))
-        }
-        return chips
-    }
-
-    /// Adds a chip to the line, or puts it in the line's place.
-    public func apply(_ chip: LineChip) {
-        switch chip.action {
-        case let .append(words):
-            text = text.isEmpty || text.hasSuffix(" ") ? text + words : text + " " + words
-            cursor = nil
-        case let .replace(line):
-            text = line
-            cursor = nil
-        case .complete:
-            _ = complete()
-        case let .suggestion(index):
-            acceptSuggestion(at: index)
         }
     }
 }

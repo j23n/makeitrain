@@ -64,6 +64,18 @@ extension AppModel {
         ledger.search(query, in: resolved)
     }
 
+    /// Earlier entries a line could start again, the latest first, each
+    /// project, tags and note once (`Ledger.recall`).
+    public func recall(_ line: String) -> [ResolvedEntry] {
+        ledger.recall(line, in: resolved, running: running)
+    }
+
+    /// Lines to try in an empty command line, naming the last project
+    /// used.
+    public var commandExamples: [CommandExample] {
+        commandContext.examples
+    }
+
     // MARK: - Entries as lines
 
     /// An entry written as a line the command line reads back, such as

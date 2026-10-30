@@ -46,7 +46,13 @@ public struct WideRoot<Trailing: View>: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .overlayPreferenceValue(CommandFieldBounds.self) { field in
-            CommandDropdown(line: line, field: commandFocused ? field : nil, select: show)
+            CommandDropdown(
+                line: line,
+                field: commandFocused ? field : nil,
+                select: show,
+                submit: { submit(alternate: $0) },
+                refocus: { focusRequest += 1 }
+            )
         }
         .background(Theme.background)
         .foregroundStyle(Theme.text)
@@ -130,18 +136,27 @@ struct CommandFieldBounds: PreferenceKey {
     }
 }
 
-/// What the main window's command line would do, under it, as the menu
-/// bar's popover shows it under its line: the suggestions, what Return
-/// would do, the entries found or today's, and the keys. Clicking an entry
-/// shows it on its week.
+/// What's under the main window's command line, as the menu bar's popover
+/// shows it under its line: lines to try and today's entries, the earlier
+/// entries the line could start again, what Return would do, and the keys.
+/// Clicking an entry shows it on its week. On iPad its rows are tall enough
+/// for a finger.
 private struct CommandDropdown: View {
     let line: CommandLineModel
     /// Where the field is, or nil while it doesn't have the keyboard.
     let field: Anchor<CGRect>?
     let select: (ResolvedEntry) -> Void
+    let submit: (_ alternate: Bool) -> Void
+    let refocus: () -> Void
 
-    /// As wide as the menu bar's popover, at least.
+    /// As wide as the menu bar's popover, at least, and wider for touch.
+    #if os(macOS)
     private static let minimumWidth: CGFloat = 410
+    private static let size = ChipLabel.Size.regular
+    #else
+    private static let minimumWidth: CGFloat = 470
+    private static let size = ChipLabel.Size.touch
+    #endif
 
     var body: some View {
         if let field {
@@ -150,7 +165,7 @@ private struct CommandDropdown: View {
                 let width = max(bounds.width, Self.minimumWidth)
                 // Centered under the field, inside the window.
                 let x = min(max(bounds.midX - width / 2, 8), max(geometry.size.width - width - 8, 8))
-                CommandDetails(line: line, continuesField: false, select: select)
+                CommandDetails(line: line, continuesField: false, size: Self.size, select: select, submit: submit, refocus: refocus)
                     .frame(width: width)
                     .background(Theme.popover)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -204,6 +219,26 @@ private struct LineRefresh: View {
     }
 }
 
+/// The top bar's sizes: for a pointer on the Mac, and for a finger on
+/// iPad, where its buttons and field are at least 44 points.
+private enum TopBarMetrics {
+    #if os(macOS)
+    static let height: CGFloat = 52
+    static let button: CGFloat = 26
+    static let field: CGFloat = 34
+    static let fieldText: CGFloat = 20
+    static let stop: CGFloat = 26
+    static let fontSize: CGFloat = 12.5
+    #else
+    static let height: CGFloat = 64
+    static let button: CGFloat = 44
+    static let field: CGFloat = 46
+    static let fieldText: CGFloat = 24
+    static let stop: CGFloat = 40
+    static let fontSize: CGFloat = 15
+    #endif
+}
+
 /// The bar along the top: Back and Forward, the zoom, and the command
 /// line with the running timer.
 struct TopBar<Trailing: View>: View {
@@ -240,7 +275,7 @@ struct TopBar<Trailing: View>: View {
             trailing
         }
         .padding(.horizontal, 16)
-        .frame(height: 52)
+        .frame(height: TopBarMetrics.height)
         .background(Theme.bar)
         .overlay(alignment: .bottom) {
             Rectangle().fill(Theme.line).frame(height: 1)
@@ -252,7 +287,7 @@ struct TopBar<Trailing: View>: View {
             Image(systemName: systemImage)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(enabled ? Theme.text2 : Theme.text3.opacity(0.5))
-                .frame(width: 26, height: 26)
+                .frame(width: TopBarMetrics.button, height: TopBarMetrics.button)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -266,7 +301,7 @@ struct TopBar<Trailing: View>: View {
         HStack(spacing: 10) {
             if let running = model.running {
                 RunningTimerLabel(model: model, running: running)
-                    .font(.system(size: 12.5))
+                    .font(.system(size: TopBarMetrics.fontSize))
                     .fixedSize()
                     .accessibilityElement(children: .combine)
                 Rectangle().fill(Theme.strongLine).frame(width: 1, height: 16)
@@ -274,14 +309,16 @@ struct TopBar<Trailing: View>: View {
             CommandField(
                 line: line,
                 placeholder: CommandText.placeholder,
-                fontSize: 12.5,
+                fontSize: TopBarMetrics.fontSize,
                 focusRequest: focusRequest,
                 onSubmit: submit,
                 onCancel: cancel,
                 onFocusChange: { focused in commandFocused = focused }
             )
-            .frame(height: 20)
+            .frame(height: TopBarMetrics.fieldText)
+            #if os(macOS)
             KeyCap("⌘K")
+            #endif
             if model.running != nil {
                 Button {
                     model.stopTimer(undoManager: undoManager)
@@ -289,7 +326,7 @@ struct TopBar<Trailing: View>: View {
                     RoundedRectangle(cornerRadius: 2)
                         .fill(Theme.text)
                         .frame(width: 9, height: 9)
-                        .frame(width: 26, height: 26)
+                        .frame(width: TopBarMetrics.stop, height: TopBarMetrics.stop)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -299,7 +336,7 @@ struct TopBar<Trailing: View>: View {
         }
         .padding(.leading, 12)
         .padding(.trailing, 4)
-        .frame(height: 34)
+        .frame(height: TopBarMetrics.field)
         .background(RoundedRectangle(cornerRadius: 9).fill(Theme.field))
         .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(commandFocused ? Theme.accent : Theme.strongLine, lineWidth: commandFocused ? 1.5 : 1))
         .anchorPreference(key: CommandFieldBounds.self, value: .bounds) { $0 }
