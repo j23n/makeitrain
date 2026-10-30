@@ -16,4 +16,12 @@ import TrackerKit
         let wednesday = LocalDate(year: 2026, month: 9, day: 23)
         #expect(titles.contains(Format.days(wednesday...wednesday)))
     }
+
+    @Test func makesRoomForTheNewYearWhenTheYearEndsOnAWeeksEnd() {
+        // December 31, 2028 is a Sunday, the end of a week starting on
+        // Monday, so the week across the new year is the year's first.
+        let titles = ScreenTitles.widest(in: 2028, firstWeekday: 2)
+        let newYear = LocalDate(year: 2027, month: 12, day: 27)...LocalDate(year: 2028, month: 1, day: 2)
+        #expect(titles.contains(Format.days(newYear)))
+    }
 }

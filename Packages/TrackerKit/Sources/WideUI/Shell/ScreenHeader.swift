@@ -157,12 +157,15 @@ extension FilterMenu {
 }
 
 /// The titles a screen header's title can have in a year, for its room:
-/// a week across each month's end, the year's last across the new year,
-/// each month, and a day of each weekday.
+/// a week across each month's end, the year's first and last, each month,
+/// and a day of each weekday.
 enum ScreenTitles {
     static func widest(in year: Int, firstWeekday: Int) -> [String] {
         let months = (1...12).map { ReportPeriod.month.range(containing: LocalDate(year: year, month: $0, day: 1), firstWeekday: firstWeekday) }
+        // The year's first week as well as its last, since one of them
+        // always crosses a new year.
         let weeks = months.map { ReportPeriod.week.range(containing: $0.upperBound, firstWeekday: firstWeekday) }
+            + [ReportPeriod.week.range(containing: LocalDate(year: year, month: 1, day: 1), firstWeekday: firstWeekday)]
         let days = (0..<7).map { LocalDate(year: year, month: 9, day: 21).adding(days: $0) }
         return Array(Set(weeks.map(Format.days) + months.map(Format.days) + days.map { Format.days($0...$0) })).sorted()
     }
