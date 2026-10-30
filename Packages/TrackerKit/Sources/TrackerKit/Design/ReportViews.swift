@@ -7,25 +7,36 @@ import TrackerCore
 /// What a report covers, as a menu's items: everything, or some clients
 /// and projects.
 public struct ReportFilterItems: View {
-    let state: ReportState
+    let model: AppModel
+    @Binding var clients: Set<UUID>
+    @Binding var projects: Set<UUID>
+    /// What "Everything" does.
+    let clear: () -> Void
 
     public init(state: ReportState) {
-        self.state = state
-    }
-
-    public var body: some View {
-        let ledger = state.model.ledger
-        Button("Everything") {
+        self.init(model: state.model, clients: Bindable(state).clients, projects: Bindable(state).projects) {
             state.clients = []
             state.projects = []
             state.tags = []
         }
+    }
+
+    public init(model: AppModel, clients: Binding<Set<UUID>>, projects: Binding<Set<UUID>>, clear: @escaping () -> Void) {
+        self.model = model
+        _clients = clients
+        _projects = projects
+        self.clear = clear
+    }
+
+    public var body: some View {
+        let ledger = model.ledger
+        Button("Everything", action: clear)
         Section("Clients") {
             ForEach(ledger.liveClients()) { client in
                 Toggle(client.name, isOn: Binding(
-                    get: { state.clients.contains(client.id) },
+                    get: { clients.contains(client.id) },
                     set: { on in
-                        if on { state.clients.insert(client.id) } else { state.clients.remove(client.id) }
+                        if on { clients.insert(client.id) } else { clients.remove(client.id) }
                     }
                 ))
             }
@@ -33,9 +44,9 @@ public struct ReportFilterItems: View {
         Section("Projects") {
             ForEach(ledger.pickerProjects()) { project in
                 Toggle(ledger.projectTitle(project.id), isOn: Binding(
-                    get: { state.projects.contains(project.id) },
+                    get: { projects.contains(project.id) },
                     set: { on in
-                        if on { state.projects.insert(project.id) } else { state.projects.remove(project.id) }
+                        if on { projects.insert(project.id) } else { projects.remove(project.id) }
                     }
                 ))
             }
