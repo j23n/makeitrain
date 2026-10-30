@@ -4,9 +4,13 @@ import TrackerKit
 
 /// The top of the week, month and year: the days shown as a title, the
 /// arrows that step them, Today when they're elsewhere, then the screen's
-/// filter and what its colors mean, and its own figures at the end.
+/// filter and what its colors mean, and its own figures at the end. The
+/// title is as wide as the widest it can be in the year, the same on all
+/// three, so the arrows stay put while stepping and switching.
 struct ScreenHeader<Content: View, Trailing: View>: View {
     let title: String
+    /// The titles the title's room fits.
+    let widest: [String]
     let previousTitle: String
     let nextTitle: String
     let showsToday: Bool
@@ -17,6 +21,8 @@ struct ScreenHeader<Content: View, Trailing: View>: View {
 
     init(
         _ title: String,
+        year: Int,
+        firstWeekday: Int,
         previous previousTitle: String,
         next nextTitle: String,
         showsToday: Bool,
@@ -26,6 +32,7 @@ struct ScreenHeader<Content: View, Trailing: View>: View {
         @ViewBuilder trailing: () -> Trailing
     ) {
         self.title = title
+        widest = ScreenTitles.widest(in: year, firstWeekday: firstWeekday)
         self.previousTitle = previousTitle
         self.nextTitle = nextTitle
         self.showsToday = showsToday
@@ -37,9 +44,17 @@ struct ScreenHeader<Content: View, Trailing: View>: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
-            Text(title)
-                .font(.system(size: 19, weight: .semibold))
-                .lineLimit(1)
+            ZStack(alignment: .leading) {
+                ForEach(widest, id: \.self) { title in
+                    Text(title).hidden()
+                }
+                .accessibilityHidden(true)
+                Text(title)
+            }
+            .font(.system(size: 19, weight: .semibold))
+            .monospacedDigit()
+            .lineLimit(1)
+            .layoutPriority(1)
             HStack(spacing: 2) {
                 stepButton("chevron.left", previousTitle, -1)
                 stepButton("chevron.right", nextTitle, 1)
@@ -138,5 +153,20 @@ extension FilterMenu {
             state.projects = []
             state.tags = []
         }
+    }
+}
+
+/// The titles a screen header's title can have in a year, for its room:
+/// a week across each month's end, the year's first and last, each month,
+/// and a day of each weekday.
+enum ScreenTitles {
+    static func widest(in year: Int, firstWeekday: Int) -> [String] {
+        let months = (1...12).map { ReportPeriod.month.range(containing: LocalDate(year: year, month: $0, day: 1), firstWeekday: firstWeekday) }
+        // The year's first week as well as its last, since one of them
+        // always crosses a new year.
+        let weeks = months.map { ReportPeriod.week.range(containing: $0.upperBound, firstWeekday: firstWeekday) }
+            + [ReportPeriod.week.range(containing: LocalDate(year: year, month: 1, day: 1), firstWeekday: firstWeekday)]
+        let days = (0..<7).map { LocalDate(year: year, month: 9, day: 21).adding(days: $0) }
+        return Array(Set(weeks.map(Format.days) + months.map(Format.days) + days.map { Format.days($0...$0) })).sorted()
     }
 }

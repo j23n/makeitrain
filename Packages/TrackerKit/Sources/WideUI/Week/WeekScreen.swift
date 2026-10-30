@@ -172,6 +172,8 @@ private struct WeekContent: View {
     private var header: some View {
         ScreenHeader(
             Format.days(range),
+            year: range.upperBound.year,
+            firstWeekday: model.firstWeekday,
             previous: "Previous week",
             next: "Next week",
             showsToday: !range.contains(model.today),
