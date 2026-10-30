@@ -129,8 +129,7 @@ struct MonthScreen: View {
         HStack(spacing: 18) {
             KeyHint("← → ↑ ↓", "move")
             KeyHint("⇧", "extend")
-            KeyHint("⏎", "open week")
-            KeyHint("W", "open week")
+            KeyHint("⏎ W", "open week")
             KeyHint("T", "today")
         }
     }

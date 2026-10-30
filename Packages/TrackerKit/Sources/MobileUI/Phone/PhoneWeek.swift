@@ -23,7 +23,7 @@ struct PhoneWeek: View {
             header
             dayStrip
             dayLine
-            if isEmpty(router.weekDay) {
+            if week.isEmpty(on: router.weekDay) {
                 PhoneEmptyDay(isToday: router.weekDay == model.today)
             } else {
                 PhoneDayGrid(model: model, week: week, day: router.weekDay, gutter: 44) { entry in
@@ -188,11 +188,6 @@ struct PhoneWeek: View {
         .foregroundStyle(Theme.text2)
         .monospacedDigit()
         .padding(.horizontal, 20)
-    }
-
-    /// Whether a day has no entries and no entries a correction would add.
-    private func isEmpty(_ day: LocalDate) -> Bool {
-        week.entries(on: day).isEmpty && !week.suggestedAdditions.contains { $0.entry.day == day }
     }
 
     private func dayLabel(_ day: LocalDate, total: Int64, corrections: Int) -> String {

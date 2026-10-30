@@ -75,4 +75,31 @@ import TrackerCore
         #expect(week.follow(wednesday, from: sunday, to: nextMonday, firstWeekday: 2) == wednesday)
         #expect(week.days == days)
     }
+
+    @Test func aDayWithOnlyAnEventToLogIsNotEmpty() async throws {
+        let harness = Harness()
+        defer { harness.cleanUp() }
+        let calendars = FakeCalendars()
+        calendars.list = [CalendarInfo(id: "acme", title: "Calendar", account: "jo@acme.example")]
+        calendars.sample = [
+            CalendarImport.Event(
+                entryID: UUID(), calendarID: "acme", title: "Kickoff",
+                start: DateTimeFormat.parse("2026-09-22T09:00:00+02:00")!,
+                end: DateTimeFormat.parse("2026-09-22T10:00:00+02:00")!
+            ),
+        ]
+        let model = harness.model(calendars: calendars)
+        await model.start()
+        model.refreshCalendars()
+        let website = model.addProject(named: "Website", client: nil, color: "#4F7CAC", undoManager: nil)
+        model.setCalendar("acme", forProject: website)
+        model.addEntry(entry(note: "Call", at: "2026-09-21T09:00:00+02:00"), undoManager: nil)
+        let week = WeekModel(model: model, days: days)
+
+        // Monday has an entry, Tuesday only the event a suggestion would
+        // log, and Wednesday nothing.
+        #expect(!week.isEmpty(on: LocalDate(year: 2026, month: 9, day: 21)))
+        #expect(!week.isEmpty(on: LocalDate(year: 2026, month: 9, day: 22)))
+        #expect(week.isEmpty(on: LocalDate(year: 2026, month: 9, day: 23)))
+    }
 }

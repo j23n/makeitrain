@@ -165,6 +165,12 @@ public final class WeekModel {
         entries[day] ?? []
     }
 
+    /// Whether a day has nothing to draw: no entries, and none that a
+    /// suggestion would add.
+    public func isEmpty(on day: LocalDate) -> Bool {
+        entries(on: day).isEmpty && !suggestedAdditions.contains { $0.entry.day == day }
+    }
+
     /// The time on a day, with the running timer up to now.
     public func total(on day: LocalDate) -> Int64 {
         model.dayTotals.total(on: day, now: model.now)
