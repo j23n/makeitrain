@@ -21,6 +21,12 @@ struct StartTimerIntent: LiveActivityIntent {
 
     init() {}
 
+    /// Starts what `line` says, as the Live Activity's buttons to switch
+    /// and continue do.
+    init(line: String) {
+        self.line = line
+    }
+
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         #if WIDGET_EXTENSION
@@ -44,6 +50,33 @@ struct StopTimerIntent: LiveActivityIntent {
         return .result(dialog: "Open Time Tracker to stop the timer.")
         #else
         let said = await TimerActions.stop()
+        return .result(dialog: "\(said)")
+        #endif
+    }
+}
+
+/// Stops the running timer at a time, as the Live Activity offers for a
+/// timer left running: when the day usually ends.
+struct StopTimerAtIntent: LiveActivityIntent {
+    static let title: LocalizedStringResource = "Stop the Timer At"
+    static let description = IntentDescription("Stops the running timer at an earlier time.")
+    static let isDiscoverable = false
+
+    @Parameter(title: "End")
+    var end: Date
+
+    init() {}
+
+    init(end: Date) {
+        self.end = end
+    }
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        #if WIDGET_EXTENSION
+        return .result(dialog: "Open Time Tracker to stop the timer.")
+        #else
+        let said = await TimerActions.stop(at: end)
         return .result(dialog: "\(said)")
         #endif
     }

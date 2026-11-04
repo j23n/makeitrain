@@ -54,6 +54,21 @@ public enum TimerActions {
         return "Stopped \(what) after \(Format.duration(model.duration(of: stopped)))."
     }
 
+    /// Stops the running timer at `end`, as when it was left running, and
+    /// says for how long it ran.
+    public static func stop(at end: Date) async -> String {
+        let model = AppModel.shared
+        await model.start()
+        guard let running = model.running else {
+            return "No timer is running."
+        }
+        let what = describe(EntryDraft(running.entry), in: model.ledger)
+        model.stopTimer(at: Timestamp(end), undoManager: nil)
+        let stopped = model.resolved.first { $0.id == running.id } ?? running
+        await model.flush()
+        return "Stopped \(what) at \(Format.time(Timestamp(end), zone: running.entry.timeZone)), after \(Format.duration(model.duration(of: stopped)))."
+    }
+
     /// Opens the app's command line, empty and ready to type in.
     public static func openCommandLine() {
         AppModel.shared.request = .command("")
