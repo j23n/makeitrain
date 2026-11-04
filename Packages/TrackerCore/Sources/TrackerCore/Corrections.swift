@@ -204,6 +204,21 @@ public enum Corrections {
         return nil
     }
 
+    /// When a timer starts to count as left running: 12 hours after its
+    /// start, or 5:00 the morning after its day, whichever comes first.
+    public static func ranLongDate(of entry: ResolvedEntry) -> Timestamp {
+        let longAfter = entry.start.adding(milliseconds: longest + 1)
+        let morning = Timestamp(date: entry.entry.day.adding(days: 1), secondOfDay: 5 * 3600, zone: entry.entry.timeZone)
+        return min(longAfter, morning)
+    }
+
+    /// When a timer left running likely ended, as its correction's first
+    /// fix says: when the day usually ends, or nil when that's not between
+    /// its start and now.
+    public static func likelyEnd(of entry: ResolvedEntry, in resolved: [ResolvedEntry], now: Timestamp) -> Timestamp? {
+        UsualEnd(resolved: resolved, before: entry.entry.day.adding(days: 1)).ends(for: entry, now: now).first
+    }
+
     /// Whether at least half of an event's time is logged to its project.
     static func isLogged(_ event: TimeEntry, end: Timestamp, in entries: [ResolvedEntry], now: Timestamp) -> Bool {
         let length = event.start.distance(to: end)

@@ -118,6 +118,30 @@ import Testing
         #expect(early.isEmpty)
     }
 
+    @Test func saysWhenATimerCountsAsLeftRunning() throws {
+        let morning = Ledger(entries: [F.entry(40, F.bookings, "2026-10-05", "08:00", nil)])
+        let early = try #require(morning.resolvedEntries().first)
+        let longDate = Corrections.ranLongDate(of: early)
+        #expect(longDate == F.at("20:00").adding(milliseconds: 1))
+        #expect(Corrections.ranLong(early, now: longDate) == false)
+        #expect(Corrections.ranLong(early, now: longDate.adding(milliseconds: -1)) == nil)
+        // One started late counts at 5:00 the next morning.
+        let evening = Ledger(entries: [F.entry(41, F.bookings, "2026-10-05", "20:00", nil)])
+        let late = try #require(evening.resolvedEntries().first)
+        #expect(Corrections.ranLongDate(of: late) == F.at("05:00", on: "2026-10-06"))
+    }
+
+    @Test func aTimerLeftRunningLikelyEndedWhenTheDayUsuallyEnds() throws {
+        let running = F.entry(40, F.bookings, "2026-10-05", "08:00", nil)
+        var ledger = self.ledger
+        ledger.merge(running)
+        let resolved = ledger.resolvedEntries()
+        let entry = try #require(resolved.first { $0.id == uuid(40) })
+        #expect(Corrections.likelyEnd(of: entry, in: resolved, now: F.at("21:00")) == F.at("18:00"))
+        // Not before the usual end has come.
+        #expect(Corrections.likelyEnd(of: entry, in: resolved, now: F.at("17:00")) == nil)
+    }
+
     @Test func acceptingTheSuggestionsLeavesWhatTakesAChoice() {
         var ledger = self.ledger
         let ids = Set(find(in: ledger).map(\.id))
