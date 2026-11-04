@@ -13,6 +13,9 @@ public enum TimerActions {
     public static func start(_ line: String) async -> String {
         let model = AppModel.shared
         await model.start()
+        guard !model.isReadOnly else {
+            return readOnly
+        }
         let zone = model.environment.timeZone()
         let prompt = "Say a project, tags or a note."
         let reading = model.read(line)
@@ -82,8 +85,8 @@ public enum TimerActions {
         return "Stopped \(what) at \(Format.time(Timestamp(end), zone: running.entry.timeZone)), after \(Format.duration(model.duration(of: stopped)))."
     }
 
-    /// What a stop says when the data can't change, as when iCloud isn't
-    /// available.
+    /// What a start or stop says when the data can't change, as when
+    /// iCloud isn't available.
     private static let readOnly = "iCloud isn't available. Data is read-only."
 
     /// Opens the app's command line, empty and ready to type in.
