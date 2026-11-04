@@ -41,11 +41,16 @@ public enum TimerActions {
     }
 
     /// Stops the running timer, and says for how long it ran.
-    public static func stop() async -> String {
+    /// With `id`, only that entry's timer: another running by then is left
+    /// alone.
+    public static func stop(_ id: UUID? = nil) async -> String {
         let model = AppModel.shared
         await model.start()
         guard let running = model.running else {
             return "No timer is running."
+        }
+        guard id == nil || running.id == id else {
+            return "That timer already stopped."
         }
         let what = describe(EntryDraft(running.entry), in: model.ledger)
         model.stopTimer(undoManager: nil)

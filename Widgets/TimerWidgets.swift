@@ -188,13 +188,13 @@ struct ActivityActions: View {
                     }
                     .buttonStyle(ActivityButtonStyle(prominent: true))
                 }
-                Button(intent: StopTimerIntent()) {
+                Button(intent: StopTimerIntent(entryID: state.entryID)) {
                     Text("Stop Now")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(ActivityButtonStyle(prominent: state.likelyEnd == nil))
             } else {
-                Button(intent: StopTimerIntent()) {
+                Button(intent: StopTimerIntent(entryID: state.entryID)) {
                     Label("Stop", systemImage: "stop.fill")
                 }
                 .buttonStyle(ActivityButtonStyle(prominent: true))

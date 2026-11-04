@@ -44,12 +44,24 @@ struct StopTimerIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Stop the Timer"
     static let description = IntentDescription("Stops the running timer.")
 
+    /// The timer's entry, as on the Live Activity's Stop, so another timer
+    /// started since is left alone. Siri, Shortcuts and the control leave
+    /// it out, to stop whichever runs.
+    @Parameter(title: "Entry")
+    var entryID: String?
+
+    init() {}
+
+    init(entryID: UUID?) {
+        self.entryID = entryID?.uuidString
+    }
+
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         #if WIDGET_EXTENSION
         return .result(dialog: "Open Time Tracker to stop the timer.")
         #else
-        let said = await TimerActions.stop()
+        let said = await TimerActions.stop(entryID.flatMap(UUID.init(uuidString:)))
         return .result(dialog: "\(said)")
         #endif
     }
