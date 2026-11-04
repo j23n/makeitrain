@@ -22,18 +22,15 @@ final class LiveActivities {
     /// watch, to update the activity when it changes.
     static func state(of model: AppModel) -> TimerActivityAttributes.ContentState? {
         guard model.preferences.showsLiveActivity else { return nil }
-        if let running = model.running {
-            let ranLong = Corrections.ranLongDate(of: running)
-            return content(for: running, in: model, end: nil, ranLong: ranLong.date, likelyEnd: Corrections.likelyEnd(of: running, in: model.resolved)?.date)
-        }
-        // The timer that just stopped, here or on another device.
+        // The running timer, or the one that just stopped, here or on
+        // another device.
         let now = max(model.now, model.environment.now())
-        guard let last = model.resolved.last(where: { $0.end != nil }),
-              let end = last.end,
-              end <= now,
-              end.adding(milliseconds: Int64(staysAfterStop * 1000)) > now
-        else { return nil }
-        return content(for: last, in: model, end: end.date, ranLong: nil, likelyEnd: nil)
+        guard let entry = model.liveActivityEntry(at: now, window: Int64(staysAfterStop * 1000)) else { return nil }
+        if let end = entry.end {
+            return content(for: entry, in: model, end: end.date, ranLong: nil, likelyEnd: nil)
+        }
+        let ranLong = Corrections.ranLongDate(of: entry)
+        return content(for: entry, in: model, end: nil, ranLong: ranLong.date, likelyEnd: Corrections.likelyEnd(of: entry, in: model.resolved)?.date)
     }
 
     private static func content(for entry: ResolvedEntry, in model: AppModel, end: Date?, ranLong: Date?, likelyEnd: Date?) -> TimerActivityAttributes.ContentState {
@@ -53,19 +50,16 @@ final class LiveActivities {
         )
     }
 
-    /// The latest two other entries that a line starts again.
+    /// The latest two other entries to switch to.
     private static func shortcuts(in model: AppModel) -> [TimerActivityAttributes.Shortcut] {
-        model.recent(limit: 4).compactMap { entry -> TimerActivityAttributes.Shortcut? in
-            guard let line = model.startLine(for: entry.entry) else { return nil }
-            let project = entry.entry.projectID.flatMap { model.ledger.projects[$0] }
+        model.switchTargets().map { target in
+            let project = target.entry.entry.projectID.flatMap { model.ledger.projects[$0] }
             return TimerActivityAttributes.Shortcut(
-                title: project?.name ?? model.ledger.title(of: entry.entry),
+                title: project?.name ?? model.ledger.title(of: target.entry.entry),
                 color: project?.color ?? "#7F7F7F",
-                line: line
+                line: target.line
             )
         }
-        .prefix(2)
-        .map { $0 }
     }
 
     /// Starts, updates or ends the Live Activity to show `state`.
@@ -74,7 +68,9 @@ final class LiveActivities {
             end()
             return
         }
-        let current = activity ?? Activity<TimerActivityAttributes>.activities.first { $0.activityState == .active }
+        // One past its stale date, asking whether the timer still runs, is
+        // still the timer's.
+        let current = activity ?? Activity<TimerActivityAttributes>.activities.first { $0.activityState == .active || $0.activityState == .stale }
         if let end = state.end {
             // Stopped: the activity that showed the timer says so, with
             // Continue, for a few minutes. None is started for it.
@@ -110,7 +106,7 @@ final class LiveActivities {
 
     /// Takes away the activities of timers that stopped.
     private func dismissEnded() {
-        for activity in Activity<TimerActivityAttributes>.activities where activity.activityState != .active {
+        for activity in Activity<TimerActivityAttributes>.activities where activity.activityState == .ended {
             Task {
                 await activity.end(nil, dismissalPolicy: .immediate)
             }

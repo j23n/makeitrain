@@ -223,6 +223,28 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
         #expect(model.running == nil)
     }
 
+    @Test func picksTheLiveActivitysEntryAndWhatToSwitchTo() async throws {
+        let (harness, model) = await Harness.started()
+        defer { harness.cleanUp() }
+        let website = model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
+        let window: Int64 = 300_000
+        #expect(model.liveActivityEntry(at: harness.clock.now, window: window) == nil)
+
+        model.addEntry(harness.finished(website, note: "Review", hoursAgo: 3), undoManager: nil)
+        model.addEntry(harness.finished(website, tags: ["#12"], note: "Fix login", hoursAgo: 2), undoManager: nil)
+        model.startTimer(EntryDraft(projectID: website, note: "Copy"), undoManager: nil)
+        let running = try #require(model.running)
+        #expect(model.liveActivityEntry(at: harness.clock.now, window: window)?.id == running.id)
+        #expect(model.switchTargets().map(\.line) == ["Website #12 Fix login", "Website Review"])
+        #expect(model.switchTargets(limit: 1).count == 1)
+
+        // Stopped, for five minutes.
+        harness.clock.advance(seconds: 600)
+        model.stopTimer(undoManager: nil)
+        #expect(model.liveActivityEntry(at: harness.clock.now.adding(seconds: 240), window: window)?.id == running.id)
+        #expect(model.liveActivityEntry(at: harness.clock.now.adding(seconds: 300), window: window) == nil)
+    }
+
     @Test func splitsAnEntryAndUndoesTheSplit() async throws {
         let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
