@@ -220,6 +220,15 @@ public enum Corrections {
         return UsualEnd(resolved: resolved, before: entry.entry.day.adding(days: 1)).ends(for: entry, now: later).first
     }
 
+    /// When to ask whether a running timer still runs, as the Live Activity
+    /// does: once it counts as left running, and not before its likely end
+    /// has come, so the time offered to stop at is past.
+    public static func asksStillRunningDate(of entry: ResolvedEntry, in resolved: [ResolvedEntry]) -> Timestamp {
+        let longDate = ranLongDate(of: entry)
+        guard let likely = likelyEnd(of: entry, in: resolved) else { return longDate }
+        return max(longDate, likely)
+    }
+
     /// Whether at least half of an event's time is logged to its project.
     static func isLogged(_ event: TimeEntry, end: Timestamp, in entries: [ResolvedEntry], now: Timestamp) -> Bool {
         let length = event.start.distance(to: end)

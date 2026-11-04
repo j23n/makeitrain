@@ -154,6 +154,12 @@ import Testing
         let nightResolved = night.resolvedEntries()
         let eveningEntry = try #require(nightResolved.first { $0.id == uuid(42) })
         #expect(Corrections.likelyEnd(of: eveningEntry, in: nightResolved) == F.at("21:00"))
+
+        // It asks once it counts as left running, and not before the end it
+        // offers has come.
+        #expect(Corrections.asksStillRunningDate(of: entry, in: resolved) == Corrections.ranLongDate(of: entry))
+        #expect(Corrections.asksStillRunningDate(of: lateEntry, in: lateResolved) == F.at("18:00"))
+        #expect(Corrections.asksStillRunningDate(of: eveningEntry, in: nightResolved) == F.at("05:00", on: "2026-10-06"))
     }
 
     @Test func acceptingTheSuggestionsLeavesWhatTakesAChoice() {

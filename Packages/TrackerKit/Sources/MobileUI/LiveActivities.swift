@@ -29,11 +29,8 @@ final class LiveActivities {
         if let end = entry.end {
             return content(for: entry, in: model, end: end.date, ranLong: nil, likelyEnd: nil)
         }
-        // It asks once the timer counts as left running, and not before the
-        // time it offers to stop at has come.
-        let likelyEnd = Corrections.likelyEnd(of: entry, in: model.resolved)
-        let ranLong = max(Corrections.ranLongDate(of: entry), likelyEnd ?? .init(milliseconds: 0))
-        return content(for: entry, in: model, end: nil, ranLong: ranLong.date, likelyEnd: likelyEnd?.date)
+        let asks = Corrections.asksStillRunningDate(of: entry, in: model.resolved)
+        return content(for: entry, in: model, end: nil, ranLong: asks.date, likelyEnd: Corrections.likelyEnd(of: entry, in: model.resolved)?.date)
     }
 
     private static func content(for entry: ResolvedEntry, in model: AppModel, end: Date?, ranLong: Date?, likelyEnd: Date?) -> TimerActivityAttributes.ContentState {
