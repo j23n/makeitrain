@@ -182,19 +182,19 @@ struct ActivityActions: View {
                 .buttonStyle(ActivityButtonStyle(prominent: false))
             } else if isStale {
                 if let likelyEnd = state.likelyEnd {
-                    Button(intent: StopTimerAtIntent(entryID: state.entryID, end: likelyEnd)) {
+                    Button(intent: StopActivityTimerIntent(entryID: state.entryID, end: likelyEnd)) {
                         Text("Stop at \(likelyEnd, style: .time)")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(ActivityButtonStyle(prominent: true))
                 }
-                Button(intent: StopTimerIntent(entryID: state.entryID)) {
+                Button(intent: StopActivityTimerIntent(entryID: state.entryID)) {
                     Text("Stop Now")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(ActivityButtonStyle(prominent: state.likelyEnd == nil))
             } else {
-                Button(intent: StopTimerIntent(entryID: state.entryID)) {
+                Button(intent: StopActivityTimerIntent(entryID: state.entryID)) {
                     Label("Stop", systemImage: "stop.fill")
                 }
                 .buttonStyle(ActivityButtonStyle(prominent: true))
