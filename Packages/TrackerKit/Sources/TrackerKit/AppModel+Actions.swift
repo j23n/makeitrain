@@ -20,9 +20,13 @@ extension AppModel {
         startTimer(EntryDraft(entry.entry), undoManager: undoManager)
     }
 
-    /// Stops the running timer now.
-    public func stopTimer(undoManager: UndoManager?) {
-        edit("Stop Timer", undoManager: undoManager) { ledger, now in
+    /// Stops the running timer now. With `id`, only while that entry is
+    /// the one running, as for a Live Activity's Stop. Returns whether it
+    /// stopped one.
+    @discardableResult
+    public func stopTimer(id: UUID? = nil, undoManager: UndoManager?) -> Bool {
+        guard let running, id == nil || running.id == id else { return false }
+        return edit("Stop Timer", undoManager: undoManager) { ledger, now in
             ledger.stopTimer(at: now, now: now)
         }
     }

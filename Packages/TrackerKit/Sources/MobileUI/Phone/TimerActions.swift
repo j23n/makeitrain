@@ -49,11 +49,10 @@ public enum TimerActions {
         guard let running = model.running else {
             return "No timer is running."
         }
-        guard id == nil || running.id == id else {
+        let what = describe(EntryDraft(running.entry), in: model.ledger)
+        guard model.stopTimer(id: id, undoManager: nil) else {
             return "That timer already stopped."
         }
-        let what = describe(EntryDraft(running.entry), in: model.ledger)
-        model.stopTimer(undoManager: nil)
         let stopped = model.resolved.first { $0.id == running.id } ?? running
         await model.flush()
         return "Stopped \(what) after \(Format.duration(model.duration(of: stopped)))."
@@ -68,11 +67,10 @@ public enum TimerActions {
         guard let running = model.running else {
             return "No timer is running."
         }
-        guard id == nil || running.id == id else {
+        let what = describe(EntryDraft(running.entry), in: model.ledger)
+        guard model.stopTimer(id: id, at: Timestamp(end), undoManager: nil) else {
             return "That timer already stopped."
         }
-        let what = describe(EntryDraft(running.entry), in: model.ledger)
-        model.stopTimer(id: id, at: Timestamp(end), undoManager: nil)
         let stopped = model.resolved.first { $0.id == running.id } ?? running
         await model.flush()
         return "Stopped \(what) at \(Format.time(Timestamp(end), zone: running.entry.timeZone)), after \(Format.duration(model.duration(of: stopped)))."

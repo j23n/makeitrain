@@ -223,6 +223,23 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
         #expect(model.running == nil)
     }
 
+    @Test func stopsOnlyTheTimerItsAskedToStopNow() async throws {
+        let (harness, model) = await Harness.started()
+        defer { harness.cleanUp() }
+        #expect(!model.stopTimer(undoManager: nil))
+        model.startTimer(EntryDraft(note: "Earlier"), undoManager: nil)
+        let earlier = try #require(model.running?.id)
+        harness.clock.advance(seconds: 600)
+        model.startTimer(EntryDraft(note: "Later"), undoManager: nil)
+        let later = try #require(model.running?.id)
+        harness.clock.advance(seconds: 600)
+        #expect(!model.stopTimer(id: earlier, undoManager: nil))
+        #expect(model.running?.id == later)
+        #expect(model.stopTimer(id: later, undoManager: nil))
+        #expect(model.running == nil)
+        #expect(model.resolved.first { $0.id == later }?.end == harness.clock.now.wholeSeconds)
+    }
+
     @Test func picksTheLiveActivitysEntryAndWhatToSwitchTo() async throws {
         let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
