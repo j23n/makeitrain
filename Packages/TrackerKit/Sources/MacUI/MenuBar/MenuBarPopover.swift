@@ -4,8 +4,9 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 
-/// The popover under the menu bar item: the running timer, if any, and the
-/// command line. Everything else is typed, or in the main window.
+/// The popover under the menu bar item: the running timer, if any, the
+/// command line, and today's time. Everything else is typed, or in the main
+/// window.
 struct MenuBarPopover: View {
     let model: AppModel
     @State private var line: CommandLineModel
@@ -23,42 +24,62 @@ struct MenuBarPopover: View {
             Divider().overlay(Theme.line)
             footer
         }
-        .frame(width: 410)
+        .frame(width: 380)
         .background(Theme.popover)
     }
 
-    /// Opening the main window and Settings, and quitting.
+    /// Today's time, and opening the main window and Settings, and
+    /// quitting. The keys are in each button's help.
     private var footer: some View {
-        HStack(spacing: 14) {
-            Button("Open Time Tracker") {
+        HStack(spacing: 2) {
+            TodayTotal(model: model)
+            Spacer(minLength: 8)
+            iconButton("macwindow", "Open Time Tracker (⌘O)", label: "Open Time Tracker") {
                 openWindow(id: WindowID.main)
                 NSApp.activate()
                 close()
             }
             .keyboardShortcut("o")
             SettingsLink {
-                Text("Settings…")
+                icon("gearshape")
             }
+            .buttonStyle(.plain)
             .keyboardShortcut(",")
+            .help("Settings… (⌘,)")
+            .accessibilityLabel(Text("Settings"))
             #if FEEDBACK
-            Button("Feedback…") {
+            iconButton("bubble.left", "Feedback…", label: "Feedback") {
                 close()
                 Task { await Feedback.center.begin() }
             }
             .disabled(!Feedback.center.isEnabled)
             .accessibilityIdentifier("menuBar.feedback")
             #endif
-            Spacer()
-            Button("Quit") {
+            iconButton("power", "Quit (⌘Q)", label: "Quit") {
                 NSApp.terminate(nil)
             }
             .keyboardShortcut("q")
         }
+        .padding(.leading, 14)
+        .padding(.trailing, 8)
+        .frame(height: 40)
+    }
+
+    private func iconButton(_ systemImage: String, _ help: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            icon(systemImage)
+        }
         .buttonStyle(.plain)
-        .font(.system(size: 12))
-        .foregroundStyle(Theme.text2)
-        .padding(.horizontal, 14)
-        .frame(height: 30)
+        .help(help)
+        .accessibilityLabel(Text(label))
+    }
+
+    private func icon(_ systemImage: String) -> some View {
+        Image(systemName: systemImage)
+            .font(.system(size: 13))
+            .foregroundStyle(Theme.text2)
+            .frame(width: 28, height: 28)
+            .contentShape(Rectangle())
     }
 
     private func close() {

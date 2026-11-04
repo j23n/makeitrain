@@ -4,10 +4,11 @@ import TrackerKit
 
 /// What's under a command line, the same in the menu bar's popover, the
 /// shortcut's panel, the main window and on iPad and iPhone: with nothing
-/// typed, lines to try and today's entries; while a line names only a
-/// project, tags or a note, the earlier entries it could start again and
-/// the line as typed; otherwise what the line would do, or what "find"
-/// found; and on the Mac, the keys to know.
+/// typed, the latest entries to start again, or lines to try before there
+/// are any, or today's entries once Down lists them; while a line names
+/// only a project, tags or a note, the earlier entries it could start
+/// again and the line as typed; otherwise what the line would do, or what
+/// "find" found; and what the line could also mean, as Option-Return does.
 public struct CommandDetails: View {
     let line: CommandLineModel
     /// Whether it goes on in the field's own box, as in the popover, where
@@ -22,6 +23,8 @@ public struct CommandDetails: View {
     /// Runs the line, as Return does, or with `alternate` as Option-Return
     /// does.
     let submit: (_ alternate: Bool) -> Void
+    /// Starts one of the latest entries again, as clicking it does.
+    let startAgain: (ResolvedEntry) -> Void
     /// Gives the field the keyboard back after a line to try fills it.
     let refocus: () -> Void
 
@@ -31,6 +34,7 @@ public struct CommandDetails: View {
         size: ChipLabel.Size = .regular,
         select: ((ResolvedEntry) -> Void)? = nil,
         submit: @escaping (_ alternate: Bool) -> Void,
+        startAgain: @escaping (ResolvedEntry) -> Void,
         refocus: @escaping () -> Void = {}
     ) {
         self.line = line
@@ -38,6 +42,7 @@ public struct CommandDetails: View {
         self.size = size
         self.select = select
         self.submit = submit
+        self.startAgain = startAgain
         self.refocus = refocus
     }
 
@@ -45,18 +50,21 @@ public struct CommandDetails: View {
     private var model: AppModel { line.model }
 
     public var body: some View {
-        let listed = line.listedEntries(alwaysListsToday: true)
+        let listed = line.listedEntries(alwaysListsToday: false)
         VStack(spacing: 0) {
             if continuesField {
                 divider
             }
             if line.text.isEmpty {
-                header("Try")
-                examples
                 if !listed.isEmpty {
-                    divider
                     header("Today")
                     EntryList(model: model, entries: listed, size: size, select: select)
+                } else if !line.recent.isEmpty {
+                    header("Start again")
+                    recent
+                } else {
+                    header("Try")
+                    examples
                 }
             } else if !line.recalled.isEmpty {
                 header("Start again")
@@ -74,12 +82,7 @@ public struct CommandDetails: View {
                     EntryList(model: model, entries: listed, size: size, select: select)
                 }
             }
-            if touch {
-                alternate
-            } else {
-                divider
-                hints
-            }
+            alternate
         }
     }
 
@@ -128,6 +131,23 @@ public struct CommandDetails: View {
             }
         }
         .padding(.bottom, 4)
+    }
+
+    /// The latest entries, to start again with a click or a tap.
+    private var recent: some View {
+        VStack(spacing: touch ? 0 : 1) {
+            ForEach(line.recent) { entry in
+                Button {
+                    startAgain(entry)
+                } label: {
+                    recalledRow(entry, highlighted: false)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("Start again: \(model.ledger.projectTitle(entry.entry.projectID)), \(model.ledger.title(of: entry.entry))"))
+            }
+        }
+        .padding(.horizontal, touch ? 8 : 6)
+        .padding(.bottom, 6)
     }
 
     // MARK: - Typing
@@ -245,8 +265,8 @@ public struct CommandDetails: View {
         return "as typed: \(title)"
     }
 
-    /// On iPad and iPhone, what the line could also mean, such as logging
-    /// it as done, as a row to tap, where the Mac has Option-Return.
+    /// What the line could also mean, such as logging it as done, as a row
+    /// to click or tap, as Option-Return does on the Mac.
     @ViewBuilder
     private var alternate: some View {
         if !line.text.isEmpty, line.recalledEntry == nil, let command = line.reading.alternate {
@@ -261,42 +281,16 @@ public struct CommandDetails: View {
                         .foregroundStyle(Theme.text)
                     Spacer(minLength: 0)
                 }
-                .font(.system(size: 14))
+                .font(.system(size: touch ? 14 : 12.5))
                 .lineLimit(1)
-                .padding(.horizontal, 16)
-                .frame(height: 44)
+                .padding(.horizontal, touch ? 16 : 14)
+                .frame(height: touch ? 44 : 34)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .help("Option-Return")
             .overlay(alignment: .top) { divider }
         }
-    }
-
-    // MARK: - Keys
-
-    /// The keys that do something with what's typed.
-    private var hints: some View {
-        HStack(spacing: 16) {
-            if line.text.isEmpty {
-                KeyHint("↑", "earlier lines")
-            } else if let entry = line.recalledEntry {
-                KeyHint("⏎", "start again")
-                KeyHint("↑↓", "choose")
-                if model.startLine(for: entry.entry) != nil {
-                    KeyHint("⇥", "copy to the line")
-                }
-            } else if !line.recalled.isEmpty {
-                KeyHint("↑↓", "choose")
-            } else if let completion = line.reading.completion {
-                KeyHint("⇥", "\(completion.text), from \(Format.weekday(completion.day))")
-                    .lineLimit(1)
-            } else if case .addProject? = line.reading.alternate {
-                KeyHint("⌥⏎", "add and start")
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 14)
-        .frame(height: 32)
     }
 }
 
@@ -352,7 +346,7 @@ struct ReadingText: View {
 
 #if DEBUG
 #Preview("Nothing Typed") {
-    CommandDetails(line: CommandLineModel(model: PreviewData.model()), continuesField: false, submit: { _ in })
+    CommandDetails(line: CommandLineModel(model: PreviewData.model()), continuesField: false, submit: { _ in }, startAgain: { _ in })
         .frame(width: 440)
         .background(Theme.panel)
 }
@@ -360,7 +354,7 @@ struct ReadingText: View {
 #Preview("Earlier Entries") {
     let line = CommandLineModel(model: PreviewData.model())
     line.text = "web"
-    return CommandDetails(line: line, continuesField: false, submit: { _ in })
+    return CommandDetails(line: line, continuesField: false, submit: { _ in }, startAgain: { _ in })
         .frame(width: 440)
         .background(Theme.panel)
 }
@@ -368,7 +362,7 @@ struct ReadingText: View {
 #Preview("Earlier Entries, Touch") {
     let line = CommandLineModel(model: PreviewData.model())
     line.text = "web"
-    return CommandDetails(line: line, continuesField: false, size: .touch, submit: { _ in })
+    return CommandDetails(line: line, continuesField: false, size: .touch, submit: { _ in }, startAgain: { _ in })
         .frame(width: 390)
         .background(Theme.panel)
 }

@@ -76,6 +76,12 @@ extension AppModel {
         commandContext.startLine(for: entry)
     }
 
+    /// The latest entries to start again, as an empty command line lists
+    /// them (`Ledger.recent`).
+    public func recent(limit: Int = 4) -> [ResolvedEntry] {
+        ledger.recent(in: resolved, running: running, limit: limit)
+    }
+
     /// Lines to try in an empty command line, naming the last project
     /// used.
     public var commandExamples: [CommandExample] {

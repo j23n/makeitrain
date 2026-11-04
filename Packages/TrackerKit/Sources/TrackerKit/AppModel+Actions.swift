@@ -27,6 +27,14 @@ extension AppModel {
         }
     }
 
+    /// Stops the running timer at `time`, or now if that's later, as for a
+    /// timer left running that likely ended when the day usually ends.
+    public func stopTimer(at time: Timestamp, undoManager: UndoManager?) {
+        edit("Stop Timer", undoManager: undoManager) { ledger, now in
+            ledger.stopTimer(at: min(time, now), now: now)
+        }
+    }
+
     /// Moves the running timer's start, such as back to when work began,
     /// as "from 9:00" on the command line does. Moving a start can't fail.
     public func setRunningStart(_ start: Timestamp, undoManager: UndoManager?) {
