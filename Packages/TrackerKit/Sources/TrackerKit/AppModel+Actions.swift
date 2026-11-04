@@ -28,9 +28,13 @@ extension AppModel {
     }
 
     /// Stops the running timer at `time`, or now if that's later, as for a
-    /// timer left running that likely ended when the day usually ends.
-    public func stopTimer(at time: Timestamp, undoManager: UndoManager?) {
-        edit("Stop Timer", undoManager: undoManager) { ledger, now in
+    /// timer left running that likely ended when the day usually ends. With
+    /// `id`, only while that entry is the one running. Returns whether it
+    /// stopped one.
+    @discardableResult
+    public func stopTimer(id: UUID? = nil, at time: Timestamp, undoManager: UndoManager?) -> Bool {
+        guard let running, id == nil || running.id == id else { return false }
+        return edit("Stop Timer", undoManager: undoManager) { ledger, now in
             ledger.stopTimer(at: min(time, now), now: now)
         }
     }

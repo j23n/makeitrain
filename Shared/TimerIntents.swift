@@ -65,9 +65,14 @@ struct StopTimerAtIntent: LiveActivityIntent {
     @Parameter(title: "End")
     var end: Date
 
+    /// The timer's entry, so another timer started since is left alone.
+    @Parameter(title: "Entry")
+    var entryID: String?
+
     init() {}
 
-    init(end: Date) {
+    init(entryID: UUID?, end: Date) {
+        self.entryID = entryID?.uuidString
         self.end = end
     }
 
@@ -76,7 +81,7 @@ struct StopTimerAtIntent: LiveActivityIntent {
         #if WIDGET_EXTENSION
         return .result(dialog: "Open Time Tracker to stop the timer.")
         #else
-        let said = await TimerActions.stop(at: end)
+        let said = await TimerActions.stop(entryID.flatMap(UUID.init(uuidString:)), at: end)
         return .result(dialog: "\(said)")
         #endif
     }

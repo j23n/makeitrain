@@ -24,7 +24,7 @@ final class LiveActivities {
         guard model.preferences.showsLiveActivity else { return nil }
         if let running = model.running {
             let ranLong = Corrections.ranLongDate(of: running)
-            return content(for: running, in: model, end: nil, ranLong: ranLong.date, likelyEnd: Corrections.likelyEnd(of: running, in: model.resolved, now: ranLong)?.date)
+            return content(for: running, in: model, end: nil, ranLong: ranLong.date, likelyEnd: Corrections.likelyEnd(of: running, in: model.resolved)?.date)
         }
         // The timer that just stopped, here or on another device.
         let now = max(model.now, model.environment.now())
@@ -41,6 +41,7 @@ final class LiveActivities {
         let detail = entry.entry.note.isEmpty ? entry.entry.tags.joined(separator: " ") : entry.entry.note
         return TimerActivityAttributes.ContentState(
             start: entry.start.date,
+            entryID: entry.id,
             project: project?.name ?? "Unassigned",
             color: project?.color ?? "#7F7F7F",
             detail: detail,

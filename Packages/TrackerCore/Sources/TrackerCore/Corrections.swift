@@ -213,10 +213,11 @@ public enum Corrections {
     }
 
     /// When a timer left running likely ended, as its correction's first
-    /// fix says: when the day usually ends, or nil when that's not between
-    /// its start and now.
-    public static func likelyEnd(of entry: ResolvedEntry, in resolved: [ResolvedEntry], now: Timestamp) -> Timestamp? {
-        UsualEnd(resolved: resolved, before: entry.entry.day.adding(days: 1)).ends(for: entry, now: now).first
+    /// fix says once it counts as left running: when the day usually ends,
+    /// or an hour after its start when it started after that.
+    public static func likelyEnd(of entry: ResolvedEntry, in resolved: [ResolvedEntry]) -> Timestamp? {
+        let later = entry.start.adding(seconds: 2 * 86400)
+        return UsualEnd(resolved: resolved, before: entry.entry.day.adding(days: 1)).ends(for: entry, now: later).first
     }
 
     /// Whether at least half of an event's time is logged to its project.

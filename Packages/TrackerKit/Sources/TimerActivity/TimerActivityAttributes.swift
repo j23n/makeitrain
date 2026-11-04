@@ -9,6 +9,8 @@ public struct TimerActivityAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable, Sendable {
         /// When the timer started, to count up from.
         public var start: Date
+        /// The timer's entry, so a button stops only that one.
+        public var entryID: UUID?
         /// The project's name, or "Unassigned".
         public var project: String
         /// The project's color, such as "#4F7CAC".
@@ -32,6 +34,7 @@ public struct TimerActivityAttributes: ActivityAttributes {
 
         public init(
             start: Date,
+            entryID: UUID? = nil,
             project: String,
             color: String,
             detail: String,
@@ -42,6 +45,7 @@ public struct TimerActivityAttributes: ActivityAttributes {
             switchTo: [Shortcut] = []
         ) {
             self.start = start
+            self.entryID = entryID
             self.project = project
             self.color = color
             self.detail = detail

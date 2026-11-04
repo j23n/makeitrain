@@ -209,6 +209,18 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
         harness.clock.advance(seconds: 60)
         model.stopTimer(at: harness.clock.now.adding(seconds: 600), undoManager: nil)
         #expect(model.resolved.first { $0.id == again }?.end == harness.clock.now.wholeSeconds)
+
+        // Only the timer it's for: one started since keeps running.
+        model.startTimer(EntryDraft(note: "Earlier"), undoManager: nil)
+        let earlier = try #require(model.running?.id)
+        harness.clock.advance(seconds: 600)
+        model.startTimer(EntryDraft(note: "Later"), undoManager: nil)
+        let later = try #require(model.running?.id)
+        harness.clock.advance(seconds: 600)
+        #expect(!model.stopTimer(id: earlier, at: harness.clock.now.adding(seconds: -900), undoManager: nil))
+        #expect(model.running?.id == later)
+        #expect(model.stopTimer(id: later, at: harness.clock.now, undoManager: nil))
+        #expect(model.running == nil)
     }
 
     @Test func splitsAnEntryAndUndoesTheSplit() async throws {

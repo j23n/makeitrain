@@ -182,7 +182,7 @@ struct ActivityActions: View {
                 .buttonStyle(ActivityButtonStyle(prominent: false))
             } else if isStale {
                 if let likelyEnd = state.likelyEnd {
-                    Button(intent: StopTimerAtIntent(end: likelyEnd)) {
+                    Button(intent: StopTimerAtIntent(entryID: state.entryID, end: likelyEnd)) {
                         Text("Stop at \(likelyEnd, style: .time)")
                             .frame(maxWidth: .infinity)
                     }

@@ -54,16 +54,20 @@ public enum TimerActions {
         return "Stopped \(what) after \(Format.duration(model.duration(of: stopped)))."
     }
 
-    /// Stops the running timer at `end`, as when it was left running, and
-    /// says for how long it ran.
-    public static func stop(at end: Date) async -> String {
+    /// Stops the timer of entry `id` at `end`, as when it was left
+    /// running, and says for how long it ran. Another timer running by
+    /// then is left alone.
+    public static func stop(_ id: UUID?, at end: Date) async -> String {
         let model = AppModel.shared
         await model.start()
         guard let running = model.running else {
             return "No timer is running."
         }
+        guard id == nil || running.id == id else {
+            return "That timer already stopped."
+        }
         let what = describe(EntryDraft(running.entry), in: model.ledger)
-        model.stopTimer(at: Timestamp(end), undoManager: nil)
+        model.stopTimer(id: id, at: Timestamp(end), undoManager: nil)
         let stopped = model.resolved.first { $0.id == running.id } ?? running
         await model.flush()
         return "Stopped \(what) at \(Format.time(Timestamp(end), zone: running.entry.timeZone)), after \(Format.duration(model.duration(of: stopped)))."

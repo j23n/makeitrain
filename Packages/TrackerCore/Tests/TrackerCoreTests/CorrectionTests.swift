@@ -137,9 +137,23 @@ import Testing
         ledger.merge(running)
         let resolved = ledger.resolvedEntries()
         let entry = try #require(resolved.first { $0.id == uuid(40) })
-        #expect(Corrections.likelyEnd(of: entry, in: resolved, now: F.at("21:00")) == F.at("18:00"))
-        // Not before the usual end has come.
-        #expect(Corrections.likelyEnd(of: entry, in: resolved, now: F.at("17:00")) == nil)
+        #expect(Corrections.likelyEnd(of: entry, in: resolved) == F.at("18:00"))
+        // The same as the correction's first fix, though the usual end
+        // comes after the timer counts as left running.
+        let late = F.entry(41, F.bookings, "2026-10-05", "05:30", nil)
+        var early = self.ledger
+        early.merge(late)
+        let lateResolved = early.resolvedEntries()
+        let lateEntry = try #require(lateResolved.first { $0.id == uuid(41) })
+        #expect(Corrections.ranLongDate(of: lateEntry) < F.at("18:00"))
+        #expect(Corrections.likelyEnd(of: lateEntry, in: lateResolved) == F.at("18:00"))
+        // One started after the usual end: an hour after its start.
+        let evening = F.entry(42, F.bookings, "2026-10-05", "20:00", nil)
+        var night = self.ledger
+        night.merge(evening)
+        let nightResolved = night.resolvedEntries()
+        let eveningEntry = try #require(nightResolved.first { $0.id == uuid(42) })
+        #expect(Corrections.likelyEnd(of: eveningEntry, in: nightResolved) == F.at("21:00"))
     }
 
     @Test func acceptingTheSuggestionsLeavesWhatTakesAChoice() {
