@@ -13,6 +13,9 @@ public enum TimerActions {
     public static func start(_ line: String) async -> String {
         let model = AppModel.shared
         await model.start()
+        guard !model.isReadOnly else {
+            return readOnly
+        }
         let zone = model.environment.timeZone()
         let prompt = "Say a project, tags or a note."
         let reading = model.read(line)
@@ -41,18 +44,50 @@ public enum TimerActions {
     }
 
     /// Stops the running timer, and says for how long it ran.
-    public static func stop() async -> String {
+    /// With `id`, only that entry's timer: another running by then is left
+    /// alone.
+    public static func stop(_ id: UUID? = nil) async -> String {
         let model = AppModel.shared
         await model.start()
+        guard !model.isReadOnly else {
+            return readOnly
+        }
         guard let running = model.running else {
             return "No timer is running."
         }
         let what = describe(EntryDraft(running.entry), in: model.ledger)
-        model.stopTimer(undoManager: nil)
+        guard model.stopTimer(id: id, undoManager: nil) else {
+            return "That timer already stopped."
+        }
         let stopped = model.resolved.first { $0.id == running.id } ?? running
         await model.flush()
         return "Stopped \(what) after \(Format.duration(model.duration(of: stopped)))."
     }
+
+    /// Stops the timer of entry `id` at `end`, as when it was left
+    /// running, and says for how long it ran. Another timer running by
+    /// then is left alone.
+    public static func stop(_ id: UUID?, at end: Date) async -> String {
+        let model = AppModel.shared
+        await model.start()
+        guard !model.isReadOnly else {
+            return readOnly
+        }
+        guard let running = model.running else {
+            return "No timer is running."
+        }
+        let what = describe(EntryDraft(running.entry), in: model.ledger)
+        guard model.stopTimer(id: id, at: Timestamp(end), undoManager: nil) else {
+            return "That timer already stopped."
+        }
+        let stopped = model.resolved.first { $0.id == running.id } ?? running
+        await model.flush()
+        return "Stopped \(what) at \(Format.time(Timestamp(end), zone: running.entry.timeZone)), after \(Format.duration(model.duration(of: stopped)))."
+    }
+
+    /// What a start or stop says when the data can't change, as when
+    /// iCloud isn't available.
+    private static let readOnly = "iCloud isn't available. Data is read-only."
 
     /// Opens the app's command line, empty and ready to type in.
     public static func openCommandLine() {

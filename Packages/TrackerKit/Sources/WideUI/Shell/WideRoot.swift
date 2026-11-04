@@ -50,6 +50,7 @@ public struct WideRoot<Trailing: View>: View {
                 field: commandFocused ? field : nil,
                 select: show,
                 submit: { submit(alternate: $0) },
+                startAgain: startAgain,
                 refocus: { focusRequest += 1 }
             )
         }
@@ -90,6 +91,14 @@ public struct WideRoot<Trailing: View>: View {
     /// Return.
     private func submit(alternate: Bool) {
         if line.submitClosing(alternate: alternate, undoManager: undoManager) {
+            finish()
+        }
+    }
+
+    /// Starts one of the latest entries again, as clicking it does, and
+    /// leaves the line as Return would.
+    private func startAgain(_ entry: ResolvedEntry) {
+        if line.startAgainClosing(entry, undoManager: undoManager) {
             finish()
         }
     }
@@ -146,11 +155,12 @@ private struct CommandDropdown: View {
     let field: Anchor<CGRect>?
     let select: (ResolvedEntry) -> Void
     let submit: (_ alternate: Bool) -> Void
+    let startAgain: (ResolvedEntry) -> Void
     let refocus: () -> Void
 
     /// As wide as the menu bar's popover, at least, and wider for touch.
     #if os(macOS)
-    private static let minimumWidth: CGFloat = 410
+    private static let minimumWidth: CGFloat = 380
     private static let size = ChipLabel.Size.regular
     #else
     private static let minimumWidth: CGFloat = 470
@@ -164,7 +174,7 @@ private struct CommandDropdown: View {
                 let width = max(bounds.width, Self.minimumWidth)
                 // Centered under the field, inside the window.
                 let x = min(max(bounds.midX - width / 2, 8), max(geometry.size.width - width - 8, 8))
-                CommandDetails(line: line, continuesField: false, size: Self.size, select: select, submit: submit, refocus: refocus)
+                CommandDetails(line: line, continuesField: false, size: Self.size, select: select, submit: submit, startAgain: startAgain, refocus: refocus)
                     .frame(width: width)
                     .background(Theme.popover)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -250,7 +260,6 @@ struct TopBar<Trailing: View>: View {
     let submit: (_ alternate: Bool) -> Void
     /// Clears the line, or leaves it with nothing typed.
     let cancel: () -> Void
-    @Environment(\.undoManager) private var undoManager
 
     var body: some View {
         HStack(spacing: 14) {
@@ -299,9 +308,8 @@ struct TopBar<Trailing: View>: View {
             if let running = model.running {
                 RunningTimerLabel(model: model, running: running)
                     .font(.system(size: TopBarMetrics.fontSize))
-                    .fixedSize()
-                    .accessibilityElement(children: .combine)
-                Rectangle().fill(Theme.strongLine).frame(width: 1, height: 16)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .padding(.vertical, 4)
             }
             CommandField(
                 line: line,
@@ -314,24 +322,15 @@ struct TopBar<Trailing: View>: View {
             )
             .frame(height: TopBarMetrics.fieldText)
             #if os(macOS)
-            KeyCap("⌘K")
+            if !commandFocused {
+                KeyCap("⌘K")
+            }
             #endif
             if model.running != nil {
-                Button {
-                    model.stopTimer(undoManager: undoManager)
-                } label: {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Theme.text)
-                        .frame(width: 9, height: 9)
-                        .frame(width: TopBarMetrics.stop, height: TopBarMetrics.stop)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help("Stop the timer")
-                .accessibilityLabel(Text("Stop the timer"))
+                StopTimerButton(model: model, size: TopBarMetrics.stop)
             }
         }
-        .padding(.leading, 12)
+        .padding(.leading, model.running == nil ? 12 : 4)
         .padding(.trailing, 4)
         .frame(height: TopBarMetrics.field)
         .background(RoundedRectangle(cornerRadius: 9).fill(Theme.field))

@@ -24,9 +24,23 @@ extension Ledger {
     /// latest first, each project, tags and note once, leaving out the
     /// running timer's and those of archived projects.
     public func recall(_ query: String, in resolved: [ResolvedEntry], running: ResolvedEntry?, limit: Int = 5) -> [ResolvedEntry] {
+        distinct(search(query, in: resolved), running: running, limit: limit)
+    }
+
+    /// The latest entries to start again, as an empty command line lists
+    /// them: the latest first, each project, tags and note once, leaving
+    /// out the running timer's and those of archived projects.
+    public func recent(in resolved: [ResolvedEntry], running: ResolvedEntry?, limit: Int = 4) -> [ResolvedEntry] {
+        distinct(resolved.reversed(), running: running, limit: limit)
+    }
+
+    /// `entries`, in their order, each project, tags and note once, without
+    /// the running timer's and archived projects'.
+    private func distinct(_ entries: some Sequence<ResolvedEntry>, running: ResolvedEntry?, limit: Int) -> [ResolvedEntry] {
         var result: [ResolvedEntry] = []
+        guard limit > 0 else { return result }
         var drafts: [EntryDraft] = running.map { [EntryDraft($0.entry)] } ?? []
-        for entry in search(query, in: resolved) {
+        for entry in entries {
             if let projectID = entry.entry.projectID, isArchived(project: projectID) {
                 continue
             }

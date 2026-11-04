@@ -21,6 +21,12 @@ struct StartTimerIntent: LiveActivityIntent {
 
     init() {}
 
+    /// Starts what `line` says, as the Live Activity's buttons to switch
+    /// and continue do.
+    init(line: String) {
+        self.line = line
+    }
+
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         #if WIDGET_EXTENSION
@@ -32,8 +38,7 @@ struct StartTimerIntent: LiveActivityIntent {
     }
 }
 
-/// Stops the running timer, from Siri, Shortcuts, the Live Activity or
-/// Control Center.
+/// Stops the running timer, from Siri, Shortcuts or Control Center.
 struct StopTimerIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Stop the Timer"
     static let description = IntentDescription("Stops the running timer.")
@@ -44,6 +49,46 @@ struct StopTimerIntent: LiveActivityIntent {
         return .result(dialog: "Open Time Tracker to stop the timer.")
         #else
         let said = await TimerActions.stop()
+        return .result(dialog: "\(said)")
+        #endif
+    }
+}
+
+/// Stops the Live Activity's own timer, now or at a time, as for a timer
+/// left running: when the day usually ends. A timer started since, as on
+/// another device, is left alone. It's only for the activity's buttons, so
+/// Shortcuts doesn't offer it.
+struct StopActivityTimerIntent: LiveActivityIntent {
+    static let title: LocalizedStringResource = "Stop the Live Activity's Timer"
+    static let description = IntentDescription("Stops the timer the Live Activity shows.")
+    static let isDiscoverable = false
+
+    @Parameter(title: "Entry")
+    var entryID: String?
+
+    /// When it ended, or nil for now.
+    @Parameter(title: "End")
+    var end: Date?
+
+    init() {}
+
+    init(entryID: UUID?, end: Date? = nil) {
+        self.entryID = entryID?.uuidString
+        self.end = end
+    }
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        #if WIDGET_EXTENSION
+        return .result(dialog: "Open Time Tracker to stop the timer.")
+        #else
+        let id = entryID.flatMap(UUID.init(uuidString:))
+        let said: String
+        if let end {
+            said = await TimerActions.stop(id, at: end)
+        } else {
+            said = await TimerActions.stop(id)
+        }
         return .result(dialog: "\(said)")
         #endif
     }

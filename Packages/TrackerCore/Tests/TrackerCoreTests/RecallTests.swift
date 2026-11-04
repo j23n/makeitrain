@@ -57,6 +57,26 @@ import Testing
         #expect(ledger.recall("invoices", in: ledger.resolvedEntries(), running: nil).isEmpty)
     }
 
+    @Test func listsTheLatestEntriesToStartAgain() {
+        let ledger = F.ledger()
+        let resolved = ledger.resolvedEntries()
+        #expect(ledger.recent(in: resolved, running: nil).map(\.id) == [uuid(105), uuid(101), uuid(104), uuid(102)])
+        #expect(ledger.recent(in: resolved, running: nil, limit: 2).map(\.id) == [uuid(105), uuid(101)])
+        #expect(ledger.recent(in: resolved, running: nil, limit: 0).isEmpty)
+        #expect(Ledger().recent(in: [], running: nil).isEmpty)
+    }
+
+    @Test func recentLeavesOutTheRunningTimerAndRepeats() {
+        let again = F.entry(107, F.inHouse, "2026-10-05", "09:00", "09:20", note: "Planning")
+        let old = F.entry(108, F.admin, "2026-10-05", "09:20", "09:30", note: "Invoices")
+        let ledger = F.ledger([again, old, F.runningBookings])
+        let resolved = ledger.resolvedEntries()
+        let running = resolved.first { $0.isRunning }
+        // 103 runs, 101 is the same as it, 105 the same as 107, and Admin is
+        // archived.
+        #expect(ledger.recent(in: resolved, running: running).map(\.id) == [uuid(107), uuid(104), uuid(102)])
+    }
+
     @Test func writesAnEntryAsALineThatStartsItAgain() throws {
         let ledger = F.ledger([
             // Would read as Bookings, with the note "copy".

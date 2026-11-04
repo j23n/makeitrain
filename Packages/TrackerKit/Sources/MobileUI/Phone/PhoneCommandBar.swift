@@ -5,77 +5,88 @@ import TrackerKit
 import UIKit
 import WideUI
 
-/// The command line floating over the tab bar: the running timer, what to
-/// type, and Stop. Tapping it opens the command line.
+/// The command line floating over the tab bar: the running timer, on two
+/// lines with its project's color, and Stop, or what to type. Tapping it
+/// opens the command line.
 struct PhoneCommandBar: View {
     let model: AppModel
     let placeholder: String
     let open: () -> Void
-    @Environment(\.undoManager) private var undoManager
 
     var body: some View {
-        HStack(spacing: 8) {
-            if let running = model.running {
-                Button(action: open) {
-                    RunningTimerLabel(model: model, running: running)
-                        .font(.system(size: 13))
-                        .foregroundStyle(Theme.text)
-                        .fixedSize()
-                }
-                .buttonStyle(.plain)
-                Rectangle()
-                    .fill(Theme.strongLine)
-                    .frame(width: 1, height: 28)
-            }
+        HStack(spacing: 10) {
             Button(action: open) {
-                HStack(spacing: 7) {
+                HStack(spacing: 10) {
                     Text("›")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 18, weight: .semibold, design: .monospaced))
                         .foregroundStyle(Theme.accent)
-                    Text(placeholder)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .foregroundStyle(Theme.text3)
-                    Spacer(minLength: 0)
+                        .accessibilityHidden(true)
+                    if let running = model.running {
+                        runningLabel(running)
+                    } else {
+                        Text(placeholder)
+                            .font(.system(size: 14))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .foregroundStyle(Theme.text3)
+                        Spacer(minLength: 0)
+                    }
                 }
-                .font(.system(size: 14))
                 .frame(maxWidth: .infinity, minHeight: 44)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text("Command line"))
+            .accessibilityLabel(Text(model.running.map { "Command line. Running: \(model.ledger.projectTitle($0.entry.projectID)), \(Format.duration(model.duration(of: $0)))" } ?? "Command line"))
             .accessibilityHint(Text(placeholder))
             if model.running != nil {
-                Button {
-                    model.stopTimer(undoManager: undoManager)
-                } label: {
-                    RoundedRectangle(cornerRadius: 2.5)
-                        .fill(Theme.inverseText)
-                        .frame(width: 11, height: 11)
-                        .frame(width: 42, height: 42)
-                        .background(RoundedRectangle(cornerRadius: 12).fill(Theme.inverse))
-                }
-                .buttonStyle(.plain)
-                .disabled(model.isReadOnly)
-                .accessibilityLabel(Text("Stop the timer"))
+                StopTimerButton(model: model, size: 44, shortcut: false)
             }
         }
         .padding(.leading, 14)
-        .padding(.trailing, 6)
-        .frame(height: 54)
-        .background(RoundedRectangle(cornerRadius: 17).fill(Theme.raised))
-        .overlay(RoundedRectangle(cornerRadius: 17).strokeBorder(Theme.strongLine))
+        .padding(.trailing, model.running == nil ? 14 : 8)
+        .frame(height: model.running == nil ? 54 : 62)
+        .background(RoundedRectangle(cornerRadius: 18).fill(Theme.raised))
+        .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(Theme.strongLine))
         .shadow(color: .black.opacity(0.14), radius: 12, y: 6)
         .padding(.horizontal, 12)
         .padding(.top, 4)
         .padding(.bottom, 8)
     }
+
+    /// The running timer: a bar in its project's color, the project over
+    /// its tags and note, and how long it's run.
+    private func runningLabel(_ running: ResolvedEntry) -> some View {
+        let entry = running.entry
+        let detail = (entry.tags.map(Tags.typed) + [entry.note]).filter { !$0.isEmpty }.joined(separator: " ")
+        return HStack(spacing: 10) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(entry.projectID == nil ? Theme.text3 : model.ledger.tint(ofProject: entry.projectID).ink)
+                .frame(width: 4, height: 34)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.projectID.flatMap { model.ledger.projects[$0]?.name } ?? "Unassigned")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(entry.projectID == nil ? Theme.text2 : Theme.text)
+                if !detail.isEmpty {
+                    Text(detail)
+                        .font(.system(size: 13))
+                        .foregroundStyle(Theme.text2)
+                }
+            }
+            .lineLimit(1)
+            .truncationMode(.tail)
+            Spacer(minLength: 4)
+            Text(Format.duration(model.duration(of: running)))
+                .font(.system(size: 20, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(Theme.text)
+        }
+    }
 }
 
 /// The command line, open over the screen at its bottom, with the field
-/// right above the keyboard and over it what the line lists: lines to try
-/// and today's entries, the earlier entries it could start again, what it
-/// does as typed, or what "find" found. On the Month tab it can read a
+/// right above the keyboard and over it the running timer and what the line
+/// lists: the latest entries to start again, the earlier entries it could
+/// start again, what it does as typed, or what "find" found. On the Month tab it can read a
 /// report instead, such as "acme sep by tag".
 struct PhoneCommandSheet: View {
     let model: AppModel
@@ -117,20 +128,8 @@ struct PhoneCommandSheet: View {
     @ViewBuilder
     private var commandLine: some View {
         if let running = model.running {
-            HStack(spacing: 7) {
-                Circle().fill(Theme.now).frame(width: 7, height: 7)
-                Text(Format.duration(model.duration(of: running)))
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Theme.text)
-                    .monospacedDigit()
-                Text(runningTitle(running))
-                    .lineLimit(1)
-            }
-            .font(.system(size: 12.5))
-            .foregroundStyle(Theme.text2)
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 4)
+            RunningCard(model: model, running: running, touch: true)
+            Divider().overlay(Theme.line)
         }
         // As tall as what's listed, scrolling when the keyboard leaves too
         // little room for it.
@@ -159,13 +158,12 @@ struct PhoneCommandSheet: View {
             size: .touch,
             select: show,
             submit: { submit(alternate: $0) },
+            startAgain: { entry in
+                line.startAgain(entry, undoManager: undoManager)
+                close()
+            },
             refocus: { router.focusRequest += 1 }
         )
-    }
-
-    private func runningTitle(_ running: ResolvedEntry) -> String {
-        let project = running.entry.projectID.flatMap { model.ledger.projects[$0]?.name } ?? "Unassigned"
-        return running.entry.note.isEmpty ? project : "\(project) · \(running.entry.note)"
     }
 
     /// A field for the typed report.

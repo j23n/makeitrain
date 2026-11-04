@@ -44,6 +44,32 @@ import TrackerCore
         #expect(!model.preferences.history.contains("Website copy"))
     }
 
+    @Test func listsTheLatestEntriesWithNothingTyped() async throws {
+        let (harness, model) = await Harness.started()
+        defer { harness.cleanUp() }
+        let website = model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
+        model.addEntry(harness.finished(website, note: "Review", hoursAgo: 3), undoManager: nil)
+        model.addEntry(harness.finished(website, tags: ["#12"], note: "Fix login", hoursAgo: 2), undoManager: nil)
+        let line = CommandLineModel(model: model)
+        line.refresh()
+        #expect(line.recent.map(\.entry.note) == ["Fix login", "Review"])
+        #expect(line.recallIndex == nil)
+
+        // Not while something's typed.
+        line.text = "web"
+        #expect(line.recent.isEmpty)
+        line.text = ""
+        #expect(line.recent.count == 2)
+
+        // Starting one remembers its line, and the running timer's entry
+        // isn't listed.
+        let review = try #require(line.recent.last)
+        line.startAgain(review, undoManager: nil)
+        #expect(model.running?.entry.note == "Review")
+        #expect(model.preferences.history.contains("Website Review"))
+        #expect(line.recent.map(\.entry.note) == ["Fix login"])
+    }
+
     @Test func returnStartsTheHighlightedEntryAgain() async throws {
         let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }

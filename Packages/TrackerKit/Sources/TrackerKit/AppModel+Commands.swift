@@ -76,6 +76,37 @@ extension AppModel {
         commandContext.startLine(for: entry)
     }
 
+    /// The latest entries to start again, as an empty command line lists
+    /// them (`Ledger.recent`).
+    public func recent(limit: Int = 4) -> [ResolvedEntry] {
+        ledger.recent(in: resolved, running: running, limit: limit)
+    }
+
+    /// The entry the Live Activity shows: the running timer, or else the
+    /// latest one that stopped in the last `window` milliseconds, as late
+    /// as `now`, to continue it.
+    public func liveActivityEntry(at now: Timestamp, window: Int64) -> ResolvedEntry? {
+        if let running {
+            return running
+        }
+        guard let last = resolved.last(where: { $0.end != nil }),
+              let end = last.end,
+              end <= now,
+              end.adding(milliseconds: window) > now
+        else { return nil }
+        return last
+    }
+
+    /// The latest other entries to switch to from the Live Activity, at
+    /// most `limit`, each with the line that starts it again: those whose
+    /// line reads back as them.
+    public func switchTargets(limit: Int = 2) -> [(entry: ResolvedEntry, line: String)] {
+        Array(recent(limit: limit + 2).compactMap { entry in
+            startLine(for: entry.entry).map { (entry: entry, line: $0) }
+        }
+        .prefix(limit))
+    }
+
     /// Lines to try in an empty command line, naming the last project
     /// used.
     public var commandExamples: [CommandExample] {

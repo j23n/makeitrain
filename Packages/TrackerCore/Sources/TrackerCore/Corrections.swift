@@ -204,6 +204,31 @@ public enum Corrections {
         return nil
     }
 
+    /// When a timer starts to count as left running: 12 hours after its
+    /// start, or 5:00 the morning after its day, whichever comes first.
+    public static func ranLongDate(of entry: ResolvedEntry) -> Timestamp {
+        let longAfter = entry.start.adding(milliseconds: longest + 1)
+        let morning = Timestamp(date: entry.entry.day.adding(days: 1), secondOfDay: 5 * 3600, zone: entry.entry.timeZone)
+        return min(longAfter, morning)
+    }
+
+    /// When a timer left running likely ended, as its correction's first
+    /// fix says once it counts as left running: when the day usually ends,
+    /// or an hour after its start when it started after that.
+    public static func likelyEnd(of entry: ResolvedEntry, in resolved: [ResolvedEntry]) -> Timestamp? {
+        let later = entry.start.adding(seconds: 2 * 86400)
+        return UsualEnd(resolved: resolved, before: entry.entry.day.adding(days: 1)).ends(for: entry, now: later).first
+    }
+
+    /// When to ask whether a running timer still runs, as the Live Activity
+    /// does: once it counts as left running, and not before its likely end
+    /// has come, so the time offered to stop at is past.
+    public static func asksStillRunningDate(of entry: ResolvedEntry, in resolved: [ResolvedEntry]) -> Timestamp {
+        let longDate = ranLongDate(of: entry)
+        guard let likely = likelyEnd(of: entry, in: resolved) else { return longDate }
+        return max(longDate, likely)
+    }
+
     /// Whether at least half of an event's time is logged to its project.
     static func isLogged(_ event: TimeEntry, end: Timestamp, in entries: [ResolvedEntry], now: Timestamp) -> Bool {
         let length = event.start.distance(to: end)

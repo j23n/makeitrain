@@ -37,6 +37,8 @@ public final class CommandLineModel {
     public private(set) var recalled: [ResolvedEntry] = []
     /// The one of them Return starts again, or nil for the line as typed.
     public var recallIndex: Int?
+    /// The latest entries to start again, while nothing is typed.
+    public private(set) var recent: [ResolvedEntry] = []
 
     public let model: AppModel
     @ObservationIgnored private var historyIndex: Int?
@@ -49,6 +51,7 @@ public final class CommandLineModel {
 
     public init(model: AppModel) {
         self.model = model
+        refresh()
     }
 
     /// Reads the line again, as after the data changed.
@@ -74,6 +77,7 @@ public final class CommandLineModel {
         let highlighted = recalledEntry?.id
         recalled = text != recalledLine && reading.recallsEntries ? model.recall(text) : []
         recalledText = text
+        recent = text.isEmpty ? model.recent() : []
         if recalled.isEmpty || (sameText && highlighted == nil) {
             recallIndex = nil
         } else {
@@ -92,13 +96,7 @@ public final class CommandLineModel {
     @discardableResult
     public func submit(alternate: Bool, undoManager: UndoManager?) -> Bool {
         if !alternate, let entry = recalledEntry {
-            if let line = model.startLine(for: entry.entry) {
-                model.preferences.remember(line)
-            }
-            model.continueEntry(entry, undoManager: undoManager)
-            historyIndex = nil
-            text = ""
-            cursor = nil
+            startAgain(entry, undoManager: undoManager)
             return true
         }
         switch model.run(text, alternate: alternate, undoManager: undoManager) {
@@ -115,6 +113,26 @@ public final class CommandLineModel {
         case .nothing:
             return false
         }
+    }
+
+    /// Starts an earlier entry again, as clicking one under the line does,
+    /// and remembers its line, for Up, when one reads back as it.
+    public func startAgain(_ entry: ResolvedEntry, undoManager: UndoManager?) {
+        if let line = model.startLine(for: entry.entry) {
+            model.preferences.remember(line)
+        }
+        model.continueEntry(entry, undoManager: undoManager)
+        historyIndex = nil
+        text = ""
+        cursor = nil
+        refresh()
+    }
+
+    /// Starts an earlier entry again, and returns whether the line closes
+    /// after it, as `submitClosing(alternate:undoManager:)` does.
+    public func startAgainClosing(_ entry: ResolvedEntry, undoManager: UndoManager?) -> Bool {
+        startAgain(entry, undoManager: undoManager)
+        return model.preferences.closesAfterReturn
     }
 
     /// Runs the line, as Return does in the Mac's command lines, or with
@@ -413,8 +431,9 @@ public struct SuggestionStrip: View {
     }
 }
 
-/// The running timer in a command line's bar: a dot, how long it's run,
-/// and its project's color and name. Callers set the font.
+/// The running timer in a command line's bar: a chip in its project's
+/// color with the project's name and how long it's run. Callers set the
+/// font.
 public struct RunningTimerLabel: View {
     let model: AppModel
     let running: ResolvedEntry
@@ -425,15 +444,22 @@ public struct RunningTimerLabel: View {
     }
 
     public var body: some View {
+        let projectID = running.entry.projectID
+        let tint = model.ledger.tint(ofProject: projectID)
         HStack(spacing: 7) {
-            Circle().fill(Theme.now).frame(width: 7, height: 7)
+            TintDot(projectID == nil ? nil : tint, size: 7)
+            Text(projectID.flatMap { model.ledger.projects[$0]?.name } ?? "Unassigned")
+                .fontWeight(.medium)
+                .lineLimit(1)
             Text(Format.duration(model.duration(of: running)))
                 .fontWeight(.semibold)
                 .monospacedDigit()
-            TintDot(model.ledger.tint(ofProject: running.entry.projectID), size: 7)
-            Text(running.entry.projectID.flatMap { model.ledger.projects[$0]?.name } ?? "Unassigned")
-                .lineLimit(1)
         }
+        .padding(.horizontal, 9)
+        .frame(maxHeight: .infinity)
+        .background(RoundedRectangle(cornerRadius: 6).fill(projectID == nil ? Theme.fill : tint.strongFill))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text("Running: \(model.ledger.projectTitle(projectID)), \(Format.duration(model.duration(of: running)))"))
     }
 }
 

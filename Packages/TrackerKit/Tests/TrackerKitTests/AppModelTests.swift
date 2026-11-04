@@ -192,6 +192,76 @@ func entry(_ id: UUID = UUID(), note: String, at time: String) -> TimeEntry {
         #expect(model.running?.entry.note == "Second")
     }
 
+    @Test func stopsTheTimerAtAnEarlierTime() async throws {
+        let (harness, model) = await Harness.started()
+        defer { harness.cleanUp() }
+        model.startTimer(EntryDraft(note: "Left running"), undoManager: nil)
+        let id = try #require(model.running?.id)
+        let start = harness.clock.now
+        harness.clock.advance(seconds: 3600)
+        model.stopTimer(at: start.adding(seconds: 1800), undoManager: nil)
+        #expect(model.running == nil)
+        #expect(model.resolved.first { $0.id == id }?.end == start.adding(seconds: 1800))
+
+        // Not later than now.
+        model.startTimer(EntryDraft(note: "Again"), undoManager: nil)
+        let again = try #require(model.running?.id)
+        harness.clock.advance(seconds: 60)
+        model.stopTimer(at: harness.clock.now.adding(seconds: 600), undoManager: nil)
+        #expect(model.resolved.first { $0.id == again }?.end == harness.clock.now.wholeSeconds)
+
+        // Only the timer it's for: one started since keeps running.
+        model.startTimer(EntryDraft(note: "Earlier"), undoManager: nil)
+        let earlier = try #require(model.running?.id)
+        harness.clock.advance(seconds: 600)
+        model.startTimer(EntryDraft(note: "Later"), undoManager: nil)
+        let later = try #require(model.running?.id)
+        harness.clock.advance(seconds: 600)
+        #expect(!model.stopTimer(id: earlier, at: harness.clock.now.adding(seconds: -900), undoManager: nil))
+        #expect(model.running?.id == later)
+        #expect(model.stopTimer(id: later, at: harness.clock.now, undoManager: nil))
+        #expect(model.running == nil)
+    }
+
+    @Test func stopsOnlyTheTimerItsAskedToStopNow() async throws {
+        let (harness, model) = await Harness.started()
+        defer { harness.cleanUp() }
+        #expect(!model.stopTimer(undoManager: nil))
+        model.startTimer(EntryDraft(note: "Earlier"), undoManager: nil)
+        let earlier = try #require(model.running?.id)
+        harness.clock.advance(seconds: 600)
+        model.startTimer(EntryDraft(note: "Later"), undoManager: nil)
+        let later = try #require(model.running?.id)
+        harness.clock.advance(seconds: 600)
+        #expect(!model.stopTimer(id: earlier, undoManager: nil))
+        #expect(model.running?.id == later)
+        #expect(model.stopTimer(id: later, undoManager: nil))
+        #expect(model.running == nil)
+        #expect(model.resolved.first { $0.id == later }?.end == harness.clock.now.wholeSeconds)
+    }
+
+    @Test func picksTheLiveActivitysEntryAndWhatToSwitchTo() async throws {
+        let (harness, model) = await Harness.started()
+        defer { harness.cleanUp() }
+        let website = model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
+        let window: Int64 = 300_000
+        #expect(model.liveActivityEntry(at: harness.clock.now, window: window) == nil)
+
+        model.addEntry(harness.finished(website, note: "Review", hoursAgo: 3), undoManager: nil)
+        model.addEntry(harness.finished(website, tags: ["#12"], note: "Fix login", hoursAgo: 2), undoManager: nil)
+        model.startTimer(EntryDraft(projectID: website, note: "Copy"), undoManager: nil)
+        let running = try #require(model.running)
+        #expect(model.liveActivityEntry(at: harness.clock.now, window: window)?.id == running.id)
+        #expect(model.switchTargets().map(\.line) == ["Website #12 Fix login", "Website Review"])
+        #expect(model.switchTargets(limit: 1).count == 1)
+
+        // Stopped, for five minutes.
+        harness.clock.advance(seconds: 600)
+        model.stopTimer(undoManager: nil)
+        #expect(model.liveActivityEntry(at: harness.clock.now.adding(seconds: 240), window: window)?.id == running.id)
+        #expect(model.liveActivityEntry(at: harness.clock.now.adding(seconds: 300), window: window) == nil)
+    }
+
     @Test func splitsAnEntryAndUndoesTheSplit() async throws {
         let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }
