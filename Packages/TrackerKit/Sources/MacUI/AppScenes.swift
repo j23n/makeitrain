@@ -32,8 +32,7 @@ public struct AppScenes: Scene {
                 #endif
         }
         .windowStyle(.hiddenTitleBar)
-        // Wide enough for every column of the projects table (`ProjectColumn`).
-        .defaultSize(width: 1410, height: 840)
+        .defaultSize(width: WideWindow.defaultWidth, height: 840)
         .commands {
             FileCommands()
             ViewCommands()
