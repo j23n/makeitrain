@@ -21,10 +21,11 @@ struct CompactDayGrid: View {
     var body: some View {
         let blocks = DayLayout.blocks(on: day, entries: week.entries(on: day), now: model.now)
         let hours = DayLayout.allDay
+        let nowHour = day == model.today ? model.now.local(in: zone).hour : nil
         let shown = DayLayout.hours(
             blocks: blocks,
             additions: week.suggestedAdditions.map(\.entry).filter { $0.day == day },
-            nowHour: day == model.today ? model.now.local(in: zone).hour : nil
+            nowHour: nowHour
         )
         ScrollViewReader { proxy in
             ScrollView(.vertical) {
@@ -58,7 +59,7 @@ struct CompactDayGrid: View {
                 .padding(.top, 8)
             }
             .onAppear {
-                proxy.scrollTo(shown.lowerBound, anchor: .top)
+                proxy.scrollTo(DayLayout.openingHour(shown: shown, nowHour: nowHour), anchor: .top)
             }
         }
     }

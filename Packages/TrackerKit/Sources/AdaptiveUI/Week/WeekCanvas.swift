@@ -21,10 +21,11 @@ struct WeekCanvas: View {
     var body: some View {
         let layouts = days.map { DayLayout.blocks(on: $0, entries: week.entries(on: $0), now: model.now) }
         let hours = DayLayout.allDay
+        let nowHour = days.contains(model.today) ? model.now.local(in: model.environment.timeZone()).hour : nil
         let shown = DayLayout.hours(
             blocks: layouts.joined(),
             additions: week.suggestedAdditions.map(\.entry),
-            nowHour: days.contains(model.today) ? model.now.local(in: model.environment.timeZone()).hour : nil
+            nowHour: nowHour
         )
         VStack(spacing: 0) {
             HStack(spacing: 0) {
@@ -70,7 +71,7 @@ struct WeekCanvas: View {
                     }
                 }
                 .onAppear {
-                    proxy.scrollTo(shown.lowerBound, anchor: .top)
+                    proxy.scrollTo(DayLayout.openingHour(shown: shown, nowHour: nowHour), anchor: .top)
                 }
             }
         }
