@@ -1,13 +1,13 @@
 #if os(macOS)
+import AdaptiveUI
 import AppKit
 import SwiftUI
 import TrackerCore
 import TrackerKit
 import UniformTypeIdentifiers
-import WideUI
 
 /// The main window: the wide window's bar and screens, or in a narrow
-/// window the iPhone's tabs, with the Mac's File menu imports and exports,
+/// window the narrow layout's tabs, with the Mac's File menu imports and exports,
 /// and a background to drag it by.
 struct MainWindow: View {
     let model: AppModel
@@ -25,7 +25,7 @@ struct MainWindow: View {
                 Color.clear.frame(width: 60, height: 1)
             }
         } narrow: {
-            PhoneRoot(model: model)
+            CompactRoot(model: model)
         }
         .frame(minWidth: 360, minHeight: 600)
         .background(WindowConfigurator())

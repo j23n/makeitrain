@@ -2,8 +2,8 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 
-/// The selected entry at the side of the week, as the iPhone's entry sheet
-/// has it: the corrections about it, such as an overlap, with their fixes,
+/// The selected entry at the side of the week, as the narrow layout's entry
+/// sheet has it: the corrections about it, such as an overlap, with their fixes,
 /// its line to change by typing, what the line reads as, and what else can
 /// be done with it. Return applies the line, Escape puts it back, and
 /// Escape again closes the panel. Over it, a button goes back to the

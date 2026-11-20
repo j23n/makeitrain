@@ -32,19 +32,19 @@ let package = Package(
         // The screens every window shows, on the Mac and on iOS: the wide
         // layout and the narrow one, and what picks one by the width.
         .target(
-            name: "WideUI",
+            name: "AdaptiveUI",
             dependencies: ["TrackerKit"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .target(
             name: "MacUI",
-            dependencies: ["TrackerKit", "WideUI", .product(name: "FeedbackKit", package: "feedbackkit")],
+            dependencies: ["TrackerKit", "AdaptiveUI", .product(name: "FeedbackKit", package: "feedbackkit")],
             swiftSettings: [.swiftLanguageMode(.v5), feedbackInDebugBuilds]
         ),
         .target(
             name: "MobileUI",
             dependencies: [
-                "TrackerKit", "TimerActivity", "WideUI", .product(name: "FeedbackKit", package: "feedbackkit"),
+                "TrackerKit", "TimerActivity", "AdaptiveUI", .product(name: "FeedbackKit", package: "feedbackkit"),
             ],
             swiftSettings: [.swiftLanguageMode(.v5), feedbackInDebugBuilds]
         ),
@@ -65,8 +65,8 @@ let package = Package(
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
         .testTarget(
-            name: "WideUITests",
-            dependencies: ["WideUI", "TrackerKit"],
+            name: "AdaptiveUITests",
+            dependencies: ["AdaptiveUI", "TrackerKit"],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
     ]

@@ -6,30 +6,30 @@ import TrackerKit
 import UIKit
 #endif
 
-/// The iPhone's tabs.
-enum PhoneTab: Hashable {
+/// The narrow layout's tabs.
+enum CompactTab: Hashable {
     case week, month, projects
 }
 
 /// A page pushed on the Projects tab.
-enum PhoneProjectRoute: Hashable {
+enum CompactProjectRoute: Hashable {
     case project(UUID)
     case archived
 }
 
 /// What the command line reads: a line to start, switch, stop or log, or
 /// a report for the Month tab.
-enum PhoneCommandMode: Hashable {
+enum CompactCommandMode: Hashable {
     case command, report
 }
 
-/// Where the iPhone app is: the tab, the week and month shown, the
+/// Where the narrow layout is: the tab, the week and month shown, the
 /// projects' pages, and whether the command line is open. The week and the
 /// month are kept here so a tab finds them as it left them.
 @MainActor
 @Observable
-final class PhoneRouter {
-    var tab: PhoneTab = .week
+final class CompactRouter {
+    var tab: CompactTab = .week
     /// The week the Week tab shows, and the day picked in it, which starts
     /// as today.
     let week: WeekModel
@@ -37,10 +37,10 @@ final class PhoneRouter {
     /// The report the Month tab shows.
     let month: ReportState
     /// The pages pushed on the Projects tab.
-    var projectsPath: [PhoneProjectRoute] = []
+    var projectsPath: [CompactProjectRoute] = []
     var showsSettings = false
     var commandOpen = false
-    var commandMode: PhoneCommandMode = .command
+    var commandMode: CompactCommandMode = .command
     /// Changing it puts the keyboard in the command line.
     var focusRequest = 0
 
@@ -52,7 +52,7 @@ final class PhoneRouter {
     }
 
     /// Opens the command line, with a line typed in, or for a report.
-    func openCommandLine(mode: PhoneCommandMode = .command) {
+    func openCommandLine(mode: CompactCommandMode = .command) {
         commandMode = mode
         commandOpen = true
         focusRequest += 1
@@ -82,14 +82,14 @@ final class PhoneRouter {
 /// the tab bar, opening over everything from the bottom when tapped. On
 /// iPhone and iPad, Settings opens over it as a sheet; the Mac has its own
 /// Settings window.
-public struct PhoneRoot<Settings: View>: View {
+public struct CompactRoot<Settings: View>: View {
     let model: AppModel
     let settings: Settings
     /// Where the app is, with the week's corrections. It's made once, as
     /// the app appears, and the tabs wait for it: made in an initializer, a
     /// new one would be built, and thrown away, whenever the view around it
     /// redraws.
-    @State private var router: PhoneRouter?
+    @State private var router: CompactRouter?
 
     public init(model: AppModel, @ViewBuilder settings: () -> Settings) {
         self.model = model
@@ -98,7 +98,7 @@ public struct PhoneRoot<Settings: View>: View {
 
     public var body: some View {
         if let router {
-            PhoneTabs(model: model, router: router, settings: settings)
+            CompactTabs(model: model, router: router, settings: settings)
         } else {
             // onAppear runs before the first frame is drawn, so this is
             // never seen.
@@ -107,13 +107,13 @@ public struct PhoneRoot<Settings: View>: View {
                     #if os(iOS)
                     UITabBarItem.appearance().badgeColor = UIColor(Theme.amber)
                     #endif
-                    router = PhoneRouter(model: model)
+                    router = CompactRouter(model: model)
                 }
         }
     }
 }
 
-extension PhoneRoot where Settings == EmptyView {
+extension CompactRoot where Settings == EmptyView {
     /// The narrow layout without a Settings sheet, as on the Mac.
     public init(model: AppModel) {
         self.init(model: model) { EmptyView() }
@@ -121,15 +121,15 @@ extension PhoneRoot where Settings == EmptyView {
 }
 
 /// The tabs and the command line over them, once the router is made.
-private struct PhoneTabs<Settings: View>: View {
+private struct CompactTabs<Settings: View>: View {
     let model: AppModel
-    @Bindable var router: PhoneRouter
+    @Bindable var router: CompactRouter
     let settings: Settings
     @State private var line: CommandLineModel
     /// What needs correcting this week, for the Week tab's badge.
     @State private var weekCorrections = 0
 
-    init(model: AppModel, router: PhoneRouter, settings: Settings) {
+    init(model: AppModel, router: CompactRouter, settings: Settings) {
         self.model = model
         self.router = router
         self.settings = settings
@@ -139,16 +139,16 @@ private struct PhoneTabs<Settings: View>: View {
     var body: some View {
         ZStack(alignment: .top) {
             TabView(selection: $router.tab) {
-                PhoneWeek(model: model, router: router)
+                CompactWeek(model: model, router: router)
                     .tabItem { Label("Week", systemImage: "calendar.day.timeline.left") }
                     .badge(weekCorrections)
-                    .tag(PhoneTab.week)
-                PhoneMonth(model: model, router: router)
+                    .tag(CompactTab.week)
+                CompactMonth(model: model, router: router)
                     .tabItem { Label("Month", systemImage: "calendar") }
-                    .tag(PhoneTab.month)
-                PhoneProjects(model: model, router: router)
+                    .tag(CompactTab.month)
+                CompactProjects(model: model, router: router)
                     .tabItem { Label("Projects", systemImage: "folder") }
-                    .tag(PhoneTab.projects)
+                    .tag(CompactTab.projects)
             }
             .tint(Theme.accent)
             #if os(macOS)
@@ -163,7 +163,7 @@ private struct PhoneTabs<Settings: View>: View {
                     .accessibilityHidden(true)
                 // At the bottom, where the bar was tapped, above the
                 // keyboard.
-                PhoneCommandSheet(model: model, router: router, line: line, close: closeCommandLine)
+                CompactCommandSheet(model: model, router: router, line: line, close: closeCommandLine)
                     .frame(maxHeight: .infinity, alignment: .bottom)
                     .padding(.top, 6)
                     .padding(.bottom, 8)

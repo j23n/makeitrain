@@ -1,9 +1,9 @@
 #if os(macOS)
+import AdaptiveUI
 import AppKit
 import SwiftUI
 import TrackerCore
 import TrackerKit
-import WideUI
 
 /// The running timer and the command line, with what the line would do
 /// under it: in the menu bar's popover and in the panel the shortcut opens.

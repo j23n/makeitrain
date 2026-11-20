@@ -6,9 +6,9 @@ import TrackerKit
 /// time, the day on an hour grid with what needs correcting drawn in place,
 /// and the corrections one at a time in a panel at the bottom. A new entry
 /// drawn on the grid opens its sheet once the finger lifts.
-struct PhoneWeek: View {
+struct CompactWeek: View {
     let model: AppModel
-    let router: PhoneRouter
+    let router: CompactRouter
     @State private var editing: ResolvedEntry?
 
     private var week: WeekModel { router.week }
@@ -34,29 +34,29 @@ struct PhoneWeek: View {
             header
             dayStrip
             dayLine
-            PhoneDayGrid(model: model, week: week, day: router.weekDay, gutter: 44) { entry in
+            CompactDayGrid(model: model, week: week, day: router.weekDay, gutter: 44) { entry in
                 editing = entry
             }
             .id(router.weekDay)
             .overlay {
                 if week.isEmpty(on: router.weekDay), week.newEntry?.day != router.weekDay {
-                    PhoneEmptyDay(isToday: router.weekDay == model.today)
+                    CompactEmptyDay(isToday: router.weekDay == model.today)
                         .allowsHitTesting(false)
                 }
             }
         }
         .sheet(isPresented: showsNewEntry) {
-            PhoneNewEntrySheet(model: model, week: week)
+            CompactNewEntrySheet(model: model, week: week)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Theme.background)
         .safeAreaInset(edge: .bottom) {
             if let preview = week.selectedPreview {
-                PhoneCorrectionPanel(model: model, week: week, preview: preview) { day in
+                CompactCorrectionPanel(model: model, week: week, preview: preview) { day in
                     router.weekDay = day
                 }
             } else {
-                PhoneCommandBar(
+                CompactCommandBar(
                     model: model,
                     placeholder: CommandText.placeholder,
                     open: { router.openCommandLine() }
@@ -64,7 +64,7 @@ struct PhoneWeek: View {
             }
         }
         .sheet(item: $editing) { entry in
-            PhoneEntrySheet(model: model, week: week, entryID: entry.id)
+            CompactEntrySheet(model: model, week: week, entryID: entry.id)
         }
         .onChange(of: week.selectedCorrection) { _, id in
             if let correction = week.corrections.first(where: { $0.id == id }), correction.day != router.weekDay {
@@ -215,7 +215,7 @@ struct PhoneWeek: View {
 
 /// A day with nothing on it, over its empty grid, which a new entry can
 /// still be drawn on.
-struct PhoneEmptyDay: View {
+struct CompactEmptyDay: View {
     let isToday: Bool
 
     /// How the grid is drawn on: dragged across with a pointer, held with
@@ -251,7 +251,7 @@ struct PhoneEmptyDay: View {
 
 /// The selected correction, at the bottom of the week: what and when,
 /// what's wrong, what its suggestion changes, and its fixes.
-struct PhoneCorrectionPanel: View {
+struct CompactCorrectionPanel: View {
     let model: AppModel
     let week: WeekModel
     let preview: CorrectionPreview

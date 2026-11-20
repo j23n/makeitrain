@@ -7,9 +7,9 @@ import UniformTypeIdentifiers
 /// time, its figures, what to check before sending it, and the time by
 /// client, project or tag. Tapping a day shows just it; holding and
 /// dragging across days shows them.
-struct PhoneMonth: View {
+struct CompactMonth: View {
     let model: AppModel
-    let router: PhoneRouter
+    let router: CompactRouter
     @State private var csv: ExportDocument?
     @State private var savingCSV = false
     @State private var pdf: ExportDocument?
@@ -23,7 +23,7 @@ struct PhoneMonth: View {
             VStack(alignment: .leading, spacing: 14) {
                 header
                 choices
-                PhoneMonthGrid(model: model, state: state, month: shownMonth)
+                CompactMonthGrid(model: model, state: state, month: shownMonth)
                     .padding(.horizontal, 12)
                 ReportFigures(state: state, compact: true)
                     .padding(.horizontal, 12)
@@ -38,7 +38,7 @@ struct PhoneMonth: View {
         }
         .background(Theme.background)
         .safeAreaInset(edge: .bottom) {
-            PhoneCommandBar(model: model, placeholder: state.typed, open: { router.openCommandLine(mode: .report) })
+            CompactCommandBar(model: model, placeholder: state.typed, open: { router.openCommandLine(mode: .report) })
         }
         .fileExporter(isPresented: $savingCSV, document: csv, contentType: .commaSeparatedText, defaultFilename: state.csvFileName) { _ in }
     }
@@ -209,7 +209,7 @@ struct PhoneMonth: View {
 
 /// A month's days in weeks, each with its date, a bar of its time and a
 /// mark where entries overlap, the days of the report outlined.
-struct PhoneMonthGrid: View {
+struct CompactMonthGrid: View {
     let model: AppModel
     let state: ReportState
     let month: LocalDate

@@ -2,7 +2,7 @@ import Foundation
 import Testing
 import TrackerCore
 import TrackerKit
-@testable import WideUI
+@testable import AdaptiveUI
 
 /// What a new entry drawn on the week overlaps, as its sidebar and its
 /// sheet say it.

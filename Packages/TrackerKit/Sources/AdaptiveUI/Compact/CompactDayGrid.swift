@@ -8,7 +8,7 @@ import TrackerKit
 /// narrow layout's size (`DayColumn`, `DayGridMetrics.compact`): the
 /// entries as blocks, what the corrections would change drawn over them,
 /// and a new entry being drawn.
-struct PhoneDayGrid: View {
+struct CompactDayGrid: View {
     let model: AppModel
     let week: WeekModel
     let day: LocalDate
@@ -101,12 +101,12 @@ struct PhoneDayGrid: View {
     }
 }
 
-/// One entry on the iPhone's grid: its times, tags and title in its
+/// One entry on the narrow layout's day: its times, tags and title in its
 /// project's tint, outlined when selected, dashed amber when a suggestion
 /// would change it. As on the week, the tags come before the title, which
 /// gets what's left of a one-line block, and a block too short for a line
 /// is a bar.
-struct PhoneEntryBlock: View {
+struct CompactEntryBlock: View {
     let model: AppModel
     let entry: ResolvedEntry
     let height: CGFloat

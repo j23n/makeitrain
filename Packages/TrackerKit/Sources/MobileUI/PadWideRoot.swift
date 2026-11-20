@@ -1,8 +1,8 @@
 #if os(iOS)
+import AdaptiveUI
 import SwiftUI
 import TrackerCore
 import TrackerKit
-import WideUI
 
 /// An iPad window wide enough for the Mac's layout: the bar with the zoom
 /// and the command line over the week, month, year or projects, with
@@ -27,7 +27,7 @@ struct PadWideRoot: View {
             .accessibilityLabel(Text("Settings"))
         }
         .sheet(isPresented: $showsSettings) {
-            PhoneSettings(model: model)
+            MobileSettings(model: model)
         }
     }
 }

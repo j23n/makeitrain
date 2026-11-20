@@ -2,7 +2,7 @@ import Foundation
 import Testing
 import TrackerCore
 import TrackerKit
-@testable import WideUI
+@testable import AdaptiveUI
 
 @MainActor
 @Suite struct NavigatorTests {

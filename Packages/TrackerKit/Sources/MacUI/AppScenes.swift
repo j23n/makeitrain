@@ -1,11 +1,11 @@
 #if os(macOS)
+import AdaptiveUI
 import AppKit
 #if FEEDBACK
 import FeedbackKit
 #endif
 import SwiftUI
 import TrackerKit
-import WideUI
 
 /// The Mac app's scenes: the menu bar popover, the main window and Settings,
 /// all showing the app's one model.

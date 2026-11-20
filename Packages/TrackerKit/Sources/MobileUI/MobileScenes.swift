@@ -1,4 +1,5 @@
 #if os(iOS)
+import AdaptiveUI
 #if FEEDBACK
 import FeedbackKit
 #endif
@@ -7,7 +8,6 @@ import TimerActivity
 import TrackerCore
 import TrackerKit
 import UIKit
-import WideUI
 
 /// The iPhone and iPad app's scene. It saves when the app goes to the
 /// background and brings the clock up to date when it comes back. An iPad
@@ -73,8 +73,8 @@ struct MobileRoot: View {
         AdaptiveRoot {
             PadWideRoot(model: model)
         } narrow: {
-            PhoneRoot(model: model) {
-                PhoneSettings(model: model)
+            CompactRoot(model: model) {
+                MobileSettings(model: model)
             }
         }
         .onChange(of: model.preferences.appearance, initial: true) { _, appearance in
@@ -134,8 +134,8 @@ struct MobileNotices: View {
 }
 
 #Preview("iPhone") {
-    PhoneRoot(model: PreviewData.model()) {
-        PhoneSettings(model: PreviewData.model())
+    CompactRoot(model: PreviewData.model()) {
+        MobileSettings(model: PreviewData.model())
     }
 }
 

@@ -1,6 +1,6 @@
 import CoreGraphics
 import Testing
-@testable import WideUI
+@testable import AdaptiveUI
 
 @Suite struct ProjectColumnTests {
     @Test func theTableIsAtLeastAsWideAsItsColumns() {
