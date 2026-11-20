@@ -91,8 +91,18 @@ struct MonthScreen: View {
         }
         .takesUnusedKeys([.leftArrow, .rightArrow, .upArrow, .downArrow, .return], letters: "wt")
         .onChange(of: anchor) { _, day in
+            // Back and Forward move to another month; the window following
+            // the days shown, below, leaves them as they are.
+            guard !state.range.contains(day) else { return }
             state.show(ReportPeriod.month.range(containing: day, firstWeekday: model.firstWeekday), period: .month)
             cursor = day
+        }
+        .onChange(of: state.range) { _, range in
+            // The window keeps the days the arrows, the grid or a typed
+            // report moved to, for the narrow layout to open on.
+            if !range.contains(anchor) {
+                navigator.replace(.month(range.lowerBound))
+            }
         }
         .onAppear {
             focused = true

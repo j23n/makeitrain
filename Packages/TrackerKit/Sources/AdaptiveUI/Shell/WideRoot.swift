@@ -19,6 +19,8 @@ public struct WideRoot<Trailing: View>: View {
     @State private var commandFocused = false
     @State private var focusRequest = 0
     @Environment(\.undoManager) private var undoManager
+    /// Where the window is, shared with its narrow layout.
+    @Environment(WindowPlace.self) private var place: WindowPlace?
 
     public init(model: AppModel, leadingInset: CGFloat = 0, @ViewBuilder trailing: () -> Trailing) {
         self.model = model
@@ -73,10 +75,20 @@ public struct WideRoot<Trailing: View>: View {
         ))
         .background(LineRefresh(model: model, line: line))
         .onAppear {
-            let zoom = Zoom(saved: savedZoom)
-            if zoom != navigator.screen.zoom {
-                navigator.replace(zoom.screen(today: model.today))
+            // Where the narrow layout was, when the window was just made
+            // wider, or else the zoom the window last showed.
+            if let screen = place?.screen {
+                navigator.replace(screen)
+            } else {
+                let zoom = Zoom(saved: savedZoom)
+                if zoom != navigator.screen.zoom {
+                    navigator.replace(zoom.screen(today: model.today))
+                }
             }
+            place?.screen = navigator.screen
+        }
+        .onChange(of: navigator.screen) { _, screen in
+            place?.screen = screen
         }
         .onChange(of: navigator.screen.zoom) { _, zoom in
             savedZoom = zoom.rawValue

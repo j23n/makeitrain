@@ -44,11 +44,57 @@ final class CompactRouter {
     /// Changing it puts the keyboard in the command line.
     var focusRequest = 0
 
-    init(model: AppModel) {
+    /// Starts on `screen`, where the window's wide layout was, or on
+    /// today's week.
+    init(model: AppModel, showing screen: Screen? = nil) {
         let today = model.today
-        week = WeekModel(model: model, days: ReportPeriod.week.range(containing: today, firstWeekday: model.firstWeekday))
-        weekDay = today
-        month = ReportState(model: model, range: ReportPeriod.month.range(containing: today, firstWeekday: model.firstWeekday), period: .month)
+        let day = screen?.day(today: today) ?? today
+        week = WeekModel(model: model, days: ReportPeriod.week.range(containing: day, firstWeekday: model.firstWeekday))
+        weekDay = day
+        month = ReportState(model: model, range: ReportPeriod.month.range(containing: day, firstWeekday: model.firstWeekday), period: .month)
+        if let screen {
+            show(screen, today: today, firstWeekday: model.firstWeekday)
+        }
+    }
+
+    /// Shows what a screen of the wide layout shows: a week on the Week
+    /// tab, on its day; a month, or a year as today's month in it, on the
+    /// Month tab; and the projects, or a project's page, on the Projects
+    /// tab.
+    func show(_ screen: Screen, today: LocalDate, firstWeekday: Int) {
+        let day = screen.day(today: today)
+        switch screen {
+        case .week:
+            weekDay = day
+            week.show(ReportPeriod.week.range(containing: day, firstWeekday: firstWeekday))
+            tab = .week
+        case .month, .year:
+            month.show(ReportPeriod.month.range(containing: day, firstWeekday: firstWeekday), period: .month)
+            tab = .month
+        case .projects:
+            projectsPath = []
+            tab = .projects
+        case let .project(id):
+            projectsPath = [.project(id)]
+            tab = .projects
+        }
+    }
+
+    /// The wide layout's screen for what the tabs show: the week of the
+    /// day picked, the month of the report's first day, or the projects or
+    /// the project whose page is open.
+    var screen: Screen {
+        switch tab {
+        case .week:
+            return .week(weekDay)
+        case .month:
+            return .month(month.range.lowerBound)
+        case .projects:
+            if case let .project(id)? = projectsPath.last {
+                return .project(id)
+            }
+            return .projects
+        }
     }
 
     /// Opens the command line, with a line typed in, or for a report.
@@ -90,6 +136,8 @@ public struct CompactRoot<Settings: View>: View {
     /// new one would be built, and thrown away, whenever the view around it
     /// redraws.
     @State private var router: CompactRouter?
+    /// Where the window is, shared with its wide layout.
+    @Environment(WindowPlace.self) private var place: WindowPlace?
 
     public init(model: AppModel, @ViewBuilder settings: () -> Settings) {
         self.model = model
@@ -107,7 +155,14 @@ public struct CompactRoot<Settings: View>: View {
                     #if os(iOS)
                     UITabBarItem.appearance().badgeColor = UIColor(Theme.amber)
                     #endif
-                    router = CompactRouter(model: model)
+                    // Where the wide layout was, when the window was
+                    // just made narrower. A year stays the window's place
+                    // until the tabs move.
+                    let router = CompactRouter(model: model, showing: place?.screen)
+                    if let place, place.screen == nil {
+                        place.screen = router.screen
+                    }
+                    self.router = router
                 }
         }
     }
@@ -126,6 +181,8 @@ private struct CompactTabs<Settings: View>: View {
     @Bindable var router: CompactRouter
     let settings: Settings
     @State private var line: CommandLineModel
+    /// Where the window is, shared with its wide layout.
+    @Environment(WindowPlace.self) private var place: WindowPlace?
     /// What needs correcting this week, for the Week tab's badge.
     @State private var weekCorrections = 0
 
@@ -200,6 +257,9 @@ private struct CompactTabs<Settings: View>: View {
         }
         .onChange(of: model.request, initial: true) { _, request in
             handle(request)
+        }
+        .onChange(of: router.screen) { _, screen in
+            place?.screen = screen
         }
     }
 
