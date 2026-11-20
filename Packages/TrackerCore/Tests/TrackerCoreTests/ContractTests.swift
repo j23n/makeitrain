@@ -135,6 +135,21 @@ import Testing
         let first = Contract.next(after: [], today: day("2026-02-10"))
         #expect(first.start == day("2026-02-01"))
         #expect(first.end == day("2026-02-28"))
+        #expect(first.hours == 40)
+
+        // After one that's over, it holds today: this month, from the day
+        // after the latest ended if that's this month.
+        let september = Contract(hours: 30, start: day("2026-09-01"), end: day("2026-09-30"), alertHours: 2)
+        let renewed = Contract.next(after: [september], today: day("2026-11-20"))
+        #expect(renewed.start == day("2026-11-01"))
+        #expect(renewed.end == day("2026-11-30"))
+        #expect(renewed.hours == 30)
+        #expect(renewed.alertHours == 2)
+        let early = Contract(hours: 30, start: day("2026-10-11"), end: day("2026-11-10"))
+        let rest = Contract.next(after: [early], today: day("2026-11-20"))
+        #expect(rest.start == day("2026-11-11"))
+        #expect(rest.end == day("2026-11-30"))
+        #expect(!rest.overlaps(early))
     }
 
     // MARK: Editing
@@ -299,6 +314,12 @@ import Testing
         let plan = ContractAlertPlan(alerts: [low, out], notified: [], scheduled: [:], now: now)
         #expect(plan.post == [out])
         #expect(plan.notified == [low.key, out.key])
+
+        // An alert scheduled for later, now covered, is taken back.
+        let waiting = ContractAlertPlan(alerts: [low, out], notified: [], scheduled: [low.key: now.adding(seconds: 7200), out.key: now.adding(seconds: 10800)], now: now)
+        #expect(waiting.post == [out])
+        #expect(Set(waiting.cancel) == [low.key, out.key])
+        #expect(waiting.scheduled.isEmpty)
     }
 
     @Test func aChangedContractAlertsAgain() {
