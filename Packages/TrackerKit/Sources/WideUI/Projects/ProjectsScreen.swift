@@ -538,9 +538,9 @@ struct ProjectTableRow<Name: View, Repos: View, Cal: View, Contract: View, Week:
 }
 
 #Preview("Projects, Narrowest Window") {
-    // The main window's least width, 960, where the table scrolls sideways.
+    // The wide layout's least width, where the table scrolls sideways.
     ProjectsScreen(model: PreviewData.model(), navigator: Navigator(.projects))
-        .frame(width: 960, height: 700)
+        .frame(width: AdaptiveRoot<EmptyView, EmptyView>.wideWidth, height: 700)
         .background(Theme.background)
 }
 #endif
