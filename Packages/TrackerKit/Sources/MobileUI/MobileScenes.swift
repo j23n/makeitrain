@@ -64,20 +64,17 @@ public struct MobileScenes: Scene {
     }
 }
 
-/// The iPhone's tabs, or on an iPad wide enough the Mac's layout, in
-/// light or dark as chosen.
+/// The narrow layout's tabs, or in a window wide enough, as on an iPad,
+/// the Mac's layout, in light or dark as chosen.
 struct MobileRoot: View {
     let model: AppModel
 
-    /// The width from which an iPad window uses the Mac's layout.
-    static let wideWidth: CGFloat = 960
-
     var body: some View {
-        GeometryReader { geometry in
-            if UIDevice.current.userInterfaceIdiom == .pad, geometry.size.width >= Self.wideWidth {
-                PadWideRoot(model: model)
-            } else {
-                PhoneRoot(model: model)
+        AdaptiveRoot {
+            PadWideRoot(model: model)
+        } narrow: {
+            PhoneRoot(model: model) {
+                PhoneSettings(model: model)
             }
         }
         .onChange(of: model.preferences.appearance, initial: true) { _, appearance in
@@ -137,7 +134,9 @@ struct MobileNotices: View {
 }
 
 #Preview("iPhone") {
-    PhoneRoot(model: PreviewData.model())
+    PhoneRoot(model: PreviewData.model()) {
+        PhoneSettings(model: PreviewData.model())
+    }
 }
 
 #Preview("No Data") {

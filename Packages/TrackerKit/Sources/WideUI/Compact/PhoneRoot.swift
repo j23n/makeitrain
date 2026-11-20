@@ -1,9 +1,10 @@
-#if os(iOS)
 import Observation
 import SwiftUI
 import TrackerCore
 import TrackerKit
+#if os(iOS)
 import UIKit
+#endif
 
 /// The iPhone's tabs.
 enum PhoneTab: Hashable {
@@ -76,43 +77,62 @@ final class PhoneRouter {
     }
 }
 
-/// The iPhone app: Week, Month and Projects, with the command line
-/// floating over the tab bar, opening over everything from the bottom when
-/// tapped.
-struct PhoneRoot: View {
+/// The narrow layout, on an iPhone, a narrow iPad window and a narrow Mac
+/// window: Week, Month and Projects, with the command line floating over
+/// the tab bar, opening over everything from the bottom when tapped. On
+/// iPhone and iPad, Settings opens over it as a sheet; the Mac has its own
+/// Settings window.
+public struct PhoneRoot<Settings: View>: View {
     let model: AppModel
+    let settings: Settings
     /// Where the app is, with the week's corrections. It's made once, as
     /// the app appears, and the tabs wait for it: made in an initializer, a
     /// new one would be built, and thrown away, whenever the view around it
     /// redraws.
     @State private var router: PhoneRouter?
 
-    var body: some View {
+    public init(model: AppModel, @ViewBuilder settings: () -> Settings) {
+        self.model = model
+        self.settings = settings()
+    }
+
+    public var body: some View {
         if let router {
-            PhoneTabs(model: model, router: router)
+            PhoneTabs(model: model, router: router, settings: settings)
         } else {
             // onAppear runs before the first frame is drawn, so this is
             // never seen.
             Color.clear
                 .onAppear {
+                    #if os(iOS)
                     UITabBarItem.appearance().badgeColor = UIColor(Theme.amber)
+                    #endif
                     router = PhoneRouter(model: model)
                 }
         }
     }
 }
 
+extension PhoneRoot where Settings == EmptyView {
+    /// The narrow layout without a Settings sheet, as on the Mac.
+    public init(model: AppModel) {
+        self.init(model: model) { EmptyView() }
+    }
+}
+
 /// The tabs and the command line over them, once the router is made.
-private struct PhoneTabs: View {
+private struct PhoneTabs<Settings: View>: View {
     let model: AppModel
     @Bindable var router: PhoneRouter
+    let settings: Settings
     @State private var line: CommandLineModel
     /// What needs correcting this week, for the Week tab's badge.
     @State private var weekCorrections = 0
 
-    init(model: AppModel, router: PhoneRouter) {
+    init(model: AppModel, router: PhoneRouter, settings: Settings) {
         self.model = model
         self.router = router
+        self.settings = settings
         _line = State(initialValue: CommandLineModel(model: model))
     }
 
@@ -131,6 +151,10 @@ private struct PhoneTabs: View {
                     .tag(PhoneTab.projects)
             }
             .tint(Theme.accent)
+            #if os(macOS)
+            // Room for the window's buttons, since the title bar is hidden.
+            .padding(.top, 28)
+            #endif
             if router.commandOpen {
                 Color.black.opacity(0.32)
                     .ignoresSafeArea()
@@ -147,8 +171,18 @@ private struct PhoneTabs: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: router.commandOpen)
+        #if os(macOS)
+        .background {
+            // ⌘K opens the command line, as it puts the keyboard in the
+            // wide layout's.
+            Button("Command Line") { router.openCommandLine() }
+                .keyboardShortcut("k")
+                .opacity(0)
+                .accessibilityHidden(true)
+        }
+        #endif
         .sheet(isPresented: $router.showsSettings) {
-            PhoneSettings(model: model)
+            settings
         }
         .onAppear(perform: countCorrections)
         .onChange(of: model.revision) {
@@ -172,7 +206,7 @@ private struct PhoneTabs: View {
     private func closeCommandLine() {
         router.commandOpen = false
         line.clear()
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        endTextEditing()
     }
 
     private func countCorrections() {
@@ -189,4 +223,3 @@ private struct PhoneTabs: View {
         model.request = nil
     }
 }
-#endif

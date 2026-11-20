@@ -1,8 +1,6 @@
-#if os(iOS)
 import SwiftUI
 import TrackerCore
 import TrackerKit
-import UIKit
 import UniformTypeIdentifiers
 
 /// A month as a report: what it covers as choices, the days with their
@@ -416,4 +414,3 @@ struct PhoneMonthGrid: View {
         ReportPeriod.month.range(containing: month, firstWeekday: model.firstWeekday)
     }
 }
-#endif

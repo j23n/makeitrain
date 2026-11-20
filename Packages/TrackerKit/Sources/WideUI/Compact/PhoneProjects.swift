@@ -1,8 +1,6 @@
-#if os(iOS)
 import SwiftUI
 import TrackerCore
 import TrackerKit
-import UIKit
 
 /// Clients and their projects: each project's repositories and calendar,
 /// its last twelve weeks and its time this week, then the entries without
@@ -11,12 +9,15 @@ struct PhoneProjects: View {
     let model: AppModel
     @Bindable var router: PhoneRouter
     @State private var filter = ""
+    #if os(macOS)
+    @Environment(\.openSettings) private var openSettings
+    #endif
 
     var body: some View {
         NavigationStack(path: $router.projectsPath) {
             list
                 .navigationTitle("Projects")
-                .toolbar(.hidden, for: .navigationBar)
+                .hidesNavigationBar()
                 .navigationDestination(for: PhoneProjectRoute.self) { route in
                     switch route {
                     case let .project(id):
@@ -41,7 +42,11 @@ struct PhoneProjects: View {
                         .font(.system(size: 30, weight: .bold))
                     Spacer()
                     Button {
+                        #if os(macOS)
+                        openSettings()
+                        #else
                         router.showsSettings = true
+                        #endif
                     } label: {
                         Image(systemName: "gearshape")
                             .font(.system(size: 18))
@@ -121,7 +126,7 @@ struct PhoneProjects: View {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(Theme.text3)
             TextField("Filter", text: $filter)
-                .textInputAutocapitalization(.never)
+                .noAutocapitalization()
                 .autocorrectionDisabled()
             if !filter.isEmpty {
                 Button {
@@ -326,7 +331,6 @@ struct PhoneArchivedProjects: View {
             }
         }
         .navigationTitle("Archived")
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
     }
 }
-#endif
