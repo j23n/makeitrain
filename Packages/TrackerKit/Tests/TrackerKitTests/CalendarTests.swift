@@ -86,6 +86,42 @@ final class FakeCalendars: CalendarProvider {
         #expect(model.hasLinkedCalendars)
     }
 
+    @Test func choosesACalendarsProjectInSettings() async throws {
+        let harness = Harness()
+        defer { harness.cleanUp() }
+        let updated = at("2026-09-21T09:00:00+02:00")
+        let website = Project(name: "Website", updated: updated)
+        let brand = Project(name: "Brand", archived: true, updated: updated)
+        let saved = Ledger(projects: [website, brand])
+        _ = try Folder(root: harness.localFolder).save(saved, changes: .all(in: saved))
+        CalendarLink.save(
+            [CalendarLink(calendarID: "globex", title: "Globex", account: "Google", projectID: brand.id)],
+            to: harness.defaults
+        )
+        let calendars = FakeCalendars()
+        calendars.list = [
+            CalendarInfo(id: "acme", title: "Calendar", account: "jo@acme.example"),
+            CalendarInfo(id: "globex", title: "Globex", account: "Google"),
+        ]
+        let model = harness.model(calendars: calendars)
+        await model.start()
+
+        // An archived project is offered only to the calendar linked to it.
+        #expect(model.calendarPickerProjects(for: "acme").map(\.id) == [website.id])
+        #expect(model.calendarPickerProjects(for: "globex").map(\.id) == [brand.id, website.id])
+
+        model.setProject(website.id, forCalendar: "acme")
+        #expect(model.linkedProject(of: "acme") == website.id)
+        // A project has one calendar, so choosing it for another moves it.
+        model.setProject(website.id, forCalendar: "globex")
+        #expect(model.linkedProject(of: "globex") == website.id)
+        #expect(model.linkedProject(of: "acme") == nil)
+        // None unlinks the calendar.
+        model.setProject(nil, forCalendar: "globex")
+        #expect(model.linkedProject(of: "globex") == nil)
+        #expect(!model.hasLinkedCalendars)
+    }
+
     @Test func importsEventsFromLinkedCalendarsAsOneStep() async throws {
         let harness = Harness()
         defer { harness.cleanUp() }
