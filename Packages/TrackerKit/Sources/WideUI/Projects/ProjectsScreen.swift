@@ -5,8 +5,8 @@ import TrackerKit
 /// Clients and their projects as a table: each project's repositories,
 /// calendar on this device, contract, and time this week, this month, over the last
 /// twelve weeks and in all. Arrows move, Return opens a project's page, and
-/// single keys rename, color, archive, merge or add. A narrow window leaves
-/// columns out, as `ProjectColumn` decides.
+/// single keys rename, color, archive, merge or add. A window narrower than
+/// the table's columns scrolls it sideways.
 struct ProjectsScreen: View {
     let model: AppModel
     let navigator: Navigator
@@ -21,12 +21,11 @@ struct ProjectsScreen: View {
         let stats = model.projectStats
         VStack(alignment: .leading, spacing: 14) {
             header(tree)
-            // The table's own width decides its columns, so that it never
-            // runs past the window's edges, which would also push the
-            // header and the keys out of the window.
+            // The table fills the window's width, and a window too narrow
+            // for its columns scrolls it sideways, so it never pushes the
+            // header and the keys past the window's edges.
             GeometryReader { geometry in
-                let columns = ProjectColumn.fitting(geometry.size.width)
-                ScrollView {
+                ScrollView([.horizontal, .vertical]) {
                     VStack(spacing: 0) {
                         columnHeaders
                         ForEach(tree.clients) { branch in
@@ -48,8 +47,9 @@ struct ProjectsScreen: View {
                         unassignedRow(stats)
                         archivedSection(tree, stats: stats)
                     }
+                    .frame(width: ProjectColumn.layoutWidth(in: geometry.size.width))
                 }
-                .environment(\.projectColumns, columns)
+                .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
             }
             .background(RoundedRectangle(cornerRadius: 12).fill(Theme.panel))
             .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -351,8 +351,7 @@ struct ProjectsScreen: View {
     }
 
     /// The entries without a project: their count, the latest with a link
-    /// to assign it in its week, and their times. A double click goes to that
-    /// week too, for when the table is too narrow for the link.
+    /// to assign it in its week, and their times.
     @ViewBuilder
     private func unassignedRow(_ stats: ProjectStats) -> some View {
         let row = stats[nil]
@@ -388,12 +387,6 @@ struct ProjectsScreen: View {
                 EmptyView()
             } total: {
                 time(row.total)
-            }
-            .contentShape(Rectangle())
-            .onTapGesture(count: 2) {
-                if let latest = row.latest {
-                    navigator.go(.week(latest.entry.day))
-                }
             }
         }
     }
@@ -483,8 +476,7 @@ struct ProjectsScreen: View {
     }
 }
 
-/// A row of the projects table, with each column's width, showing the
-/// columns that fit the table (`ProjectColumn`).
+/// A row of the projects table, with each column's width (`ProjectColumn`).
 struct ProjectTableRow<Name: View, Repos: View, Cal: View, Contract: View, Week: View, Month: View, Spark: View, Total: View>: View {
     let height: CGFloat
     @ViewBuilder var name: Name
@@ -495,7 +487,6 @@ struct ProjectTableRow<Name: View, Repos: View, Cal: View, Contract: View, Week:
     @ViewBuilder var month: Month
     @ViewBuilder var spark: Spark
     @ViewBuilder var total: Total
-    @Environment(\.projectColumns) private var columns
 
     var body: some View {
         HStack(spacing: ProjectColumn.spacing) {
@@ -514,16 +505,13 @@ struct ProjectTableRow<Name: View, Repos: View, Cal: View, Contract: View, Week:
         .overlay(alignment: .top) { Rectangle().fill(Theme.line).frame(height: 1) }
     }
 
-    /// A column's cell at its width, or nothing when the table leaves the
-    /// column out.
+    /// A column's cell at its width.
     @ViewBuilder
     private func column(_ column: ProjectColumn, _ content: some View, alignment: Alignment) -> some View {
-        if columns.contains(column) {
-            if column.isFlexible {
-                cell(content, alignment: alignment).frame(minWidth: column.minimumWidth, maxWidth: .infinity)
-            } else {
-                cell(content, alignment: alignment).frame(width: column.minimumWidth)
-            }
+        if column.isFlexible {
+            cell(content, alignment: alignment).frame(minWidth: column.minimumWidth, maxWidth: .infinity)
+        } else {
+            cell(content, alignment: alignment).frame(width: column.minimumWidth)
         }
     }
 
@@ -547,8 +535,7 @@ struct ProjectTableRow<Name: View, Repos: View, Cal: View, Contract: View, Week:
 }
 
 #Preview("Projects, Narrowest Window") {
-    // The main window's least width, 960, which leaves out the last twelve
-    // weeks, the calendar and the repositories.
+    // The main window's least width, 960, where the table scrolls sideways.
     ProjectsScreen(model: PreviewData.model(), navigator: Navigator(.projects))
         .frame(width: 960, height: 700)
         .background(Theme.background)
