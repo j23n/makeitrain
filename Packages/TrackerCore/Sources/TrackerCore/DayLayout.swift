@@ -207,7 +207,7 @@ public enum NewEntrySpan {
     /// down, or above where it started.
     public static func held(at: Int, to: Int, latest: Int) -> (start: Int, end: Int)? {
         if to < at - snap / 2 || to - at > heldLength {
-            return dragged(from: at, to: to, latest: latest)
+            return dragged(from: at / snap * snap, to: to, latest: latest)
         }
         return placed(at: at, length: heldLength, latest: latest)
     }

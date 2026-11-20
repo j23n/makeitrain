@@ -55,6 +55,14 @@ import Testing
         #expect(upward?.end == hm(15, 0))
     }
 
+    @Test func draggingPastHalfAnHourKeepsTheHeldStart() {
+        let held = NewEntrySpan.held(at: hm(15, 3), to: hm(15, 20), latest: latest)
+        #expect(held?.start == hm(15, 0))
+        let dragged = NewEntrySpan.held(at: hm(15, 3), to: hm(15, 40), latest: latest)
+        #expect(dragged?.start == hm(15, 0))
+        #expect(dragged?.end == hm(15, 40))
+    }
+
     @Test func aHeldEntryNearNowEndsNow() {
         let span = NewEntrySpan.held(at: hm(15, 30), to: hm(15, 30), latest: hm(15, 40))
         #expect(span?.start == hm(15, 10))
