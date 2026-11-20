@@ -32,16 +32,11 @@ struct NewEntryPanel: View {
                     VStack(alignment: .leading, spacing: 10) {
                         field
                         if !line.suggestions.isEmpty {
-                            suggestions
+                            EntryLineSuggestions(model: model, line: line)
                         }
                     }
                     EntryLineReading(model: model, line: line)
-                    if let overlap = overlap(draft) {
-                        Text(overlap)
-                            .font(.system(size: 12.5))
-                            .foregroundStyle(Theme.amberText)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    NewEntryOverlap(model: model, week: week, draft: draft)
                     buttons
                 }
             }
@@ -66,20 +61,6 @@ struct NewEntryPanel: View {
         "\(Format.weekday(draft.day)) \(draft.day.day) · \(Format.duration(Int64(draft.endSecond - draft.startSecond) * 1000))"
     }
 
-    /// What the new entry overlaps, such as "Overlaps Push notifications
-    /// from 14:15 to 14:30.", for the first entry it does.
-    private func overlap(_ draft: NewEntryDraft) -> String? {
-        let blocks = DayLayout.blocks(on: draft.day, entries: week.entries(on: draft.day), now: model.now)
-        for block in blocks {
-            let from = max(draft.startSecond, block.startSecond)
-            let to = min(draft.endSecond, block.endSecond)
-            if from < to {
-                return "Overlaps \(model.ledger.title(of: block.entry.entry)) from \(Format.time(secondOfDay: from)) to \(Format.time(secondOfDay: to))."
-            }
-        }
-        return nil
-    }
-
     private var field: some View {
         CommandField(
             entryLine: line,
@@ -97,21 +78,6 @@ struct NewEntryPanel: View {
                 .strokeBorder(line.refused ? Theme.amber : Theme.accent, lineWidth: 1.5)
         )
         .disabled(model.isReadOnly)
-    }
-
-    /// What could replace the word being typed: Tab takes the highlighted
-    /// one, Up and Down move the highlight, and a click takes any.
-    private var suggestions: some View {
-        FlowLayout(spacing: 6) {
-            ForEach(Array(line.suggestions.chips(ledger: model.ledger).enumerated()), id: \.offset) { index, chip in
-                Button {
-                    line.acceptSuggestion(at: index)
-                } label: {
-                    ChipLabel(chip)
-                }
-                .buttonStyle(.plain)
-            }
-        }
     }
 
     private var buttons: some View {
