@@ -2,7 +2,7 @@ import Foundation
 import Testing
 import TrackerCore
 import TrackerKit
-@testable import WideUI
+@testable import AdaptiveUI
 
 /// The titles a screen header makes room for.
 @Suite struct ScreenTitlesTests {

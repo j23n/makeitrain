@@ -5,7 +5,7 @@ import FeedbackKit
 #endif
 import SwiftUI
 import TrackerKit
-import WideUI
+import AdaptiveUI
 
 /// The Mac app's scenes: the menu bar popover, the main window and Settings,
 /// all showing the app's one model.

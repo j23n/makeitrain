@@ -1,6 +1,6 @@
 import SwiftUI
 import Testing
-@testable import WideUI
+@testable import AdaptiveUI
 
 /// Which layout a window gets for its width.
 @Suite struct AdaptiveRootTests {
