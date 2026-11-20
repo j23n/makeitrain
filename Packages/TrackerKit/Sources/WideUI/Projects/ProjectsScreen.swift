@@ -5,7 +5,8 @@ import TrackerKit
 /// Clients and their projects as a table: each project's repositories,
 /// calendar on this device, contract, and time this week, this month, over the last
 /// twelve weeks and in all. Arrows move, Return opens a project's page, and
-/// single keys rename, color, archive, merge or add.
+/// single keys rename, color, archive, merge or add. A window narrower than
+/// the table's columns scrolls it sideways.
 struct ProjectsScreen: View {
     let model: AppModel
     let navigator: Navigator
@@ -20,28 +21,38 @@ struct ProjectsScreen: View {
         let stats = model.projectStats
         VStack(alignment: .leading, spacing: 14) {
             header(tree)
-            ScrollView {
-                VStack(spacing: 0) {
-                    columnHeaders
-                    ForEach(tree.clients) { branch in
-                        let projects = visible(branch.projects)
-                        if !projects.isEmpty || ProjectSearch.matches(filter, project: "", client: branch.client.name) {
-                            clientRow(branch.client, projects: branch.projects, stats: stats)
-                            ForEach(projects) { project in
+            // The table fills the window's width, and a window too narrow
+            // for its columns scrolls it sideways, so it never pushes the
+            // header and the keys past the window's edges.
+            GeometryReader { geometry in
+                ScrollView([.horizontal, .vertical]) {
+                    VStack(spacing: 0) {
+                        columnHeaders
+                        ForEach(tree.clients) { branch in
+                            let projects = visible(branch.projects)
+                            if !projects.isEmpty || ProjectSearch.matches(filter, project: "", client: branch.client.name) {
+                                clientRow(branch.client, projects: branch.projects, stats: stats)
+                                ForEach(projects) { project in
+                                    projectRow(project, stats: stats)
+                                }
+                            }
+                        }
+                        let unfiled = visible(tree.unfiled)
+                        if !unfiled.isEmpty {
+                            sectionRow("No client")
+                            ForEach(unfiled) { project in
                                 projectRow(project, stats: stats)
                             }
                         }
+                        unassignedRow(stats)
+                        archivedSection(tree, stats: stats)
                     }
-                    let unfiled = visible(tree.unfiled)
-                    if !unfiled.isEmpty {
-                        sectionRow("No client")
-                        ForEach(unfiled) { project in
-                            projectRow(project, stats: stats)
-                        }
-                    }
-                    unassignedRow(stats)
-                    archivedSection(tree, stats: stats)
+                    .frame(width: ProjectColumn.layoutWidth(in: geometry.size.width))
+                    // A list shorter than the panel starts at its top, where
+                    // a scroll view that scrolls both ways may center it.
+                    .frame(minHeight: geometry.size.height, alignment: .top)
                 }
+                .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
             }
             .background(RoundedRectangle(cornerRadius: 12).fill(Theme.panel))
             .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -98,10 +109,13 @@ struct ProjectsScreen: View {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text("Clients and projects")
                     .font(.system(size: 19, weight: .semibold))
+                    .lineLimit(1)
+                    .layoutPriority(1)
                 Text("\(clients) \(clients == 1 ? "client" : "clients") · \(projects) \(projects == 1 ? "project" : "projects")\(archived > 0 ? " · \(archived) archived" : "")")
                     .foregroundStyle(Theme.text3)
+                    .lineLimit(1)
             }
-            Spacer()
+            Spacer(minLength: 0)
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(Theme.text3)
@@ -110,12 +124,13 @@ struct ProjectsScreen: View {
             }
             .font(.system(size: 12.5))
             .padding(.horizontal, 10)
-            .frame(width: 200, height: 28)
+            .frame(minWidth: 120, idealWidth: 200, maxWidth: 200, minHeight: 28, maxHeight: 28)
             .background(RoundedRectangle(cornerRadius: 7).fill(Theme.field))
             .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Theme.strongLine))
             Toggle("Show archived", isOn: $showsArchived)
                 .checkbox()
                 .font(.system(size: 12.5))
+                .fixedSize()
             Menu {
                 Button("New Project…") { model.request = .command("new project ") }
                 Button("New Client…") { model.request = .command("new client ") }
@@ -338,37 +353,44 @@ struct ProjectsScreen: View {
         .accessibilityLabel(Text("\(project.name)'s color, \(Palette.name(of: project.color))"))
     }
 
+    /// The entries without a project: their count, the latest with a link
+    /// to assign it in its week, and their times.
     @ViewBuilder
     private func unassignedRow(_ stats: ProjectStats) -> some View {
         let row = stats[nil]
         if row.entryCount > 0 {
-            HStack(spacing: 16) {
+            ProjectTableRow(height: 48) {
                 HStack(spacing: 10) {
                     Circle().strokeBorder(Theme.text3, lineWidth: 1.5).frame(width: 12, height: 12)
                     Text("Unassigned").fontWeight(.semibold)
                     Text("\(row.entryCount) \(row.entryCount == 1 ? "entry" : "entries")")
                         .foregroundStyle(Theme.text3)
                 }
-                .frame(minWidth: ProjectColumnWidth.name, alignment: .leading)
+                .lineLimit(1)
+            } repositories: {
                 if let latest = row.latest {
                     Text(latest.entry.note.isEmpty ? Format.longDay(latest.entry.day) : "\(latest.entry.note), \(Format.weekday(latest.entry.day))")
                         .foregroundStyle(Theme.text2)
                         .lineLimit(1)
+                }
+            } calendar: {
+                if let latest = row.latest {
                     Button("Assign in Week ›") {
                         navigator.go(.week(latest.entry.day))
                     }
                     .linkButton()
                 }
-                Spacer()
-                Color.clear.frame(width: ProjectColumnWidth.contract, height: 1)
-                time(row.thisWeek).frame(width: ProjectColumnWidth.week, alignment: .trailing)
-                time(row.thisMonth).frame(width: ProjectColumnWidth.month, alignment: .trailing)
-                Color.clear.frame(width: ProjectColumnWidth.spark, height: 1)
-                time(row.total).frame(width: ProjectColumnWidth.total, alignment: .trailing)
+            } contract: {
+                EmptyView()
+            } week: {
+                time(row.thisWeek)
+            } month: {
+                time(row.thisMonth)
+            } spark: {
+                EmptyView()
+            } total: {
+                time(row.total)
             }
-            .padding(.horizontal, 16)
-            .frame(height: 48)
-            .overlay(alignment: .top) { Rectangle().fill(Theme.line).frame(height: 1) }
         }
     }
 
@@ -457,20 +479,7 @@ struct ProjectsScreen: View {
     }
 }
 
-/// The widths of the projects table's columns, which the unassigned row
-/// lines up with: the first three take at least theirs and share the rest.
-enum ProjectColumnWidth {
-    static let name: CGFloat = 220
-    static let repositories: CGFloat = 150
-    static let calendar: CGFloat = 170
-    static let contract: CGFloat = 230
-    static let week: CGFloat = 84
-    static let month: CGFloat = 100
-    static let spark: CGFloat = 156
-    static let total: CGFloat = 104
-}
-
-/// A row of the projects table, with each column's width.
+/// A row of the projects table, with each column's width (`ProjectColumn`).
 struct ProjectTableRow<Name: View, Repos: View, Cal: View, Contract: View, Week: View, Month: View, Spark: View, Total: View>: View {
     let height: CGFloat
     @ViewBuilder var name: Name
@@ -483,20 +492,30 @@ struct ProjectTableRow<Name: View, Repos: View, Cal: View, Contract: View, Week:
     @ViewBuilder var total: Total
 
     var body: some View {
-        HStack(spacing: 16) {
-            cell(name, alignment: .leading).frame(minWidth: ProjectColumnWidth.name, maxWidth: .infinity)
-            cell(repositories, alignment: .leading).frame(minWidth: ProjectColumnWidth.repositories, maxWidth: .infinity)
-            cell(calendar, alignment: .leading).frame(minWidth: ProjectColumnWidth.calendar, maxWidth: .infinity)
-            cell(contract, alignment: .leading).frame(width: ProjectColumnWidth.contract)
-            cell(week, alignment: .trailing).frame(width: ProjectColumnWidth.week)
-            cell(month, alignment: .trailing).frame(width: ProjectColumnWidth.month)
-            cell(spark, alignment: .leading).frame(width: ProjectColumnWidth.spark)
-            cell(total, alignment: .trailing).frame(width: ProjectColumnWidth.total)
+        HStack(spacing: ProjectColumn.spacing) {
+            column(.name, name, alignment: .leading)
+            column(.repositories, repositories, alignment: .leading)
+            column(.calendar, calendar, alignment: .leading)
+            column(.contract, contract, alignment: .leading)
+            column(.week, week, alignment: .trailing)
+            column(.month, month, alignment: .trailing)
+            column(.spark, spark, alignment: .leading)
+            column(.total, total, alignment: .trailing)
         }
         .font(.system(size: 13))
-        .padding(.horizontal, 16)
+        .padding(.horizontal, ProjectColumn.padding)
         .frame(height: height)
         .overlay(alignment: .top) { Rectangle().fill(Theme.line).frame(height: 1) }
+    }
+
+    /// A column's cell at its width.
+    @ViewBuilder
+    private func column(_ column: ProjectColumn, _ content: some View, alignment: Alignment) -> some View {
+        if column.isFlexible {
+            cell(content, alignment: alignment).frame(minWidth: column.minimumWidth, maxWidth: .infinity)
+        } else {
+            cell(content, alignment: alignment).frame(width: column.minimumWidth)
+        }
     }
 
     /// A column's content on a clear background, so that a column left
@@ -510,3 +529,18 @@ struct ProjectTableRow<Name: View, Repos: View, Cal: View, Contract: View, Week:
         }
     }
 }
+
+#if DEBUG
+#Preview("Projects") {
+    ProjectsScreen(model: PreviewData.model(), navigator: Navigator(.projects))
+        .frame(width: 1400, height: 700)
+        .background(Theme.background)
+}
+
+#Preview("Projects, Narrowest Window") {
+    // The main window's least width, 960, where the table scrolls sideways.
+    ProjectsScreen(model: PreviewData.model(), navigator: Navigator(.projects))
+        .frame(width: 960, height: 700)
+        .background(Theme.background)
+}
+#endif
