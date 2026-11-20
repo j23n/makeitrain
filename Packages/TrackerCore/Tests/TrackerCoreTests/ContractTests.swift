@@ -252,10 +252,11 @@ import Testing
         let resolved = ledger.resolvedEntries()
         let now = start.adding(seconds: 1800)
         let alerts = ledger.contractAlerts(dayTotals: DayTotals(resolved), running: resolved.first { $0.isRunning }, today: day("2026-11-20"), now: now)
-        // 3:30 left: the alert, at 1 hour left, at 11:30, and the end at 12:30.
+        // At 09:30, 6:30 used and 3:30 left: the alert, at 1 hour left,
+        // at 12:00, and the end at 13:00.
         #expect(Set(alerts.map(\.kind)) == [.low, .usedUp])
-        #expect(alerts.first { $0.kind == .low }?.date == start.adding(seconds: 9000))
-        #expect(alerts.first { $0.kind == .usedUp }?.date == start.adding(seconds: 12600))
+        #expect(alerts.first { $0.kind == .low }?.date == start.adding(seconds: 10800))
+        #expect(alerts.first { $0.kind == .usedUp }?.date == start.adding(seconds: 14400))
         #expect(alerts.allSatisfy { $0.running })
     }
 
