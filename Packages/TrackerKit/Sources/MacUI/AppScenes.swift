@@ -32,7 +32,7 @@ public struct AppScenes: Scene {
                 #endif
         }
         .windowStyle(.hiddenTitleBar)
-        .defaultSize(width: 1320, height: 840)
+        .defaultSize(width: WideWindow.defaultWidth, height: 840)
         .commands {
             FileCommands()
             ViewCommands()
