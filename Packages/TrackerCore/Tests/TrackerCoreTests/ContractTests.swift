@@ -105,7 +105,7 @@ import Testing
         let ledger = makeLedger([contract], entries: entries)
         let status = ContractStatus(contract: contract, projectID: project, dayTotals: DayTotals(ledger.resolvedEntries()), today: day("2026-11-20"), now: t("2026-11-20T20:00:00+01:00"))
         #expect(status.left == 5 * 3_600_000)
-        #expect(status.recentRate == 2 * 3_600_000)
+        #expect(status.recentRate == Int64(2 * 3_600_000))
         #expect(status.runsOut == day("2026-11-25"))
 
         // Enough for the rest of the contract: no date.
@@ -251,7 +251,7 @@ import Testing
         let alerts = ledger.contractAlerts(dayTotals: DayTotals(ledger.resolvedEntries()), running: nil, today: day("2026-11-20"), now: now)
         #expect(alerts.map(\.kind) == [.low])
         #expect(alerts.first?.date == now)
-        #expect(alerts.first?.left == 30 * 60000)
+        #expect(alerts.first?.left == Int64(30 * 60000))
 
         // Archived projects and contracts that don't hold today don't alert.
         let archived = makeLedger([contract], entries: [entry(1, on: "2026-11-20", hours: 9.5)], archived: true)
