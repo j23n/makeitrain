@@ -140,22 +140,14 @@ public struct ContractSheet: View {
                 Text(summary)
             }
         }
+        alertSection
+    }
+
+    private var alertSection: some View {
         Section {
-            Toggle("Alert", isOn: Binding(
-                get: { edited.alertsAt > 0 },
-                set: { on in
-                    draft.alertHours = on ? nil : 0
-                    error = nil
-                }
-            ))
+            Toggle("Alert", isOn: alertIsOn)
             if edited.alertsAt > 0 {
-                Stepper(value: Binding(
-                    get: { edited.alertsAt },
-                    set: { hours in
-                        draft.alertHours = hours == Contract.defaultAlertHours(for: edited.hours) ? nil : hours
-                        error = nil
-                    }
-                ), in: 1...max(1, edited.hours)) {
+                Stepper(value: alertHours, in: 1...max(1, edited.hours)) {
                     LabeledContent("When left", value: Format.hours(edited.alertsAt))
                         .monospacedDigit()
                 }
@@ -165,6 +157,31 @@ public struct ContractSheet: View {
         } footer: {
             Text(alertNote)
         }
+    }
+
+    /// Whether the contract alerts: off sets it to 0, and on back to 10%
+    /// of the hours.
+    private var alertIsOn: Binding<Bool> {
+        Binding(
+            get: { edited.alertsAt > 0 },
+            set: { on in
+                draft.alertHours = on ? nil : 0
+                error = nil
+            }
+        )
+    }
+
+    /// The hours left at which to alert. The default is kept as nil, so it
+    /// follows the hours.
+    private var alertHours: Binding<Int> {
+        Binding(
+            get: { edited.alertsAt },
+            set: { hours in
+                let fallback = Contract.defaultAlertHours(for: edited.hours)
+                draft.alertHours = hours == fallback ? nil : hours
+                error = nil
+            }
+        )
     }
 
     /// What the contract counts, and the time on its days so far.

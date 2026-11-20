@@ -71,23 +71,7 @@ public struct ContractList: View {
     private var formLayout: some View {
         Section {
             ForEach(contracts) { contract in
-                Button {
-                    open(contract)
-                } label: {
-                    HStack(spacing: 8) {
-                        row(contract)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Theme.text3)
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .swipeActions {
-                    Button("Remove", role: .destructive) { removing = contract }
-                        .disabled(model.isReadOnly)
-                }
-                .contextMenu { menu(contract) }
+                formRow(contract)
             }
             presentations(
                 Button("New Contract…", action: openNew)
@@ -114,35 +98,7 @@ public struct ContractList: View {
             if !contracts.isEmpty {
                 VStack(spacing: 0) {
                     ForEach(Array(contracts.enumerated()), id: \.element.id) { index, contract in
-                        HStack(spacing: 6) {
-                            Button {
-                                open(contract)
-                            } label: {
-                                row(contract)
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .help("Change or remove this contract")
-                            Menu {
-                                menu(contract)
-                            } label: {
-                                Image(systemName: "ellipsis")
-                                    .foregroundStyle(Theme.text3)
-                                    .frame(width: 22, height: 22)
-                                    .contentShape(Rectangle())
-                            }
-                            .menuIndicatorHidden()
-                            .fixedSize()
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(Text("More for the contract for \(Format.days(contract.days))"))
-                        }
-                        .padding(.vertical, 7)
-                        .contextMenu { menu(contract) }
-                        .overlay(alignment: .top) {
-                            if index > 0 {
-                                Rectangle().fill(Theme.accentLine.opacity(0.6)).frame(height: 1)
-                            }
-                        }
+                        panelRow(contract, isFirst: index == 0)
                     }
                 }
             }
@@ -157,6 +113,65 @@ public struct ContractList: View {
         .padding(14)
         .background(RoundedRectangle(cornerRadius: 12).fill(Theme.accentFill.opacity(0.6)))
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.accentLine.opacity(0.65)))
+    }
+
+    /// A contract in the form, which opens it, with a swipe to remove it.
+    private func formRow(_ contract: Contract) -> some View {
+        Button {
+            open(contract)
+        } label: {
+            HStack(spacing: 8) {
+                row(contract)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.text3)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .swipeActions {
+            Button("Remove", role: .destructive) { removing = contract }
+                .disabled(model.isReadOnly)
+        }
+        .contextMenu { menu(contract) }
+    }
+
+    /// A contract in the panel: its row, which opens it, and a menu.
+    private func panelRow(_ contract: Contract, isFirst: Bool) -> some View {
+        HStack(spacing: 6) {
+            Button {
+                open(contract)
+            } label: {
+                row(contract)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Change or remove this contract")
+            moreMenu(contract)
+        }
+        .padding(.vertical, 7)
+        .contextMenu { menu(contract) }
+        .overlay(alignment: .top) {
+            if !isFirst {
+                Rectangle().fill(Theme.accentLine.opacity(0.6)).frame(height: 1)
+            }
+        }
+    }
+
+    private func moreMenu(_ contract: Contract) -> some View {
+        let label = Image(systemName: "ellipsis")
+            .foregroundStyle(Theme.text3)
+            .frame(width: 22, height: 22)
+            .contentShape(Rectangle())
+        return Menu {
+            menu(contract)
+        } label: {
+            label
+        }
+        .menuIndicatorHidden()
+        .fixedSize()
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("More for the contract for \(Format.days(contract.days))"))
     }
 
     // MARK: - Parts

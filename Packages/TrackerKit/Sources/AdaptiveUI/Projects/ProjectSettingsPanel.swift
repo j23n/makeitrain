@@ -63,83 +63,80 @@ struct ProjectSettingsPanel: View {
 
     private var form: some View {
         Form {
-            Section {
-                LabeledContent("Name") {
-                    TextField("Name", text: $name)
-                        .multilineTextAlignment(.trailing)
-                        .labelsHidden()
-                        .onSubmit(rename)
-                }
-                clientPicker
-                    .navigationPicker()
-            }
-            .disabled(model.isReadOnly)
-            Section("Color") {
-                swatches(size: 30)
-            }
-            .disabled(model.isReadOnly)
+            identitySection
+            colorSection
             ContractList(model: model, project: project, layout: .form)
-            Section {
-                ForEach(Array(project.repositories.enumerated()), id: \.offset) { index, address in
-                    let repository = GitHub.Repository(address)
-                    HStack(spacing: 8) {
-                        Text(repository?.title ?? address)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                        Spacer(minLength: 8)
-                        if index == 0 {
-                            issueBadge
-                        }
-                        Menu {
-                            repositoryMenu(address, index: index)
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                                .foregroundStyle(Theme.text3)
-                                .frame(width: 32, height: 32)
-                                .contentShape(Rectangle())
-                        }
-                        .accessibilityLabel(Text("More for \(repository?.title ?? address)"))
-                    }
-                    .swipeActions {
-                        Button("Remove", role: .destructive) {
-                            model.removeRepository(address, fromProject: project.id, undoManager: undoManager)
-                        }
-                        .disabled(model.isReadOnly)
-                    }
-                }
-                HStack(spacing: 8) {
-                    repositoryField
-                    Button("Add", action: addRepository)
-                        .disabled(repository.trimmingCharacters(in: .whitespaces).isEmpty)
-                }
-                .disabled(model.isReadOnly)
-            } header: {
-                Text("GitHub repositories")
-            } footer: {
-                repositoryFooter
-            }
-            Section("Calendar on this \(deviceName)") {
-                calendarChoice
-            }
-            .disabled(model.isReadOnly)
-            Section {
-                Toggle("Archived", isOn: Binding(
-                    get: { project.archived },
-                    set: { _ in toggleArchived() }
-                ))
-                mergeMenu
-                Button("Delete Project…", role: .destructive) {
-                    confirmingDelete = true
-                }
-                .disabled(model.ledger.hasEntries(project: project.id))
-            } footer: {
-                if model.ledger.hasEntries(project: project.id) {
-                    Text("A project with entries can't be deleted.")
-                }
-            }
-            .disabled(model.isReadOnly)
+            repositorySection
+            calendarSection
+            actionSection
         }
         .formStyle(.grouped)
+    }
+
+    private var identitySection: some View {
+        Section {
+            LabeledContent("Name") {
+                TextField("Name", text: $name)
+                    .multilineTextAlignment(.trailing)
+                    .labelsHidden()
+                    .onSubmit(rename)
+            }
+            clientPicker
+                .navigationPicker()
+        }
+        .disabled(model.isReadOnly)
+    }
+
+    private var colorSection: some View {
+        Section("Color") {
+            swatches(size: 30)
+        }
+        .disabled(model.isReadOnly)
+    }
+
+    private var repositorySection: some View {
+        Section {
+            ForEach(Array(project.repositories.enumerated()), id: \.offset) { index, address in
+                formRepositoryRow(address, index: index)
+            }
+            HStack(spacing: 8) {
+                repositoryField
+                Button("Add", action: addRepository)
+                    .disabled(repository.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+            .disabled(model.isReadOnly)
+        } header: {
+            Text("GitHub repositories")
+        } footer: {
+            repositoryFooter
+        }
+    }
+
+    private var calendarSection: some View {
+        Section("Calendar on this \(deviceName)") {
+            calendarChoice
+        }
+        .disabled(model.isReadOnly)
+    }
+
+    private var actionSection: some View {
+        let hasEntries = model.ledger.hasEntries(project: project.id)
+        return Section {
+            Toggle("Archived", isOn: Binding(
+                get: { project.archived },
+                set: { _ in toggleArchived() }
+            ))
+            mergeMenu
+            Button("Delete Project…", role: .destructive) {
+                confirmingDelete = true
+            }
+            .disabled(hasEntries)
+        } footer: {
+            if hasEntries {
+                Text("A project with entries can't be deleted.")
+            }
+        }
+        .disabled(model.isReadOnly)
     }
 
     // MARK: - Wide: a column beside the page
@@ -197,42 +194,7 @@ struct ProjectSettingsPanel: View {
     private var repositoryBox: some View {
         VStack(spacing: 0) {
             ForEach(Array(project.repositories.enumerated()), id: \.offset) { index, address in
-                let repository = GitHub.Repository(address)
-                HStack(spacing: 8) {
-                    Group {
-                        if let url = repository.flatMap({ URL(string: $0.address) }) {
-                            Link(destination: url) {
-                                Text(repository?.title ?? address)
-                            }
-                            .help("Open \(repository?.title ?? address) in the browser")
-                        } else {
-                            Text(address)
-                        }
-                    }
-                    .font(.system(size: 12, design: .monospaced))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    Spacer(minLength: 8)
-                    if index == 0 {
-                        issueBadge
-                    }
-                    Menu {
-                        repositoryMenu(address, index: index)
-                    } label: {
-                        Image(systemName: "ellipsis")
-                            .foregroundStyle(Theme.text3)
-                            .frame(width: 20, height: 20)
-                            .contentShape(Rectangle())
-                    }
-                    .menuIndicatorHidden()
-                    .fixedSize()
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(Text("More for \(repository?.title ?? address)"))
-                }
-                .padding(.horizontal, 10)
-                .frame(height: 32)
-                .overlay(alignment: .bottom) { Rectangle().fill(Theme.line).frame(height: 1) }
-                .contextMenu { repositoryMenu(address, index: index) }
+                boxRepositoryRow(address, index: index)
             }
             HStack(spacing: 8) {
                 repositoryField
@@ -249,6 +211,78 @@ struct ProjectSettingsPanel: View {
         }
         .background(RoundedRectangle(cornerRadius: 8).fill(Theme.field))
         .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(repositoryError ? Theme.amber : Theme.strongLine))
+    }
+
+    /// A repository in the form: its name, "#123" on the first, and a
+    /// menu, with a swipe to remove it.
+    private func formRepositoryRow(_ address: String, index: Int) -> some View {
+        let title = GitHub.Repository(address)?.title ?? address
+        return HStack(spacing: 8) {
+            Text(title)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer(minLength: 8)
+            if index == 0 {
+                issueBadge
+            }
+            repositoryMoreMenu(address, index: index, title: title, systemImage: "ellipsis.circle", size: 32)
+        }
+        .swipeActions {
+            Button("Remove", role: .destructive) {
+                model.removeRepository(address, fromProject: project.id, undoManager: undoManager)
+            }
+            .disabled(model.isReadOnly)
+        }
+    }
+
+    /// A repository in the wide layout's box: its name, linking to GitHub,
+    /// "#123" on the first, and a menu.
+    private func boxRepositoryRow(_ address: String, index: Int) -> some View {
+        let repository = GitHub.Repository(address)
+        let title = repository?.title ?? address
+        return HStack(spacing: 8) {
+            repositoryLink(title: title, url: repository.flatMap { URL(string: $0.address) })
+                .font(.system(size: 12, design: .monospaced))
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer(minLength: 8)
+            if index == 0 {
+                issueBadge
+            }
+            repositoryMoreMenu(address, index: index, title: title, systemImage: "ellipsis", size: 20)
+        }
+        .padding(.horizontal, 10)
+        .frame(height: 32)
+        .overlay(alignment: .bottom) { Rectangle().fill(Theme.line).frame(height: 1) }
+        .contextMenu { repositoryMenu(address, index: index) }
+    }
+
+    @ViewBuilder
+    private func repositoryLink(title: String, url: URL?) -> some View {
+        if let url {
+            Link(destination: url) {
+                Text(title)
+            }
+            .help("Open \(title) in the browser")
+        } else {
+            Text(title)
+        }
+    }
+
+    private func repositoryMoreMenu(_ address: String, index: Int, title: String, systemImage: String, size: CGFloat) -> some View {
+        let label = Image(systemName: systemImage)
+            .foregroundStyle(Theme.text3)
+            .frame(width: size, height: size)
+            .contentShape(Rectangle())
+        return Menu {
+            repositoryMenu(address, index: index)
+        } label: {
+            label
+        }
+        .menuIndicatorHidden()
+        .fixedSize()
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("More for \(title)"))
     }
 
     private var columnActions: some View {
