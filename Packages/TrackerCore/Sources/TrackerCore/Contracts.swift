@@ -413,3 +413,48 @@ extension Contract {
         return Contract(hours: latest.hours, start: start, end: start.adding(days: latest.days.count - 1), alertHours: latest.alertHours)
     }
 }
+
+/// A contract as it's edited in a sheet, before Save keeps it: the hours as
+/// typed, and the days and alert as chosen.
+public struct ContractDraft: Hashable, Sendable {
+    /// The contract with the days and alert as chosen. Its hours are the
+    /// ones it started with; `hoursText` has the ones typed.
+    public var base: Contract
+    /// The hours as typed.
+    public var hoursText: String
+
+    public init(_ contract: Contract) {
+        base = contract
+        hoursText = "\(contract.hours)"
+    }
+
+    /// The hours typed, 0 while they aren't a whole number.
+    public var hours: Int {
+        Int(hoursText.trimmingCharacters(in: .whitespaces)) ?? 0
+    }
+
+    /// The contract to save: the hours typed, and an alert no larger than
+    /// them.
+    public var contract: Contract {
+        var contract = base
+        contract.hours = hours
+        if let alert = contract.alertHours, alert > contract.hours, contract.hours > 0 {
+            contract.alertHours = contract.hours
+        }
+        return contract
+    }
+
+    /// Whether it alerts. Off sets the alert to 0; on goes back to the
+    /// default, 10% of the hours.
+    public var alerts: Bool {
+        get { contract.alertsAt > 0 }
+        set { base.alertHours = newValue ? nil : 0 }
+    }
+
+    /// The hours left at which it alerts. The default is kept as nil, so
+    /// it follows the hours.
+    public var alertHours: Int {
+        get { contract.alertsAt }
+        set { base.alertHours = newValue == Contract.defaultAlertHours(for: hours) ? nil : newValue }
+    }
+}

@@ -10,9 +10,9 @@ public struct ContractSheet: View {
     /// The contract as it was, or as it starts for a new one.
     let original: Contract
     let isNew: Bool
-    @State private var draft: Contract
-    @State private var hoursText: String
-    @State private var error: ContractError?
+    @State private var draft: ContractDraft
+    /// Why Save didn't keep the contract.
+    @State private var problem: String?
     @State private var confirmingRemove = false
     /// The presenting window's, so that the change undoes there: on the
     /// Mac, a sheet has an undo manager of its own, gone once it closes.
@@ -25,19 +25,12 @@ public struct ContractSheet: View {
         self.projectID = projectID
         self.original = contract
         self.isNew = isNew
-        _draft = State(initialValue: contract)
-        _hoursText = State(initialValue: "\(contract.hours)")
+        _draft = State(initialValue: ContractDraft(contract))
     }
 
-    /// The draft with the hours as typed, 0 while they aren't a number,
-    /// and an alert no larger than the hours.
+    /// The contract to save.
     private var edited: Contract {
-        var contract = draft
-        contract.hours = Int(hoursText.trimmingCharacters(in: .whitespaces)) ?? 0
-        if let alert = contract.alertHours, alert > contract.hours, contract.hours > 0 {
-            contract.alertHours = contract.hours
-        }
-        return contract
+        draft.contract
     }
 
     private var hasChanges: Bool {
@@ -125,14 +118,14 @@ public struct ContractSheet: View {
         Section {
             LabeledContent("Hours") {
                 HStack(spacing: 4) {
-                    TextField("Hours", text: $hoursText)
+                    TextField("Hours", text: $draft.hoursText)
                         .multilineTextAlignment(.trailing)
                         .monospacedDigit()
                         .labelsHidden()
                         #if os(iOS)
                         .keyboardType(.numberPad)
                         #endif
-                        .onChange(of: hoursText) { error = nil }
+                        .onChange(of: draft.hoursText) { problem = nil }
                     Text("h")
                         .foregroundStyle(Theme.text2)
                 }
@@ -140,8 +133,8 @@ public struct ContractSheet: View {
             DatePicker("Starts", selection: day(\.start), displayedComponents: .date)
             DatePicker("Ends", selection: day(\.end), displayedComponents: .date)
         } footer: {
-            if let error {
-                Text(message(for: error))
+            if let problem {
+                Text(problem)
                     .foregroundStyle(Theme.amberText)
             } else {
                 Text(summary)
@@ -170,10 +163,10 @@ public struct ContractSheet: View {
     /// of the hours.
     private var alertIsOn: Binding<Bool> {
         Binding(
-            get: { edited.alertsAt > 0 },
+            get: { draft.alerts },
             set: { on in
-                draft.alertHours = on ? nil : 0
-                error = nil
+                draft.alerts = on
+                problem = nil
             }
         )
     }
@@ -182,11 +175,10 @@ public struct ContractSheet: View {
     /// follows the hours.
     private var alertHours: Binding<Int> {
         Binding(
-            get: { edited.alertsAt },
+            get: { draft.alertHours },
             set: { hours in
-                let fallback = Contract.defaultAlertHours(for: edited.hours)
-                draft.alertHours = hours == fallback ? nil : hours
-                error = nil
+                draft.alertHours = hours
+                problem = nil
             }
         )
     }
@@ -218,22 +210,29 @@ public struct ContractSheet: View {
     /// A picker's date for one of the contract's days.
     private func day(_ keyPath: WritableKeyPath<Contract, LocalDate>) -> Binding<Date> {
         Binding(
-            get: { draft[keyPath: keyPath].pickerDate },
+            get: { draft.base[keyPath: keyPath].pickerDate },
             set: { date in
-                draft[keyPath: keyPath] = LocalDate(pickerDate: date)
-                error = nil
+                draft.base[keyPath: keyPath] = LocalDate(pickerDate: date)
+                problem = nil
             }
         )
     }
 
+    /// Keeps the contract, unless it was removed meanwhile, as on another
+    /// device, or can't be kept.
     private func save() {
+        let isGone = model.ledger.projects[projectID]?.contracts.contains { $0.id == original.id } != true
+        if !isNew, isGone {
+            problem = "This contract was removed, perhaps on another device. Cancel, then add it again if it's still needed."
+            return
+        }
         do {
             try model.setContract(edited, ofProject: projectID, undoManager: undoManager)
             dismiss()
         } catch let failure as ContractError {
-            error = failure
+            problem = message(for: failure)
         } catch {
-            self.error = .invalid
+            problem = message(for: .invalid)
         }
     }
 
