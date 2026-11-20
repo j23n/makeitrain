@@ -2,10 +2,10 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 
-/// A project's settings: name, client, color, repositories, the calendar on
-/// this device, and archiving, merging or deleting it. The wide layout shows
-/// them in a column beside the project's page, and the narrow one in a sheet
-/// over it, at touch size.
+/// A project's settings: name, client, color, contracts, repositories, the
+/// calendar on this device, and archiving, merging or deleting it. The wide
+/// layout shows them in a column beside the project's page, and the narrow
+/// one in a sheet over it, at touch size.
 struct ProjectSettingsPanel: View {
     let model: AppModel
     let project: Project
@@ -90,7 +90,7 @@ struct ProjectSettingsPanel: View {
                 }
             }
             field("Contract", footer: "Time on the contract's days counts toward its hours. Each device alerts once when the time left reaches the alert.") {
-                ContractEditor(model: model, project: project)
+                ContractEditor(model: model, project: project, touch: compact)
                     .font(.system(size: compact ? 15 : 12.5))
             }
             repositories
