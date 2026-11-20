@@ -158,6 +158,9 @@ struct DayGridMetrics: Equatable {
     /// Whether a block can be dragged to move it or change its times. Not
     /// on a narrow touch screen, where a drag on a block scrolls the day.
     var movesBlocks: Bool
+    /// Whether blocks are drawn at the narrow layout's size, with more of
+    /// the entry on them.
+    var compactBlocks: Bool
     /// The small text on the grid, such as times.
     var smallFont: CGFloat
     /// A suggested entry's title.
@@ -177,6 +180,7 @@ struct DayGridMetrics: Equatable {
         minimumHitHeight: 10,
         touch: false,
         movesBlocks: true,
+        compactBlocks: false,
         smallFont: 10.5,
         titleFont: 11.5,
         handleOffset: 14,
@@ -197,6 +201,7 @@ struct DayGridMetrics: Equatable {
             minimumHitHeight: touch ? 24 : 10,
             touch: touch,
             movesBlocks: !touch,
+            compactBlocks: true,
             smallFont: 11,
             titleFont: 12.5,
             handleOffset: touch ? 22 : 14,
@@ -390,7 +395,7 @@ struct DayColumn: View {
     /// size, with more of the entry on it.
     @ViewBuilder
     private func blockContent(_ entry: ResolvedEntry, start: Int, end: Int, height: CGFloat, selected: Bool) -> some View {
-        if metrics == .wide {
+        if !metrics.compactBlocks {
             EntryBlock(
                 model: model,
                 entry: entry,
@@ -654,6 +659,9 @@ struct DayColumn: View {
                             .padding(.horizontal, 8)
                             .frame(height: 21)
                             .background(Capsule().fill(Theme.marker))
+                            // A finger's height to hold it by on a touch screen.
+                            .frame(height: metrics.touch ? 44 : 21)
+                            .contentShape(Rectangle())
                             .offset(y: offset)
                             .resizeCursor()
                             .gesture(
