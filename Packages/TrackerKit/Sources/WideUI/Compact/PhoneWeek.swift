@@ -218,6 +218,16 @@ struct PhoneWeek: View {
 struct PhoneEmptyDay: View {
     let isToday: Bool
 
+    /// How the grid is drawn on: dragged across with a pointer, held with
+    /// a finger.
+    #if os(macOS)
+    private static let logGesture = "drag across"
+    private static let logGestureAtStart = "Drag across"
+    #else
+    private static let logGesture = "touch and hold"
+    private static let logGestureAtStart = "Touch and hold"
+    #endif
+
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: "clock")
@@ -226,8 +236,8 @@ struct PhoneEmptyDay: View {
             Text(isToday ? "Nothing logged yet" : "Nothing logged")
                 .font(.system(size: 15, weight: .semibold))
             Text(isToday
-                ? "Type a project in the line below to start a timer, or touch and hold the grid to log time."
-                : "Touch and hold the grid to log time, or type a project, the day and the times in the line below.")
+                ? "Type a project in the line below to start a timer, or \(Self.logGesture) the grid to log time."
+                : "\(Self.logGestureAtStart) the grid to log time, or type a project, the day and the times in the line below.")
                 .font(.system(size: 13))
                 .foregroundStyle(Theme.text2)
                 .multilineTextAlignment(.center)
