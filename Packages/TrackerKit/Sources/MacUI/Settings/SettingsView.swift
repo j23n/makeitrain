@@ -357,6 +357,11 @@ struct DataSettings: View {
                         calendarAccess
                     }
                     if model.calendarAccess == .granted {
+                        if model.calendars.isEmpty {
+                            SettingsRow(title: "No calendars on this \(deviceName).") {
+                                EmptyView()
+                            }
+                        }
                         ForEach(model.calendars) { calendar in
                             SettingsRow(title: calendar.title, detail: calendar.account) {
                                 CalendarProjectPicker(model: model, calendar: calendar) {
