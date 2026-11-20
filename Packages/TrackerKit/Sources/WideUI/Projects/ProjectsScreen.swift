@@ -3,7 +3,7 @@ import TrackerCore
 import TrackerKit
 
 /// Clients and their projects as a table: each project's repositories,
-/// calendar on this device, and time this week, this month, over the last
+/// calendar on this device, contract, and time this week, this month, over the last
 /// twelve weeks and in all. Arrows move, Return opens a project's page, and
 /// single keys rename, color, archive, merge or add.
 struct ProjectsScreen: View {
@@ -135,6 +135,8 @@ struct ProjectsScreen: View {
             Text("Repositories")
         } calendar: {
             Text("Calendar on this \(deviceName)")
+        } contract: {
+            Text("Contract")
         } week: {
             Text("This week")
         } month: {
@@ -177,6 +179,8 @@ struct ProjectsScreen: View {
             EmptyView()
         } calendar: {
             EmptyView()
+        } contract: {
+            EmptyView()
         } week: {
             time(row.thisWeek, dim: true)
         } month: {
@@ -192,7 +196,7 @@ struct ProjectsScreen: View {
     private func sectionRow(_ title: String) -> some View {
         ProjectTableRow(height: 42) {
             Text(title).fontWeight(.semibold).foregroundStyle(Theme.text2)
-        } repositories: { EmptyView() } calendar: { EmptyView() } week: { EmptyView() } month: { EmptyView() } spark: { EmptyView() } total: { EmptyView() }
+        } repositories: { EmptyView() } calendar: { EmptyView() } contract: { EmptyView() } week: { EmptyView() } month: { EmptyView() } spark: { EmptyView() } total: { EmptyView() }
         .background(Theme.sunken)
     }
 
@@ -201,7 +205,7 @@ struct ProjectsScreen: View {
         let selected = selection == project.id
         let running = model.running?.entry.projectID == project.id
         let calendar = model.linkedCalendar(ofProject: project.id)
-        return ProjectTableRow(height: 52) {
+        return ProjectTableRow(height: 56) {
             HStack(spacing: 10) {
                 colorMenu(project)
                 Text(project.name)
@@ -256,6 +260,8 @@ struct ProjectsScreen: View {
                 .fixedSize()
                 .disabled(model.calendars.isEmpty)
             }
+        } contract: {
+            contractCell(project)
         } week: {
             time(row.thisWeek)
         } month: {
@@ -286,6 +292,31 @@ struct ProjectsScreen: View {
                 model.updateProject(project.id, actionName: "Archive Project", undoManager: undoManager) { $0.archived = true }
             }
             Button("Merge Into…") { model.request = .command("merge \(project.name.lowercased()) into ") }
+        }
+    }
+
+    /// The project's contract: the time left over a bar, with its hours
+    /// and when it ends, or a link to add one on the project's page.
+    @ViewBuilder
+    private func contractCell(_ project: Project) -> some View {
+        if let status = model.contractStatus(ofProject: project.id) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline) {
+                    ContractLeftText(status)
+                    Spacer(minLength: 6)
+                    Text(status.hasStarted
+                        ? "of \(Format.hours(status.contract.hours)) · to \(Format.monthDay(status.contract.end))"
+                        : "\(Format.hours(status.contract.hours)) from \(Format.monthDay(status.contract.start))")
+                        .font(.system(size: 11.5))
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.text3)
+                        .lineLimit(1)
+                }
+                ContractBar(status: status, tint: model.ledger.tint(ofProject: project.id))
+            }
+        } else if !project.archived {
+            Button("Add a contract…") { navigator.go(.project(project.id)) }
+                .linkButton()
         }
     }
 
@@ -329,6 +360,7 @@ struct ProjectsScreen: View {
                     .linkButton()
                 }
                 Spacer()
+                Color.clear.frame(width: ProjectColumnWidth.contract, height: 1)
                 time(row.thisWeek).frame(width: ProjectColumnWidth.week, alignment: .trailing)
                 time(row.thisMonth).frame(width: ProjectColumnWidth.month, alignment: .trailing)
                 Color.clear.frame(width: ProjectColumnWidth.spark, height: 1)
@@ -431,6 +463,7 @@ enum ProjectColumnWidth {
     static let name: CGFloat = 220
     static let repositories: CGFloat = 150
     static let calendar: CGFloat = 170
+    static let contract: CGFloat = 230
     static let week: CGFloat = 84
     static let month: CGFloat = 100
     static let spark: CGFloat = 156
@@ -438,11 +471,12 @@ enum ProjectColumnWidth {
 }
 
 /// A row of the projects table, with each column's width.
-struct ProjectTableRow<Name: View, Repos: View, Cal: View, Week: View, Month: View, Spark: View, Total: View>: View {
+struct ProjectTableRow<Name: View, Repos: View, Cal: View, Contract: View, Week: View, Month: View, Spark: View, Total: View>: View {
     let height: CGFloat
     @ViewBuilder var name: Name
     @ViewBuilder var repositories: Repos
     @ViewBuilder var calendar: Cal
+    @ViewBuilder var contract: Contract
     @ViewBuilder var week: Week
     @ViewBuilder var month: Month
     @ViewBuilder var spark: Spark
@@ -453,6 +487,7 @@ struct ProjectTableRow<Name: View, Repos: View, Cal: View, Week: View, Month: Vi
             cell(name, alignment: .leading).frame(minWidth: ProjectColumnWidth.name, maxWidth: .infinity)
             cell(repositories, alignment: .leading).frame(minWidth: ProjectColumnWidth.repositories, maxWidth: .infinity)
             cell(calendar, alignment: .leading).frame(minWidth: ProjectColumnWidth.calendar, maxWidth: .infinity)
+            cell(contract, alignment: .leading).frame(width: ProjectColumnWidth.contract)
             cell(week, alignment: .trailing).frame(width: ProjectColumnWidth.week)
             cell(month, alignment: .trailing).frame(width: ProjectColumnWidth.month)
             cell(spark, alignment: .leading).frame(width: ProjectColumnWidth.spark)

@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import TrackerCore
 
 /// Settings that stay on this device. Clients, projects and entries are
 /// in the data files, which sync; these don't.
@@ -77,6 +78,19 @@ public final class Preferences {
         didSet { defaults.set(showsLiveActivity, forKey: Keys.showsLiveActivity) }
     }
 
+    /// Whether this device notifies when a contract's time left reaches its
+    /// alert, and when its hours run out.
+    public var contractAlerts: Bool {
+        didSet { defaults.set(contractAlerts, forKey: Keys.contractAlerts) }
+    }
+
+    /// The contract alerts this device has shown, by key, so each shows once.
+    public private(set) var notifiedContractAlerts: Set<String>
+
+    /// The contract alerts this device has scheduled for a running timer,
+    /// by key, and when they're due.
+    public private(set) var scheduledContractAlerts: [String: Timestamp]
+
     /// The corrections skipped on this device, by id, the latest last.
     public private(set) var skippedCorrections: [String]
 
@@ -93,6 +107,9 @@ public final class Preferences {
         static let closesAfterReturn = "closesCommandAfterReturn"
         static let shortcut = "commandShortcut"
         static let showsLiveActivity = "showsLiveActivity"
+        static let contractAlerts = "contractAlerts"
+        static let notifiedContractAlerts = "notifiedContractAlerts"
+        static let scheduledContractAlerts = "scheduledContractAlerts"
         static let skippedCorrections = "skippedCorrections"
         static let history = "commandHistory"
     }
@@ -110,6 +127,10 @@ public final class Preferences {
         closesAfterReturn = defaults.object(forKey: Keys.closesAfterReturn) as? Bool ?? true
         shortcut = defaults.data(forKey: Keys.shortcut).flatMap { try? JSONDecoder().decode(Shortcut.self, from: $0) }
         showsLiveActivity = defaults.object(forKey: Keys.showsLiveActivity) as? Bool ?? true
+        contractAlerts = defaults.object(forKey: Keys.contractAlerts) as? Bool ?? true
+        notifiedContractAlerts = Set(defaults.stringArray(forKey: Keys.notifiedContractAlerts) ?? [])
+        scheduledContractAlerts = (defaults.dictionary(forKey: Keys.scheduledContractAlerts) ?? [:])
+            .compactMapValues { ($0 as? NSNumber).map { Timestamp(milliseconds: $0.int64Value) } }
         skippedCorrections = defaults.stringArray(forKey: Keys.skippedCorrections) ?? []
         history = defaults.stringArray(forKey: Keys.history) ?? []
     }
@@ -126,6 +147,20 @@ public final class Preferences {
         guard !isSkipped(id) else { return }
         skippedCorrections = Array((skippedCorrections + [id]).suffix(Self.skippedLimit))
         defaults.set(skippedCorrections, forKey: Keys.skippedCorrections)
+    }
+
+    // MARK: - Contract alerts
+
+    /// Remembers which contract alerts were shown and scheduled.
+    public func rememberContractAlerts(notified: Set<String>, scheduled: [String: Timestamp]) {
+        if notified != notifiedContractAlerts {
+            notifiedContractAlerts = notified
+            defaults.set(notified.sorted(), forKey: Keys.notifiedContractAlerts)
+        }
+        if scheduled != scheduledContractAlerts {
+            scheduledContractAlerts = scheduled
+            defaults.set(scheduled.mapValues(\.milliseconds), forKey: Keys.scheduledContractAlerts)
+        }
     }
 
     // MARK: - History
