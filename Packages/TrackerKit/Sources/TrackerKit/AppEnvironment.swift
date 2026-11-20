@@ -17,6 +17,9 @@ public struct AppEnvironment {
     public var cloud: CloudProvider?
     /// This device's calendars, or nil where there are none, as in tests.
     public var calendars: CalendarProvider?
+    /// This device's notifications, or nil where there are none, as in
+    /// tests and previews.
+    public var notifications: NotificationProvider?
 
     public init(
         localFolder: URL,
@@ -25,7 +28,8 @@ public struct AppEnvironment {
         now: @escaping () -> Timestamp = { .now },
         timeZone: @escaping () -> String = { TimeZone.current.identifier },
         cloud: CloudProvider? = nil,
-        calendars: CalendarProvider? = nil
+        calendars: CalendarProvider? = nil,
+        notifications: NotificationProvider? = nil
     ) {
         self.localFolder = localFolder
         self.backupsFolder = backupsFolder
@@ -34,6 +38,7 @@ public struct AppEnvironment {
         self.timeZone = timeZone
         self.cloud = cloud
         self.calendars = calendars
+        self.notifications = notifications
     }
 
     /// The real thing: folders in the app's Application Support folder, which
@@ -47,7 +52,8 @@ public struct AppEnvironment {
             backupsFolder: support.appendingPathComponent("Backups", isDirectory: true),
             defaults: .standard,
             cloud: ICloudProvider(containerIdentifier: "iCloud.com.j23n.TimeTracker"),
-            calendars: EventKitCalendars()
+            calendars: EventKitCalendars(),
+            notifications: SystemNotifications()
         )
     }
 }

@@ -99,7 +99,7 @@ private struct WeekContent: View {
                 }
                 .transition(.move(edge: .trailing))
             case .newEntry?:
-                NewEntryPanel(model: model, week: week) {
+                NewEntryPanel(model: model, week: week, focusRequest: lineFocusRequest) {
                     focused = true
                 }
                 .transition(.move(edge: .trailing))

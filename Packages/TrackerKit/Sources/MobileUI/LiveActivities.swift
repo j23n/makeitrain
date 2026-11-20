@@ -36,6 +36,7 @@ final class LiveActivities {
     private static func content(for entry: ResolvedEntry, in model: AppModel, end: Date?, ranLong: Date?, likelyEnd: Date?) -> TimerActivityAttributes.ContentState {
         let project = entry.entry.projectID.flatMap { model.ledger.projects[$0] }
         let detail = entry.entry.note.isEmpty ? entry.entry.tags.joined(separator: " ") : entry.entry.note
+        let contract = end == nil ? model.activeContract(ofProject: entry.entry.projectID) : nil
         return TimerActivityAttributes.ContentState(
             start: entry.start.date,
             entryID: entry.id,
@@ -46,7 +47,10 @@ final class LiveActivities {
             line: model.startLine(for: entry.entry),
             ranLong: ranLong,
             likelyEnd: likelyEnd,
-            switchTo: end == nil ? shortcuts(in: model) : []
+            switchTo: end == nil ? shortcuts(in: model) : [],
+            contractOut: contract.map { model.now.date.addingTimeInterval(Double($0.left) / 1000) },
+            contractUntil: contract.map { Format.monthDay($0.contract.end) },
+            contractLow: contract?.isLow
         )
     }
 

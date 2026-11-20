@@ -29,6 +29,7 @@ public final class AppModel {
             dayTotals = DayTotals(resolved)
             projectTags = ledger.tagsByProject()
             revision += 1
+            updateContractAlerts()
         }
     }
     /// Goes up with every change to the ledger, for views that work
@@ -45,7 +46,13 @@ public final class AppModel {
     public private(set) var projectTags: [UUID?: [String]] = [:]
     /// The current time, updated whenever a running timer's minutes change.
     public private(set) var now: Timestamp
-    public private(set) var state: State = .loading
+    public private(set) var state: State = .loading {
+        didSet {
+            if state != oldValue {
+                updateContractAlerts()
+            }
+        }
+    }
     public private(set) var storage: StorageKind
     /// Files that couldn't be read or saved.
     public private(set) var issues: [FileIssue] = []
@@ -428,6 +435,7 @@ public final class AppModel {
                 guard !Task.isCancelled, let self else { return }
                 self.now = self.environment.now()
                 self.backUpIfDue()
+                self.updateContractAlerts()
             }
         }
     }

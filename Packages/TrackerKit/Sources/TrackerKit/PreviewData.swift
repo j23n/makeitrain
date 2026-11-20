@@ -6,7 +6,9 @@ import TrackerCore
 /// clients, with a running timer, an overlap, an unassigned entry, one
 /// recorded in New York, an archived project, a run of short entries on
 /// Tuesday, and tags that refer to issues in Acme's GitHub repositories,
-/// some written "Core/#31". There's also
+/// some written "Core/#31", and contracts: Website redesign's nearly used,
+/// Mobile app's with room and an earlier one, and Brand refresh's over.
+/// There's also
 /// a freelancer's three months, with hundreds of hours and dozens of issue
 /// tags. "Now" is Wednesday, September 23, 2026, at 15:40 in Berlin.
 public enum PreviewData {
@@ -39,6 +41,7 @@ public enum PreviewData {
                 name: "Website redesign",
                 color: "#4F7CAC",
                 repositories: ["https://github.com/acme/website"],
+                contracts: [Contract(id: id(31), hours: 8, start: day(9, 1), end: day(9, 30))],
                 updated: now
             ),
             Project(
@@ -47,9 +50,20 @@ public enum PreviewData {
                 name: "Mobile app",
                 color: "#C0504D",
                 repositories: ["https://github.com/acme/mobile", "https://github.com/acme/api", "https://github.com/acme/Core"],
+                contracts: [
+                    Contract(id: id(32), hours: 30, start: day(6, 1), end: day(8, 31)),
+                    Contract(id: id(33), hours: 40, start: day(9, 1), end: day(10, 31)),
+                ],
                 updated: now
             ),
-            Project(id: brand, clientID: globex, name: "Brand refresh", color: "#9BBB59", updated: now),
+            Project(
+                id: brand,
+                clientID: globex,
+                name: "Brand refresh",
+                color: "#9BBB59",
+                contracts: [Contract(id: id(34), hours: 4, start: day(9, 1), end: day(9, 30))],
+                updated: now
+            ),
             Project(id: internalWork, name: "Internal", color: "#8064A2", updated: now),
             Project(id: admin, name: "Admin", color: "#7F7F7F", archived: true, updated: now),
         ]
@@ -291,6 +305,11 @@ public enum PreviewData {
             preconditionFailure("Not a sample time: \(text)")
         }
         return parsed
+    }
+
+    /// A day of 2026, such as `day(9, 30)`.
+    private static func day(_ month: Int, _ day: Int) -> LocalDate {
+        LocalDate(year: 2026, month: month, day: day)
     }
 
     private static func id(_ number: Int) -> UUID {

@@ -122,6 +122,12 @@ struct GeneralSettings: View {
                             .labelsHidden()
                             .fixedSize()
                     }
+                    SettingsRow(title: "Contract alerts") {
+                        Toggle("Contract alerts", isOn: $preferences.contractAlerts)
+                            .toggleStyle(.switch)
+                            .labelsHidden()
+                            .onChange(of: preferences.contractAlerts) { model.updateContractAlerts() }
+                    }
                 }
 
                 SettingsSection(title: "Command line") {
