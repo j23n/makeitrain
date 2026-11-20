@@ -328,6 +328,8 @@ public struct ContractAlertPlan: Hashable, Sendable {
                 continue
             }
             if alert.kind == .low, postedUsedUp.contains(alert.contract.id) {
+                // Covered by the used-up notice: take it back if it's waiting.
+                if scheduled[alert.key] != nil { cancel.append(alert.key) }
                 continue
             }
             if scheduled[alert.key] != nil {
@@ -392,13 +394,18 @@ extension Ledger {
 
 extension Contract {
     /// A new contract to follow the project's latest: as many hours, from
-    /// the day after it ends for as many days. Without one, 40 hours over
-    /// the month of `today`.
+    /// the day after it ends for as many days. When the latest ended
+    /// before `today`, it runs to the end of this month instead, from the
+    /// first of the month or the day after the latest ended, so it holds
+    /// today. Without one, 40 hours over the month of `today`.
     public static func next(after contracts: [Contract], today: LocalDate) -> Contract {
+        let first = LocalDate(year: today.year, month: today.month, day: 1)
+        let last = LocalDate(year: today.year, month: today.month, day: LocalDate.daysIn(month: today.month, year: today.year))
         guard let latest = contracts.max(by: { $0.end < $1.end }) else {
-            let first = LocalDate(year: today.year, month: today.month, day: 1)
-            let last = LocalDate(year: today.year, month: today.month, day: LocalDate.daysIn(month: today.month, year: today.year))
             return Contract(hours: 40, start: first, end: last)
+        }
+        if latest.end < today {
+            return Contract(hours: latest.hours, start: max(first, latest.end.adding(days: 1)), end: last, alertHours: latest.alertHours)
         }
         let start = latest.end.adding(days: 1)
         return Contract(hours: latest.hours, start: start, end: start.adding(days: latest.days.count - 1), alertHours: latest.alertHours)
