@@ -46,5 +46,19 @@ public struct AdaptiveRoot<Wide: View, Narrow: View>: View {
 @Observable
 final class WindowPlace {
     /// The screen the window shows, or nil before either layout appeared.
-    var screen: Screen?
+    private(set) var screen: Screen?
+
+    /// Notes that a layout opened, on `screen` when the window has no place
+    /// yet. A place it has stays: the narrow layout shows a year as a month
+    /// and keeps the year until its tabs move.
+    func opened(on screen: Screen) {
+        if self.screen == nil {
+            self.screen = screen
+        }
+    }
+
+    /// Notes that the layout showing moved to `screen`.
+    func moved(to screen: Screen) {
+        self.screen = screen
+    }
 }

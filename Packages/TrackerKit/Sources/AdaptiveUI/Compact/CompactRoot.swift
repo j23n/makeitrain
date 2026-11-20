@@ -156,12 +156,9 @@ public struct CompactRoot<Settings: View>: View {
                     UITabBarItem.appearance().badgeColor = UIColor(Theme.amber)
                     #endif
                     // Where the wide layout was, when the window was
-                    // just made narrower. A year stays the window's place
-                    // until the tabs move.
+                    // just made narrower.
                     let router = CompactRouter(model: model, showing: place?.screen)
-                    if let place, place.screen == nil {
-                        place.screen = router.screen
-                    }
+                    place?.opened(on: router.screen)
                     self.router = router
                 }
         }
@@ -259,7 +256,7 @@ private struct CompactTabs<Settings: View>: View {
             handle(request)
         }
         .onChange(of: router.screen) { _, screen in
-            place?.screen = screen
+            place?.moved(to: screen)
         }
     }
 

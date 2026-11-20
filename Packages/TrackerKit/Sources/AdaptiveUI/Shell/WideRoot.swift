@@ -85,10 +85,10 @@ public struct WideRoot<Trailing: View>: View {
                     navigator.replace(zoom.screen(today: model.today))
                 }
             }
-            place?.screen = navigator.screen
+            place?.opened(on: navigator.screen)
         }
         .onChange(of: navigator.screen) { _, screen in
-            place?.screen = screen
+            place?.moved(to: screen)
         }
         .onChange(of: navigator.screen.zoom) { _, zoom in
             savedZoom = zoom.rawValue

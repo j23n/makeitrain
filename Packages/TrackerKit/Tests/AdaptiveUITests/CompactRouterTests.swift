@@ -68,4 +68,32 @@ import TrackerKit
         router.tab = .projects
         #expect(router.screen == .projects)
     }
+
+    @Test func aYearStaysTheWindowsPlaceUntilTheTabsMove() {
+        let model = PreviewData.model()
+        let year = model.today.year - 1
+        let place = WindowPlace()
+        place.opened(on: .year(year))
+
+        // Narrowed: the Month tab shows a month of the year, and widening
+        // again finds the year.
+        let narrow = CompactRouter(model: model, showing: place.screen)
+        place.opened(on: narrow.screen)
+        #expect(place.screen == .year(year))
+
+        // Narrowed again, with the month stepped: widening finds the month.
+        let stepped = CompactRouter(model: model, showing: place.screen)
+        place.opened(on: stepped.screen)
+        stepped.month.step(1)
+        place.moved(to: stepped.screen)
+        #expect(place.screen == .month(stepped.month.range.lowerBound))
+    }
+
+    @Test func aNewWindowTakesTheFirstLayoutsPlace() {
+        let place = WindowPlace()
+        place.opened(on: .projects)
+        #expect(place.screen == .projects)
+        place.opened(on: .week(wednesday))
+        #expect(place.screen == .projects)
+    }
 }
