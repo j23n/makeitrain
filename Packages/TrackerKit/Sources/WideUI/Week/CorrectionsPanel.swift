@@ -87,6 +87,8 @@ struct CorrectionCard: View {
     let week: WeekModel
     let preview: CorrectionPreview
     let selected: Bool
+    /// Whether its buttons show their keys, as they do in the list.
+    var showsKeys = true
     @Environment(\.undoManager) private var undoManager
 
     private var correction: Correction { preview.correction }
@@ -132,7 +134,7 @@ struct CorrectionCard: View {
                 } label: {
                     HStack(spacing: 9) {
                         Text(CorrectionText.fixTitle(fix, in: correction, model: model))
-                        if index == 0, selected {
+                        if index == 0, selected, showsKeys {
                             KeyCap("⏎", onInverse: true)
                         }
                     }
@@ -155,7 +157,7 @@ struct CorrectionCard: View {
             Button {
                 week.skip(preview.id)
             } label: {
-                Text("Skip ⇥")
+                Text(showsKeys ? "Skip ⇥" : "Skip")
                     .font(.system(size: 12.5))
                     .foregroundStyle(Theme.text2)
                     .padding(.horizontal, 6)

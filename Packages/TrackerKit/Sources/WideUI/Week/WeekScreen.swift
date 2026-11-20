@@ -5,6 +5,7 @@ import TrackerKit
 /// What the week's sidebar shows.
 private enum WeekSide: Equatable {
     case entry(UUID)
+    case newEntry
     case corrections
 }
 
@@ -62,9 +63,13 @@ private struct WeekContent: View {
         }
     }
 
-    /// What the sidebar shows: the selected entry, or else what needs
-    /// correcting when anything does.
+    /// What the sidebar shows: a new entry drawn on the grid once the drag
+    /// ends, the selected entry, or else what needs correcting when
+    /// anything does.
     private var side: WeekSide? {
+        if week.newEntry != nil, !week.isDrawingNewEntry {
+            return .newEntry
+        }
         if let id = week.selectedEntry, model.ledger.entries[id].map({ !$0.isDeleted }) == true {
             return .entry(id)
         }
@@ -86,10 +91,15 @@ private struct WeekContent: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             switch side {
             case let .entry(id)?:
-                EntryPanel(model: model, entryID: id, focusRequest: lineFocusRequest) { copy in
+                EntryPanel(model: model, week: week, entryID: id, focusRequest: lineFocusRequest) { copy in
                     week.selectedEntry = copy
                 } close: {
                     week.selectedEntry = nil
+                    focused = true
+                }
+                .transition(.move(edge: .trailing))
+            case .newEntry?:
+                NewEntryPanel(model: model, week: week, focusRequest: lineFocusRequest) {
                     focused = true
                 }
                 .transition(.move(edge: .trailing))
@@ -107,13 +117,14 @@ private struct WeekContent: View {
         .onKeyPress(keys: ["j", "k"]) { press in
             guard !isEditingText() else { return .ignored }
             week.selectedEntry = nil
+            week.newEntry = nil
             week.moveSelection(by: press.key == "j" ? 1 : -1)
             return .handled
         }
         .onKeyPress(.return) {
             guard !isEditingText() else { return .ignored }
             switch side {
-            case .entry?:
+            case .entry?, .newEntry?:
                 lineFocusRequest += 1
             case .corrections?:
                 week.acceptSelected(undoManager: undoManager)
@@ -128,8 +139,9 @@ private struct WeekContent: View {
             return .handled
         }
         .onKeyPress(.escape) {
-            guard !isEditingText(), week.selectedEntry != nil else { return .ignored }
+            guard !isEditingText(), week.selectedEntry != nil || week.newEntry != nil else { return .ignored }
             week.selectedEntry = nil
+            week.newEntry = nil
             return .handled
         }
         .onKeyPress(.leftArrow) {

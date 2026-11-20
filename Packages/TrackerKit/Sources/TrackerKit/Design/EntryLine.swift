@@ -3,14 +3,17 @@ import Observation
 import TrackerCore
 
 /// A line typed over an entry, as the week's line editor and the iPhone's
-/// entry sheet edit it: what it reads as, part by part, what could replace
-/// the word being typed, and why it can't be applied.
+/// entry sheet edit it, or for a new entry drawn on the week: what it
+/// reads as, part by part, what could replace the word being typed, and
+/// why it can't be applied.
 @MainActor
 @Observable
 public final class EntryLineModel {
     public let model: AppModel
     /// The entry the line edits.
     public private(set) var entryID: UUID?
+    /// The new entry the line makes, when it makes one instead.
+    public private(set) var newEntry: NewEntryDraft?
     public var text = "" {
         didSet {
             if text != oldValue {
@@ -56,12 +59,34 @@ public final class EntryLineModel {
     /// Edits another entry, or none.
     public func show(_ entryID: UUID?) {
         self.entryID = entryID
+        newEntry = nil
         revert()
     }
 
-    /// Puts the entry's line back.
+    /// Makes a new entry, starting with the draft's day and times.
+    public func showNew(_ draft: NewEntryDraft) {
+        entryID = nil
+        newEntry = draft
+        revert()
+    }
+
+    /// Follows the new entry's times as it's dragged on the week: the line
+    /// gets the new day and times while it still starts with the old ones,
+    /// and keeps the rest.
+    public func retime(_ draft: NewEntryDraft) {
+        guard let old = newEntry, old != draft else { return }
+        let before = model.line(for: old)
+        newEntry = draft
+        if text.hasPrefix(before) {
+            text = model.line(for: draft) + text.dropFirst(before.count)
+        } else {
+            refresh()
+        }
+    }
+
+    /// Puts the entry's line back, or the new entry's day and times.
     public func revert() {
-        let line = entry.map { model.line(for: $0) } ?? ""
+        let line = entry.map { model.line(for: $0) } ?? newEntry.map { model.line(for: $0) } ?? ""
         if text == line {
             refresh()
         } else {
@@ -75,7 +100,14 @@ public final class EntryLineModel {
     /// why, when the line isn't an entry.
     @discardableResult
     public func apply(undoManager: UndoManager?) -> Bool {
-        guard let entryID, model.apply(line: text, to: entryID, undoManager: undoManager) else {
+        let applied = if let newEntry {
+            model.addEntry(line: text, for: newEntry, undoManager: undoManager)
+        } else if let entryID {
+            model.apply(line: text, to: entryID, undoManager: undoManager)
+        } else {
+            false
+        }
+        guard applied else {
             // Read it again, in case it was read before the data changed.
             refresh()
             refused = true
@@ -123,7 +155,12 @@ public final class EntryLineModel {
     }
 
     private func refresh() {
-        if let entryID, !text.isEmpty {
+        if let newEntry, !text.isEmpty {
+            let read = model.readNewEntryLine(text, for: newEntry)
+            reading = read.reading
+            parts = read.parts
+            problem = read.problem
+        } else if let entryID, !text.isEmpty {
             let read = model.readEntryLine(text, for: entryID)
             reading = read.reading
             parts = read.parts
@@ -137,7 +174,9 @@ public final class EntryLineModel {
     }
 
     private func refreshSuggestions() {
-        if let entryID, !text.isEmpty {
+        if let newEntry, !text.isEmpty {
+            suggestions.reset(to: model.suggestions(for: text, cursor: cursor ?? text.utf16.count, newEntry: newEntry))
+        } else if let entryID, !text.isEmpty {
             suggestions.reset(to: model.suggestions(for: text, cursor: cursor ?? text.utf16.count, editing: entryID))
         } else {
             suggestions.reset(to: [])

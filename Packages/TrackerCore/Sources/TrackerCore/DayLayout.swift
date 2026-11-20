@@ -161,3 +161,124 @@ extension Timestamp {
         self.init(calendar.date(from: components) ?? Date(timeIntervalSince1970: 0))
     }
 }
+
+/// Where a new entry drawn on a day's grid goes, in seconds after midnight:
+/// from dragging across empty space, from touching and holding it, or from
+/// double-clicking it. Times snap to five minutes, as dragging an entry
+/// does, a new entry is at least five minutes long, and it ends by
+/// `latest`: now on today, so it can't end in the future, or else 23:55,
+/// so its end is a time of the same day.
+public enum NewEntrySpan {
+    /// Five minutes, in seconds.
+    public static let snap = 300
+    /// How long a new entry made by touching and holding is, before it's
+    /// dragged: 30 minutes.
+    public static let heldLength = 1800
+    /// How long a new entry made by double-clicking is: an hour.
+    public static let clickedLength = 3600
+    /// The latest a new entry can end on a day: 23:55.
+    public static let lastEnd = 86400 - snap
+
+    /// The latest end on `day`: now on today, the day's last end on a day
+    /// before it, and nothing after it.
+    public static func latest(on day: LocalDate, now: Timestamp, zone: String) -> Int {
+        let local = now.local(in: zone)
+        if day < local.date { return lastEnd }
+        if day > local.date { return 0 }
+        return min(local.millisecondOfDay / 1000 / snap * snap, lastEnd)
+    }
+
+    /// Dragged from `from` to `to`, either way: the times between them,
+    /// snapped. Nil when there's no room for one, as just after midnight.
+    public static func dragged(from: Int, to: Int, latest: Int) -> (start: Int, end: Int)? {
+        let limit = min(latest, lastEnd)
+        guard limit >= snap else { return nil }
+        var start = min(max(rounded(min(from, to)), 0), limit)
+        var end = min(max(rounded(max(from, to)), 0), limit)
+        if end - start < snap {
+            end = min(start + snap, limit)
+            start = end - snap
+        }
+        return (start, end)
+    }
+
+    /// Touched and held at `at`, then dragged to `to`: half an hour from
+    /// the five minutes under the finger, until the drag takes it further
+    /// down, or above where it started.
+    public static func held(at: Int, to: Int, latest: Int) -> (start: Int, end: Int)? {
+        if to < at - snap / 2 || to - at > heldLength {
+            return dragged(from: at / snap * snap, to: to, latest: latest)
+        }
+        return placed(at: at, length: heldLength, latest: latest)
+    }
+
+    /// Double-clicked at `at`: an hour from the five minutes under the
+    /// pointer.
+    public static func clicked(at: Int, latest: Int) -> (start: Int, end: Int)? {
+        placed(at: at, length: clickedLength, latest: latest)
+    }
+
+    /// `length` from the five minutes before `at`, moved earlier when it
+    /// would end after `latest`.
+    static func placed(at: Int, length: Int, latest: Int) -> (start: Int, end: Int)? {
+        let limit = min(latest, lastEnd)
+        guard limit >= snap else { return nil }
+        let end = min(max(at / snap * snap, 0) + length, limit)
+        return (max(end - length, 0), end)
+    }
+
+    /// A new entry's start or end dragged to `second`: the other end stays,
+    /// and it stays at least five minutes long.
+    public static func adjusted(start: Int, end: Int, movingStart: Bool, to second: Int, latest: Int) -> (start: Int, end: Int) {
+        let limit = min(latest, lastEnd)
+        if movingStart {
+            return (min(max(rounded(second), 0), end - snap), end)
+        }
+        return (start, max(min(rounded(second), limit), start + snap))
+    }
+
+    /// The entries that a new entry from `start` to `end` overlaps, in
+    /// order, each with the part it overlaps as seconds after midnight on
+    /// the new entry's day, which starts at `startSecond`. It compares real
+    /// instants, so an entry from the day before that runs past midnight,
+    /// or one recorded in another zone, counts. A running entry runs to
+    /// `now`.
+    public static func overlapping(
+        start: Timestamp,
+        end: Timestamp,
+        startSecond: Int,
+        entries: [ResolvedEntry],
+        now: Timestamp
+    ) -> [(entry: ResolvedEntry, range: Range<Int>)] {
+        var found: [(entry: ResolvedEntry, range: Range<Int>)] = []
+        for entry in entries {
+            let from = max(start, entry.start)
+            let to = min(end, entry.end ?? now)
+            guard from < to else { continue }
+            let lower = startSecond + Int(start.distance(to: from) / 1000)
+            let upper = startSecond + Int(start.distance(to: to) / 1000)
+            if lower < upper {
+                found.append((entry, lower..<upper))
+            }
+        }
+        return found.sorted { $0.range.lowerBound < $1.range.lowerBound }
+    }
+
+    /// `ranges` with the ones that touch or overlap joined, in order, for
+    /// hatching time counted twice once each.
+    public static func merged(_ ranges: [Range<Int>]) -> [Range<Int>] {
+        var result: [Range<Int>] = []
+        for range in ranges.sorted(by: { $0.lowerBound < $1.lowerBound }) {
+            if let last = result.last, range.lowerBound <= last.upperBound {
+                result[result.count - 1] = last.lowerBound..<max(last.upperBound, range.upperBound)
+            } else {
+                result.append(range)
+            }
+        }
+        return result
+    }
+
+    private static func rounded(_ second: Int) -> Int {
+        Int((Double(second) / Double(snap)).rounded()) * snap
+    }
+}

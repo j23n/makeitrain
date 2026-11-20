@@ -43,8 +43,27 @@ public final class WeekModel {
     public private(set) var correctedTotals: DayTotals?
     /// The correction chosen in the list, by id.
     public var selectedCorrection: String?
-    /// The entry chosen on the week.
-    public var selectedEntry: UUID?
+    /// The entry chosen on the week. Choosing one drops a new entry being
+    /// made.
+    public var selectedEntry: UUID? {
+        didSet {
+            if selectedEntry != nil {
+                newEntry = nil
+            }
+        }
+    }
+    /// A new entry drawn on the week, until its line is saved or it's
+    /// dropped. Drawing one leaves the chosen entry.
+    public var newEntry: NewEntryDraft? {
+        didSet {
+            if newEntry != nil, selectedEntry != nil {
+                selectedEntry = nil
+            }
+        }
+    }
+    /// Whether the new entry is still being drawn, so its line waits until
+    /// the drag ends.
+    public var isDrawingNewEntry = false
     /// The entries on each day shown and the day before, as they're
     /// resolved, by day.
     public private(set) var entries: [LocalDate: [ResolvedEntry]] = [:]
@@ -62,6 +81,7 @@ public final class WeekModel {
     public func show(_ days: ClosedRange<LocalDate>) {
         guard days != self.days else { return }
         self.days = days
+        newEntry = nil
         reload()
     }
 
@@ -109,6 +129,29 @@ public final class WeekModel {
         }
         if let entry = selectedEntry, model.ledger.entries[entry]?.isDeleted != false {
             selectedEntry = nil
+        }
+    }
+
+    /// The corrections about an entry, as its sidebar and sheet show them:
+    /// its overlaps, a long run, or its missing project.
+    public func previews(involving id: UUID) -> [CorrectionPreview] {
+        previews.filter { preview in
+            switch preview.correction.kind {
+            case let .overlap(overlap): overlap.earlier == id || overlap.later == id
+            case let .ranLong(entry, _), let .noProject(entry): entry == id
+            case .notLogged: false
+            }
+        }
+    }
+
+    /// Whether an entry overlaps another, as a correction this week says,
+    /// so its block keeps an amber edge whether or not it's chosen.
+    public func isInOverlap(_ id: UUID) -> Bool {
+        previews.contains { preview in
+            if case let .overlap(overlap) = preview.correction.kind {
+                return overlap.earlier == id || overlap.later == id
+            }
+            return false
         }
     }
 

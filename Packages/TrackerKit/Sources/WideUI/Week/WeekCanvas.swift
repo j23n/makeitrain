@@ -154,7 +154,7 @@ struct BlockDrag {
 }
 
 /// One day's column: hour lines, blocks, what corrections would change,
-/// and the current time.
+/// a new entry being drawn, and the current time.
 struct DayColumn: View {
     let model: AppModel
     let week: WeekModel
@@ -188,11 +188,13 @@ struct DayColumn: View {
         GeometryReader { geometry in
             let width = geometry.size.width
             ZStack(alignment: .topLeading) {
+                emptySpace(width: width, columnHeight: geometry.size.height)
                 hourLines(width: width)
                 continuations(width: width)
                 ForEach(blocks) { block in
                     blockView(block, width: width)
                 }
+                newEntryView(width: width)
                 ghosts(width: width)
                 overlapBands(width: width)
                 longEntryMarks(width: width)
@@ -312,7 +314,8 @@ struct DayColumn: View {
             height: rect.height,
             selected: selected,
             change: week.suggestedChange(of: entry.id),
-            overnight: week.ranLongNote(for: entry)
+            overnight: week.ranLongNote(for: entry),
+            overlaps: week.isInOverlap(entry.id)
         )
         .frame(width: rect.width, height: rect.height)
         .opacity(isShown(entry) || selected ? 1 : 0.3)
@@ -371,6 +374,131 @@ struct DayColumn: View {
         }
         model.applyDrag(kind, to: block, on: day, startSecond: start, endSecond: end, dayShift: shift, undoManager: undoManager)
         week.selectedEntry = block.id
+    }
+
+    // MARK: New entries
+
+    /// The second of the day at `y`, within the hours shown.
+    private func second(at y: CGFloat) -> Int {
+        let second = Int((y / height + CGFloat(hours.lowerBound)) * 3600)
+        return min(max(second, hours.lowerBound * 3600), hours.upperBound * 3600)
+    }
+
+    /// The latest a new entry here can end: now on today.
+    private var latest: Int {
+        model.latestNewEntryEnd(on: day)
+    }
+
+    /// Empty space under the blocks. On the Mac, dragging across it draws a
+    /// new entry, double-clicking makes one an hour long, and clicking drops
+    /// one being made. On a touch screen, a touch held there draws one as
+    /// it's dragged, a tap drops one being made, and a swipe still scrolls.
+    @ViewBuilder
+    private func emptySpace(width: CGFloat, columnHeight: CGFloat) -> some View {
+        #if os(macOS)
+        Color.clear
+            .frame(width: width, height: columnHeight)
+            .contentShape(Rectangle())
+            .onTapGesture(count: 2, coordinateSpace: .named(Self.space)) { location in
+                draw(NewEntrySpan.clicked(at: second(at: location.y), latest: latest))
+                week.isDrawingNewEntry = false
+            }
+            .onTapGesture {
+                week.newEntry = nil
+                onSelect()
+            }
+            .gesture(
+                DragGesture(minimumDistance: 4, coordinateSpace: .named(Self.space))
+                    .onChanged { value in
+                        draw(NewEntrySpan.dragged(from: second(at: value.startLocation.y), to: second(at: value.location.y), latest: latest))
+                    }
+                    .onEnded { _ in
+                        week.isDrawingNewEntry = false
+                    }
+            )
+        #else
+        HoldAndDrag { start, location in
+            draw(NewEntrySpan.held(at: second(at: start.y), to: second(at: location.y), latest: latest))
+        } onEnd: {
+            week.isDrawingNewEntry = false
+        } onTap: {
+            week.newEntry = nil
+            onSelect()
+        }
+        .frame(width: width, height: columnHeight)
+        #endif
+    }
+
+    /// Puts the new entry being drawn at `span`, when there's one.
+    private func draw(_ span: (start: Int, end: Int)?) {
+        guard !model.isReadOnly, let span else { return }
+        week.isDrawingNewEntry = true
+        if var draft = week.newEntry, draft.day == day {
+            draft.startSecond = span.start
+            draft.endSecond = span.end
+            if draft != week.newEntry {
+                week.newEntry = draft
+            }
+        } else {
+            week.newEntry = model.newEntryDraft(on: day, startSecond: span.start, endSecond: span.end)
+        }
+    }
+
+    /// The new entry being made on this day: a dashed outline with its
+    /// times, handles to drag its start and end, and what it overlaps
+    /// hatched.
+    @ViewBuilder
+    private func newEntryView(width: CGFloat) -> some View {
+        if let draft = week.newEntry, draft.day == day {
+            let top = y(draft.startSecond)
+            let bottom = y(draft.endSecond)
+            ForEach(model.overlapRanges(of: draft), id: \.lowerBound) { range in
+                Hatching()
+                    .frame(width: width - 8, height: max(y(range.upperBound) - y(range.lowerBound), 2))
+                    .overlay(alignment: .top) { Rectangle().fill(Theme.amber).frame(height: 1.5) }
+                    .overlay(alignment: .bottom) { Rectangle().fill(Theme.amber).frame(height: 1.5) }
+                    .offset(x: 4, y: y(range.lowerBound))
+                    .allowsHitTesting(false)
+                    .zIndex(4)
+            }
+            NewEntryOutline(startSecond: draft.startSecond, endSecond: draft.endSecond, height: bottom - top)
+                .frame(width: width - 8, height: max(bottom - top, 6))
+                .overlay(alignment: .topTrailing) {
+                    newEntryHandle(movingStart: true)
+                        .offset(x: -6, y: -14)
+                }
+                .overlay(alignment: .bottomLeading) {
+                    newEntryHandle(movingStart: false)
+                        .offset(x: 6, y: 14)
+                }
+                .offset(x: 4, y: top)
+                .zIndex(4)
+        }
+    }
+
+    /// A round handle that drags the new entry's start or end.
+    private func newEntryHandle(movingStart: Bool) -> some View {
+        NewEntryHandle()
+            .resizeCursor()
+            .gesture(
+                DragGesture(minimumDistance: 1, coordinateSpace: .named(Self.space))
+                    .onChanged { value in
+                        guard var draft = week.newEntry else { return }
+                        let span = NewEntrySpan.adjusted(
+                            start: draft.startSecond,
+                            end: draft.endSecond,
+                            movingStart: movingStart,
+                            to: second(at: value.location.y),
+                            latest: latest
+                        )
+                        draft.startSecond = span.start
+                        draft.endSecond = span.end
+                        if draft != week.newEntry {
+                            week.newEntry = draft
+                        }
+                    }
+            )
+            .accessibilityLabel(Text(movingStart ? "Drag the new entry's start" : "Drag the new entry's end"))
     }
 
     // MARK: Corrections
@@ -568,6 +696,8 @@ struct EntryBlock: View {
     let selected: Bool
     let change: (before: TimeEntry, after: TimeEntry)?
     let overnight: String?
+    /// Whether it overlaps another entry, so it keeps an amber edge.
+    var overlaps = false
 
     private var unassigned: Bool { entry.entry.projectID == nil }
     private var tint: ProjectTint { model.ledger.tint(ofProject: entry.entry.projectID) }
@@ -578,7 +708,7 @@ struct EntryBlock: View {
             .padding(.horizontal, 8)
             .padding(.vertical, height < 34 ? 0 : 5)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: height < 34 ? .leading : .topLeading)
-            .entryBlockChrome(RoundedRectangle(cornerRadius: min(7, height / 2)), tint: tint, unassigned: unassigned, selected: selected, running: entry.isRunning, changed: change != nil)
+            .entryBlockChrome(RoundedRectangle(cornerRadius: min(7, height / 2)), tint: tint, unassigned: unassigned, selected: selected, running: entry.isRunning, changed: change != nil, overlaps: overlaps)
             .help(summary)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(summary))

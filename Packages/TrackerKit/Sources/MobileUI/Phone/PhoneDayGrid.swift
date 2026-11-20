@@ -9,7 +9,8 @@ import WideUI
 /// blocks in their projects' colors, and what the corrections would change
 /// drawn over them, as on the Mac: changed times struck through, what would
 /// be added as dashed outlines, time counted twice hatched, and numbered
-/// markers.
+/// markers. Touching and holding empty space, then dragging, draws a new
+/// entry.
 struct PhoneDayGrid: View {
     let model: AppModel
     let week: WeekModel
@@ -19,6 +20,8 @@ struct PhoneDayGrid: View {
     let onCorrection: (CorrectionPreview) -> Void
 
     private let hourHeight: CGFloat = 40
+    /// The grid's own coordinates, which a new entry's handles measure in.
+    private static let space = "phoneDayGrid"
     private var zone: String { model.environment.timeZone() }
 
     var body: some View {
@@ -40,16 +43,19 @@ struct PhoneDayGrid: View {
                     GeometryReader { geometry in
                         let width = geometry.size.width - gutter - 16
                         ZStack(alignment: .topLeading) {
+                            emptySpace(hours, width: width)
                             hourLines(hours, width: width)
                             ForEach(blocks) { block in
                                 blockView(block, in: blocks, hours: hours, width: width)
                             }
+                            newEntryView(hours: hours, width: width)
                             ghosts(hours, width: width)
                             overlaps(hours, width: width)
                             longEntries(hours, width: width)
                             markers(hours, width: width)
                             nowLine(hours, width: width)
                         }
+                        .coordinateSpace(.named(Self.space))
                         .offset(x: gutter)
                     }
                 }
@@ -138,7 +144,8 @@ struct PhoneDayGrid: View {
             height: height,
             selected: week.selectedEntry == entry.id,
             change: week.suggestedChange(of: entry.id),
-            overnight: week.ranLongNote(for: entry)
+            overnight: week.ranLongNote(for: entry),
+            overlaps: week.isInOverlap(entry.id)
         )
         .frame(width: blockWidth, height: height)
         .frame(width: blockWidth, height: CGFloat(hit.height))
@@ -152,6 +159,100 @@ struct PhoneDayGrid: View {
         .contextMenu {
             EntryMenu(model: model, entry: entry, touch: true)
         }
+    }
+
+    // MARK: New entries
+
+    /// The second of the day at `y`, within the hours shown.
+    private func second(at y: CGFloat, _ hours: Range<Int>) -> Int {
+        let second = Int((y / hourHeight + CGFloat(hours.lowerBound)) * 3600)
+        return min(max(second, hours.lowerBound * 3600), hours.upperBound * 3600)
+    }
+
+    private var latest: Int {
+        model.latestNewEntryEnd(on: day)
+    }
+
+    /// Empty space under the blocks, where a touch held, then dragged,
+    /// draws a new entry, and a tap drops one being made. A swipe still
+    /// scrolls.
+    private func emptySpace(_ hours: Range<Int>, width: CGFloat) -> some View {
+        HoldAndDrag { start, location in
+            guard !model.isReadOnly,
+                  let span = NewEntrySpan.held(at: second(at: start.y, hours), to: second(at: location.y, hours), latest: latest)
+            else { return }
+            week.isDrawingNewEntry = true
+            if var draft = week.newEntry, draft.day == day {
+                draft.startSecond = span.start
+                draft.endSecond = span.end
+                if draft != week.newEntry {
+                    week.newEntry = draft
+                }
+            } else {
+                week.newEntry = model.newEntryDraft(on: day, startSecond: span.start, endSecond: span.end)
+            }
+        } onEnd: {
+            week.isDrawingNewEntry = false
+        } onTap: {
+            week.newEntry = nil
+        }
+        .frame(width: width, height: CGFloat(hours.count) * hourHeight)
+    }
+
+    /// The new entry being made on this day: a dashed outline with its
+    /// times, round handles to drag its start and end, and what it
+    /// overlaps hatched.
+    @ViewBuilder
+    private func newEntryView(hours: Range<Int>, width: CGFloat) -> some View {
+        if let draft = week.newEntry, draft.day == day {
+            let top = y(draft.startSecond, hours)
+            let bottom = y(draft.endSecond, hours)
+            ForEach(model.overlapRanges(of: draft), id: \.lowerBound) { range in
+                Hatching()
+                    .frame(width: width - 8, height: max(y(range.upperBound, hours) - y(range.lowerBound, hours), 2))
+                    .overlay(alignment: .top) { Rectangle().fill(Theme.amber).frame(height: 1.5) }
+                    .overlay(alignment: .bottom) { Rectangle().fill(Theme.amber).frame(height: 1.5) }
+                    .offset(x: 4, y: y(range.lowerBound, hours))
+                    .allowsHitTesting(false)
+                    .zIndex(4)
+            }
+            NewEntryOutline(startSecond: draft.startSecond, endSecond: draft.endSecond, height: bottom - top, size: 12)
+                .frame(width: width - 8, height: max(bottom - top, 6))
+                .overlay(alignment: .topTrailing) {
+                    handle(movingStart: true, hours)
+                        .offset(x: -2, y: -22)
+                }
+                .overlay(alignment: .bottomLeading) {
+                    handle(movingStart: false, hours)
+                        .offset(x: 2, y: 22)
+                }
+                .offset(x: 4, y: top)
+                .zIndex(4)
+        }
+    }
+
+    /// A round handle that drags the new entry's start or end.
+    private func handle(movingStart: Bool, _ hours: Range<Int>) -> some View {
+        NewEntryHandle(touch: true)
+            .gesture(
+                DragGesture(minimumDistance: 1, coordinateSpace: .named(Self.space))
+                    .onChanged { value in
+                        guard var draft = week.newEntry else { return }
+                        let span = NewEntrySpan.adjusted(
+                            start: draft.startSecond,
+                            end: draft.endSecond,
+                            movingStart: movingStart,
+                            to: second(at: value.location.y, hours),
+                            latest: latest
+                        )
+                        draft.startSecond = span.start
+                        draft.endSecond = span.end
+                        if draft != week.newEntry {
+                            week.newEntry = draft
+                        }
+                    }
+            )
+            .accessibilityLabel(Text(movingStart ? "Drag the new entry's start" : "Drag the new entry's end"))
     }
 
     // MARK: Corrections
@@ -316,6 +417,8 @@ struct PhoneEntryBlock: View {
     let selected: Bool
     let change: (before: TimeEntry, after: TimeEntry)?
     let overnight: String?
+    /// Whether it overlaps another entry, so it keeps an amber edge.
+    var overlaps = false
 
     private var unassigned: Bool { entry.entry.projectID == nil }
     private var tint: ProjectTint { model.ledger.tint(ofProject: entry.entry.projectID) }
@@ -326,7 +429,7 @@ struct PhoneEntryBlock: View {
             .padding(.horizontal, 10)
             .padding(.vertical, height < 34 ? 0 : 5)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: height < 34 ? .leading : .topLeading)
-            .entryBlockChrome(shape, tint: tint, unassigned: unassigned, selected: selected, running: entry.isRunning, changed: change != nil)
+            .entryBlockChrome(shape, tint: tint, unassigned: unassigned, selected: selected, running: entry.isRunning, changed: change != nil, overlaps: overlaps)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(summary))
             .accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
