@@ -668,19 +668,16 @@ struct DayColumn: View {
                             .contentShape(Rectangle())
                             .offset(y: offset)
                             .resizeCursor()
-                            .gesture(
-                                DragGesture(minimumDistance: 1, coordinateSpace: .named(Self.space))
-                                    .onChanged { value in
-                                        seamDrag = (preview.id, value.translation.height)
-                                    }
-                                    .onEnded { value in
-                                        seamDrag = nil
-                                        let seconds = Int64(value.translation.height / height * 3600) * 1000
-                                        let middle = span.start.adding(milliseconds: span.duration / 2)
-                                        let seam = middle.adding(milliseconds: seconds).rounded(toMinutes: 5)
-                                        model.moveSeam(earlier: earlier.id, later: later.id, to: seam, undoManager: undoManager)
-                                    }
-                            )
+                            .modifier(SeamDrag(touch: metrics.touch, space: Self.space) { distance in
+                                seamDrag = (preview.id, distance)
+                            } ended: { distance in
+                                seamDrag = nil
+                                guard let distance else { return }
+                                let seconds = Int64(distance / height * 3600) * 1000
+                                let middle = span.start.adding(milliseconds: span.duration / 2)
+                                let seam = middle.adding(milliseconds: seconds).rounded(toMinutes: 5)
+                                model.moveSeam(earlier: earlier.id, later: later.id, to: seam, undoManager: undoManager)
+                            })
                             .help("Drag to move where \(model.ledger.title(of: earlier)) ends and \(model.ledger.title(of: later)) starts")
                             .accessibilityLabel(Text("Drag the seam between \(model.ledger.title(of: earlier)) and \(model.ledger.title(of: later))"))
                     }
@@ -973,6 +970,47 @@ public struct EntryMenu: View {
             Button(title, systemImage: systemImage, role: role, action: action)
         } else {
             Button(title, role: role, action: action)
+        }
+    }
+}
+
+/// Drags the seam between two entries: at once with a pointer, and after a
+/// hold on a touch screen, so that a swipe that starts on the handle still
+/// scrolls the day.
+private struct SeamDrag: ViewModifier {
+    let touch: Bool
+    let space: String
+    /// How far it's been dragged, in points.
+    let changed: (CGFloat) -> Void
+    /// How far it was dragged, or nil when it was held and let go.
+    let ended: (CGFloat?) -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        let drag = DragGesture(minimumDistance: 1, coordinateSpace: .named(space))
+        if touch {
+            content.gesture(
+                LongPressGesture(minimumDuration: 0.3)
+                    .sequenced(before: drag)
+                    .onChanged { value in
+                        if case .second(true, let drag?) = value {
+                            changed(drag.translation.height)
+                        }
+                    }
+                    .onEnded { value in
+                        if case .second(true, let drag?) = value {
+                            ended(drag.translation.height)
+                        } else {
+                            ended(nil)
+                        }
+                    }
+            )
+        } else {
+            content.gesture(
+                drag
+                    .onChanged { changed($0.translation.height) }
+                    .onEnded { ended($0.translation.height) }
+            )
         }
     }
 }
