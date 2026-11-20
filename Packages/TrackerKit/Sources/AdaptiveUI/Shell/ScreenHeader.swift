@@ -7,7 +7,12 @@ import TrackerKit
 /// filter and what its colors mean, and its own figures at the end. The
 /// title is as wide as the widest it can be in the year, the same on all
 /// three, so the arrows stay put while stepping and switching.
-struct ScreenHeader<Content: View, Trailing: View>: View {
+///
+/// It's one line while it fits. As the window narrows, the legend is left
+/// out first, then the filter, legend and figures move to a second line,
+/// and last the legend is left out of that too. The title and Today keep
+/// their size.
+struct ScreenHeader<Filter: View, Legend: View, Trailing: View>: View {
     let title: String
     /// The titles the title's room fits.
     let widest: [String]
@@ -16,7 +21,8 @@ struct ScreenHeader<Content: View, Trailing: View>: View {
     let showsToday: Bool
     let step: (Int) -> Void
     let today: () -> Void
-    let content: Content
+    let filter: Filter
+    let legend: Legend
     let trailing: Trailing
 
     init(
@@ -28,7 +34,8 @@ struct ScreenHeader<Content: View, Trailing: View>: View {
         showsToday: Bool,
         step: @escaping (Int) -> Void,
         today: @escaping () -> Void,
-        @ViewBuilder content: () -> Content,
+        @ViewBuilder filter: () -> Filter,
+        @ViewBuilder legend: () -> Legend,
         @ViewBuilder trailing: () -> Trailing
     ) {
         self.title = title
@@ -38,11 +45,54 @@ struct ScreenHeader<Content: View, Trailing: View>: View {
         self.showsToday = showsToday
         self.step = step
         self.today = today
-        self.content = content()
+        self.filter = filter()
+        self.legend = legend()
         self.trailing = trailing()
     }
 
     var body: some View {
+        // The first arrangement whose parts fit side by side at their own
+        // size, or the last.
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .center, spacing: 12) {
+                navigation
+                filter
+                legend
+                Spacer(minLength: 12)
+                trailing
+            }
+            HStack(alignment: .center, spacing: 12) {
+                navigation
+                filter
+                Spacer(minLength: 12)
+                trailing
+            }
+            twoLines(legend: true)
+            twoLines(legend: false)
+        }
+    }
+
+    /// The title, the arrows and Today on a line of their own, over the
+    /// filter, the legend if asked, and the figures.
+    private func twoLines(legend showsLegend: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 12) {
+                navigation
+                Spacer(minLength: 0)
+            }
+            HStack(alignment: .center, spacing: 12) {
+                filter
+                if showsLegend {
+                    legend
+                }
+                Spacer(minLength: 12)
+                trailing
+            }
+        }
+    }
+
+    /// The title, the arrows that step it, and Today.
+    private var navigation: some View {
         HStack(alignment: .center, spacing: 12) {
             ZStack(alignment: .leading) {
                 ForEach(widest, id: \.self) { title in
@@ -54,7 +104,7 @@ struct ScreenHeader<Content: View, Trailing: View>: View {
             .font(.system(size: 19, weight: .semibold))
             .monospacedDigit()
             .lineLimit(1)
-            .layoutPriority(1)
+            .fixedSize()
             HStack(spacing: 2) {
                 stepButton("chevron.left", previousTitle, -1)
                 stepButton("chevron.right", nextTitle, 1)
@@ -62,10 +112,9 @@ struct ScreenHeader<Content: View, Trailing: View>: View {
             if showsToday {
                 Button("Today", action: today)
                     .buttonStyle(ChoiceButtonStyle(compact: true))
+                    .lineLimit(1)
+                    .fixedSize()
             }
-            content
-            Spacer(minLength: 12)
-            trailing
         }
     }
 

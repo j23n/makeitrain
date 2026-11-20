@@ -193,6 +193,7 @@ private struct WeekContent: View {
             today: showToday
         ) {
             FilterMenu(model: model, navigator: navigator)
+        } legend: {
             legend
         } trailing: {
             totals

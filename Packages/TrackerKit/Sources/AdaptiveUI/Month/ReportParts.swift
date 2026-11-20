@@ -84,6 +84,8 @@ struct ReportTypeField: View {
             .frame(width: 200, height: 18)
             KeyCap("⌘L")
         }
+        // At its own width, so the header moves it rather than squeezing it.
+        .fixedSize(horizontal: true, vertical: false)
         .padding(.leading, 9)
         .padding(.trailing, 4)
         .frame(height: 28)

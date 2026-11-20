@@ -43,6 +43,7 @@ struct MonthScreen: View {
                 today: showToday
             ) {
                 FilterMenu(state: state)
+            } legend: {
                 ReportLegend(model: model, state: state)
             } trailing: {
                 ReportTypeField(model: model, state: state)
@@ -286,6 +287,7 @@ struct YearScreen: View {
                 today: showToday
             ) {
                 FilterMenu(state: state)
+            } legend: {
                 ReportLegend(model: model, state: state)
             } trailing: {
                 ReportTypeField(model: model, state: state)
@@ -448,3 +450,29 @@ struct MiniMonth: View {
         return Theme.accent.opacity(0.18 + level * 0.67)
     }
 }
+
+#if DEBUG
+#Preview("Month") {
+    let model = PreviewData.model()
+    MonthScreen(model: model, navigator: Navigator(.month(model.today)), anchor: model.today)
+        .frame(width: 1400, height: 820)
+        .background(Theme.background)
+}
+
+#Preview("Month, Narrowest Window") {
+    // The wide layout's least width, where the header takes two lines. A
+    // month before this one, so Today shows.
+    let model = PreviewData.model()
+    let day = model.today.adding(days: -40)
+    MonthScreen(model: model, navigator: Navigator(.month(day)), anchor: day)
+        .frame(width: AdaptiveRoot<EmptyView, EmptyView>.wideWidth, height: 820)
+        .background(Theme.background)
+}
+
+#Preview("Year, Narrowest Window") {
+    let model = PreviewData.model()
+    YearScreen(model: model, navigator: Navigator(.year(model.today.year - 1)), year: model.today.year - 1)
+        .frame(width: AdaptiveRoot<EmptyView, EmptyView>.wideWidth, height: 820)
+        .background(Theme.background)
+}
+#endif
