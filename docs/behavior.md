@@ -166,7 +166,7 @@ date,start,end,hours,client,project,tags,note
 
 - A project can have GitHub repositories, added as "owner/name" or by pasting an address, including clone addresses and GitHub Enterprise servers.
 - A tag like `#123` refers to issue or pull request 123 in the project's first repository. `api#123` refers to #123 in the project's repository named `api`, and `owner/repo#123` to #123 in any repository, as GitHub writes references. A slash before the "#" reads the same, so `api/#123` and `owner/repo/#123` work too. Any other tag is a plain tag.
-- The first repository is marked "#123"; "Make first" makes another one the first.
+- The first repository is marked "#123"; "Make first" makes another one the first. A repository's name in a project's settings opens it in the browser.
 - Changing the repositories never moves a tag to another issue. When a tag would point elsewhere, because another repository became the first or the one it names was removed, it's rewritten to name the repository it meant: `#123` becomes `web#123`, or `acme/web#123` once `web` is removed, which still opens it. A tag written with a slash keeps it: `web/#123` becomes `acme/web/#123`. Where two repositories share a name, the owner is added too. The change and the rewritten tags are one step to undo. Removing a project's last repository leaves its tags as they are, so tags can wait for the right repository after a mistyped one.
 - Tags that refer to issues are tinted and open the issue in the browser, from a project's page and from reports. The address is the issue's, which GitHub opens as the pull request when the number is one.
 - The app doesn't talk to GitHub itself, so it needs no account or token, and private repositories open with the browser's GitHub sign-in.

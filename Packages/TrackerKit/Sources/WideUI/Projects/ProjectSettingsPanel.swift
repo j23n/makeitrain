@@ -145,9 +145,14 @@ struct ProjectSettingsPanel: View {
                     HStack(spacing: 8) {
                         Image(systemName: "chevron.left.forwardslash.chevron.right")
                             .foregroundStyle(Theme.text3)
-                        Text(repository?.title ?? address)
-                            .font(.system(size: smallFont, design: .monospaced))
-                            .lineLimit(1)
+                        if let url = repository.flatMap({ URL(string: $0.address) }) {
+                            Link(destination: url) {
+                                repositoryName(repository?.title ?? address)
+                            }
+                            .help("Open \(repository?.title ?? address) in the browser")
+                        } else {
+                            repositoryName(address)
+                        }
                         Spacer()
                         if index == 0 {
                             Text("#123")
@@ -204,6 +209,12 @@ struct ProjectSettingsPanel: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    private func repositoryName(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: smallFont, design: .monospaced))
+            .lineLimit(1)
     }
 
     private func addRepository() {
