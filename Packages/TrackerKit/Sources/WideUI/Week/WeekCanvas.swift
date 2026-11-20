@@ -48,8 +48,9 @@ struct WeekCanvas: View {
                                 index: index,
                                 blocks: layouts[index],
                                 hours: hours,
+                                metrics: .wide,
                                 isShown: isShown,
-                                onSelect: onSelect
+                                onSelect: { _ in onSelect() }
                             )
                         }
                     }
@@ -146,6 +147,67 @@ struct HourGutter: View {
     }
 }
 
+/// A day column's sizes: the wide layout's, for a pointer and seven days
+/// side by side, and the narrow layout's, for a finger and one day.
+struct DayGridMetrics: Equatable {
+    var hourHeight: CGFloat
+    /// The least height a block can be clicked or tapped in.
+    var minimumHitHeight: Double
+    /// Whether it's for a finger: touch-size handles, markers and menus.
+    var touch: Bool
+    /// Whether a block can be dragged to move it or change its times. Not
+    /// on a narrow touch screen, where a drag on a block scrolls the day.
+    var movesBlocks: Bool
+    /// The small text on the grid, such as times.
+    var smallFont: CGFloat
+    /// A suggested entry's title.
+    var titleFont: CGFloat
+    /// How far a new entry's round handles sit outside it.
+    var handleOffset: CGFloat
+    /// The size of the times on a new entry being drawn.
+    var outlineFont: CGFloat
+    /// The square a correction's marker can be clicked or tapped in.
+    var markerTarget: CGFloat
+    /// The dot at the start of the line at the current time.
+    var nowDot: CGFloat
+    var cornerRadius: CGFloat
+
+    static let wide = DayGridMetrics(
+        hourHeight: WeekCanvas.hourHeight,
+        minimumHitHeight: 10,
+        touch: false,
+        movesBlocks: true,
+        smallFont: 10.5,
+        titleFont: 11.5,
+        handleOffset: 14,
+        outlineFont: 10.5,
+        markerTarget: 18,
+        nowDot: 7,
+        cornerRadius: 7
+    )
+
+    static var compact: DayGridMetrics {
+        #if os(macOS)
+        let touch = false
+        #else
+        let touch = true
+        #endif
+        return DayGridMetrics(
+            hourHeight: 40,
+            minimumHitHeight: touch ? 24 : 10,
+            touch: touch,
+            movesBlocks: !touch,
+            smallFont: 11,
+            titleFont: 12.5,
+            handleOffset: touch ? 22 : 14,
+            outlineFont: 12,
+            markerTarget: touch ? 44 : 18,
+            nowDot: 10,
+            cornerRadius: 9
+        )
+    }
+}
+
 /// What a drag on a block is doing.
 struct BlockDrag {
     var id: UUID
@@ -154,7 +216,8 @@ struct BlockDrag {
 }
 
 /// One day's column: hour lines, blocks, what corrections would change,
-/// a new entry being drawn, and the current time.
+/// a new entry being drawn, and the current time. The week has one for
+/// each of its days; the narrow layout's Week has one for the day picked.
 struct DayColumn: View {
     let model: AppModel
     let week: WeekModel
@@ -162,14 +225,17 @@ struct DayColumn: View {
     let index: Int
     let blocks: [DayBlock]
     let hours: Range<Int>
+    var metrics = DayGridMetrics.wide
     let isShown: (ResolvedEntry) -> Bool
-    let onSelect: () -> Void
+    /// When a block is clicked or tapped, with its entry, or empty space,
+    /// with nil.
+    let onSelect: (ResolvedEntry?) -> Void
     @State private var drag: BlockDrag?
     @State private var seamDrag: (id: String, offset: CGFloat)?
     @Environment(\.undoManager) private var undoManager
 
     private var day: LocalDate { days[index] }
-    private let height = WeekCanvas.hourHeight
+    private var height: CGFloat { metrics.hourHeight }
 
     /// The column's own coordinates, which drags measure in. A block's
     /// edges move while they're dragged, so a drag measured in the edge's
@@ -256,15 +322,12 @@ struct DayColumn: View {
             .clipped()
             .onTapGesture {
                 week.selectedEntry = entry.id
-                onSelect()
+                onSelect(entry)
             }
         }
     }
 
     // MARK: Blocks
-
-    /// The least height a block can be clicked and dragged in.
-    private static let minimumHitHeight = 10.0
 
     /// Where a block goes in a column `width` wide, from `start` to `end`
     /// seconds, moved sideways while it's dragged, and where it can be
@@ -286,7 +349,7 @@ struct DayColumn: View {
             hourHeight: Double(height),
             nextStart: DayLayout.nextStart(after: placed, in: blocks)
         )
-        let hit = DayLayout.hitSpan(top: Double(y(start)), height: drawnHeight, minimum: Self.minimumHitHeight)
+        let hit = DayLayout.hitSpan(top: Double(y(start)), height: drawnHeight, minimum: metrics.minimumHitHeight)
         let x = 4 + CGFloat(block.column) * columnWidth + dx
         let blockWidth = columnWidth - (block.columns > 1 ? 2 : 0)
         return (
@@ -306,31 +369,50 @@ struct DayColumn: View {
         // The edges take a third each of where a short block can be
         // clicked, so its middle still moves it.
         let handle = min(6, hit.height / 3)
-        return EntryBlock(
-            model: model,
-            entry: entry,
-            startSecond: start,
-            endSecond: end,
-            height: rect.height,
-            selected: selected,
-            change: week.suggestedChange(of: entry.id),
-            overnight: week.ranLongNote(for: entry),
-            overlaps: week.isInOverlap(entry.id)
-        )
-        .frame(width: rect.width, height: rect.height)
-        .opacity(isShown(entry) || selected ? 1 : 0.3)
-        .frame(width: hit.width, height: hit.height)
-        .overlay(alignment: .top) { edgeHandle(block, kind: .start, height: handle, width: width) }
-        .overlay(alignment: .bottom) { edgeHandle(block, kind: .end, height: handle, width: width) }
-        .contentShape(Rectangle())
-        .offset(x: hit.minX, y: hit.minY)
-        .zIndex(drag?.id == block.id ? 3 : (selected ? 2 : (short ? 1 : 0)))
-        .onTapGesture {
-            week.selectedEntry = entry.id
-            onSelect()
+        return blockContent(entry, start: start, end: end, height: rect.height, selected: selected)
+            .frame(width: rect.width, height: rect.height)
+            .opacity(isShown(entry) || selected ? 1 : 0.3)
+            .frame(width: hit.width, height: hit.height)
+            .overlay(alignment: .top) { edgeHandle(block, kind: .start, height: handle, width: width) }
+            .overlay(alignment: .bottom) { edgeHandle(block, kind: .end, height: handle, width: width) }
+            .contentShape(Rectangle())
+            .offset(x: hit.minX, y: hit.minY)
+            .zIndex(drag?.id == block.id ? 3 : (selected ? 2 : (short ? 1 : 0)))
+            .onTapGesture {
+                week.selectedEntry = entry.id
+                onSelect(entry)
+            }
+            .gesture(dragGesture(block, kind: .move, width: width), including: metrics.movesBlocks ? .all : .subviews)
+            .contextMenu { EntryMenu(model: model, entry: entry, touch: metrics.touch) }
+    }
+
+    /// The block's text and chrome: the week's, or at the narrow layout's
+    /// size, with more of the entry on it.
+    @ViewBuilder
+    private func blockContent(_ entry: ResolvedEntry, start: Int, end: Int, height: CGFloat, selected: Bool) -> some View {
+        if metrics == .wide {
+            EntryBlock(
+                model: model,
+                entry: entry,
+                startSecond: start,
+                endSecond: end,
+                height: height,
+                selected: selected,
+                change: week.suggestedChange(of: entry.id),
+                overnight: week.ranLongNote(for: entry),
+                overlaps: week.isInOverlap(entry.id)
+            )
+        } else {
+            PhoneEntryBlock(
+                model: model,
+                entry: entry,
+                height: height,
+                selected: selected,
+                change: week.suggestedChange(of: entry.id),
+                overnight: week.ranLongNote(for: entry),
+                overlaps: week.isInOverlap(entry.id)
+            )
         }
-        .gesture(dragGesture(block, kind: .move, width: width))
-        .contextMenu { EntryMenu(model: model, entry: entry) }
     }
 
     /// A block's start and end, or where a drag on it puts them.
@@ -358,7 +440,7 @@ struct DayColumn: View {
             .frame(height: height)
             .contentShape(Rectangle())
             .resizeCursor()
-            .gesture(dragGesture(block, kind: kind, width: width))
+            .gesture(dragGesture(block, kind: kind, width: width), including: metrics.movesBlocks ? .all : .subviews)
     }
 
     /// Applies a drag: a move goes to the day whose column it ends over,
@@ -404,7 +486,7 @@ struct DayColumn: View {
             }
             .onTapGesture {
                 week.newEntry = nil
-                onSelect()
+                onSelect(nil)
             }
             .gesture(
                 DragGesture(minimumDistance: 4, coordinateSpace: .named(Self.space))
@@ -457,15 +539,15 @@ struct DayColumn: View {
                     .allowsHitTesting(false)
                     .zIndex(4)
             }
-            NewEntryOutline(startSecond: draft.startSecond, endSecond: draft.endSecond, height: bottom - top)
+            NewEntryOutline(startSecond: draft.startSecond, endSecond: draft.endSecond, height: bottom - top, size: metrics.outlineFont)
                 .frame(width: width - 8, height: max(bottom - top, 6))
                 .overlay(alignment: .topTrailing) {
                     newEntryHandle(movingStart: true)
-                        .offset(x: -6, y: -14)
+                        .offset(x: metrics.touch ? -2 : -6, y: -metrics.handleOffset)
                 }
                 .overlay(alignment: .bottomLeading) {
                     newEntryHandle(movingStart: false)
-                        .offset(x: 6, y: 14)
+                        .offset(x: metrics.touch ? 2 : 6, y: metrics.handleOffset)
                 }
                 .offset(x: 4, y: top)
                 .zIndex(4)
@@ -474,7 +556,7 @@ struct DayColumn: View {
 
     /// A round handle that drags the new entry's start or end.
     private func newEntryHandle(movingStart: Bool) -> some View {
-        NewEntryHandle()
+        NewEntryHandle(touch: metrics.touch)
             .resizeCursor()
             .gesture(
                 DragGesture(minimumDistance: 1, coordinateSpace: .named(Self.space))
@@ -512,7 +594,7 @@ struct DayColumn: View {
                 HStack(spacing: 5) {
                     if addition.isEvent {
                         Image(systemName: "calendar")
-                            .font(.system(size: 9))
+                            .font(.system(size: metrics.smallFont - 1.5))
                             .foregroundStyle(Theme.text3)
                         Text(times)
                             .foregroundStyle(Theme.text3)
@@ -525,18 +607,23 @@ struct DayColumn: View {
                             .foregroundStyle(Theme.amberText)
                     }
                 }
-                .font(.system(size: 10.5))
+                .font(.system(size: metrics.smallFont))
                 .monospacedDigit()
                 Text(model.ledger.title(of: entry))
-                    .font(.system(size: 11.5, weight: addition.isEvent ? .regular : .semibold))
+                    .font(.system(size: metrics.titleFont, weight: addition.isEvent ? .regular : .semibold))
                     .foregroundStyle(Theme.text4)
                     .lineLimit(1)
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .frame(width: width - 8, height: max(bottom - top, 22), alignment: .topLeading)
-            .suggestedAdditionChrome(isEvent: addition.isEvent, tint: model.ledger.tint(ofProject: entry.projectID), cornerRadius: 7)
+            .suggestedAdditionChrome(isEvent: addition.isEvent, tint: model.ledger.tint(ofProject: entry.projectID), cornerRadius: metrics.cornerRadius)
             .offset(x: 4, y: top)
+            .onTapGesture {
+                if let preview = week.previews.first(where: { $0.number == addition.number }) {
+                    select(preview)
+                }
+            }
             .accessibilityElement(children: .combine)
             .accessibilityLabel(Text("Suggested: \(entry.note), \(times)"))
         }
@@ -635,13 +722,22 @@ struct DayColumn: View {
             let top = markerTop(preview)
             CorrectionMarker(preview.number)
                 .background(Circle().strokeBorder(Theme.canvas, lineWidth: 2).padding(-2))
-                .offset(x: width - 18, y: max(top - 8, 0))
+                .frame(width: metrics.markerTarget, height: metrics.markerTarget)
+                .contentShape(Rectangle())
+                .offset(x: width - metrics.markerTarget, y: max(top - metrics.markerTarget / 2, metrics.touch ? -12 : 0))
                 .zIndex(4)
                 .onTapGesture {
-                    week.selectedEntry = nil
-                    week.selectedCorrection = preview.id
+                    select(preview)
                 }
+                .accessibilityLabel(Text("Correction \(preview.number)"))
+                .accessibilityAddTraits(.isButton)
         }
+    }
+
+    /// Selects a correction, in place of the entry selected.
+    private func select(_ preview: CorrectionPreview) {
+        week.selectedEntry = nil
+        week.selectedCorrection = preview.id
     }
 
     private func markerTop(_ preview: CorrectionPreview) -> CGFloat {
@@ -666,11 +762,11 @@ struct DayColumn: View {
         if day == model.today {
             let top = y(model.now, zone: model.environment.timeZone())
             HStack(spacing: 0) {
-                Circle().fill(Theme.now).frame(width: 7, height: 7)
-                Rectangle().fill(Theme.now).frame(height: 1.5)
+                Circle().fill(Theme.now).frame(width: metrics.nowDot, height: metrics.nowDot)
+                Rectangle().fill(Theme.now).frame(height: metrics.nowDot > 7 ? 2 : 1.5)
             }
-            .frame(width: width + 3)
-            .offset(x: -3, y: top - 3.5)
+            .frame(width: width + metrics.nowDot / 2)
+            .offset(x: -metrics.nowDot / 2, y: top - metrics.nowDot / 2)
             .allowsHitTesting(false)
             .zIndex(5)
         }
