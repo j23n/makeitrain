@@ -75,6 +75,7 @@ public struct ContractSheet: View {
             .padding([.bottom, .horizontal], 20)
         }
         .frame(width: 440, height: 500)
+        .onChange(of: isGone) { closeIfGone() }
         .confirmationDialog(removeQuestion, isPresented: $confirmingRemove, titleVisibility: .visible) {
             Button("Remove", role: .destructive, action: remove)
         }
@@ -110,6 +111,7 @@ public struct ContractSheet: View {
             }
         }
         .interactiveDismissDisabled(hasChanges && !isNew)
+        .onChange(of: isGone) { closeIfGone() }
         #endif
     }
 
@@ -218,11 +220,24 @@ public struct ContractSheet: View {
         )
     }
 
+    /// Whether the contract being changed was removed meanwhile, as on
+    /// another device or by undo. Never for a new one.
+    private var isGone: Bool {
+        !isNew && model.ledger.projects[projectID]?.contracts.contains { $0.id == original.id } != true
+    }
+
+    /// Closes the sheet once its contract is removed: there's nothing left
+    /// to save to.
+    private func closeIfGone() {
+        if isGone {
+            dismiss()
+        }
+    }
+
     /// Keeps the contract, unless it was removed meanwhile, as on another
     /// device, or can't be kept.
     private func save() {
-        let isGone = model.ledger.projects[projectID]?.contracts.contains { $0.id == original.id } != true
-        if !isNew, isGone {
+        if isGone {
             problem = "This contract was removed, perhaps on another device. Cancel, then add it again if it's still needed."
             return
         }
