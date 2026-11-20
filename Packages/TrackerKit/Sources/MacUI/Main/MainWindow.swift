@@ -1,10 +1,10 @@
 #if os(macOS)
+import AdaptiveUI
 import AppKit
 import SwiftUI
 import TrackerCore
 import TrackerKit
 import UniformTypeIdentifiers
-import AdaptiveUI
 
 /// The main window: the wide window's bar and screens, or in a narrow
 /// window the narrow layout's tabs, with the Mac's File menu imports and exports,

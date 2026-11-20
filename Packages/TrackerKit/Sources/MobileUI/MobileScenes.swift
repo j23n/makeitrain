@@ -1,4 +1,5 @@
 #if os(iOS)
+import AdaptiveUI
 #if FEEDBACK
 import FeedbackKit
 #endif
@@ -7,7 +8,6 @@ import TimerActivity
 import TrackerCore
 import TrackerKit
 import UIKit
-import AdaptiveUI
 
 /// The iPhone and iPad app's scene. It saves when the app goes to the
 /// background and brings the clock up to date when it comes back. An iPad

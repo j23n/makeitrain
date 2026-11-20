@@ -1,8 +1,8 @@
 #if os(iOS)
+import AdaptiveUI
 import SwiftUI
 import TrackerCore
 import TrackerKit
-import AdaptiveUI
 
 /// An iPad window wide enough for the Mac's layout: the bar with the zoom
 /// and the command line over the week, month, year or projects, with
