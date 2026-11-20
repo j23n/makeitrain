@@ -72,9 +72,13 @@ public enum DayLayout {
         return blocks
     }
 
-    /// The hours a day's grid shows: 7:00 to 19:00, widened to its blocks,
-    /// to the entries suggestions would add, and to the hour it is now,
-    /// when that's given.
+    /// The hours a day's grid runs over: the whole day, so an entry can be
+    /// drawn at any hour.
+    public static let allDay = 0..<24
+
+    /// The hours a day's grid shows at first, before it's scrolled: 7:00
+    /// to 19:00, widened to its blocks, to the entries suggestions would
+    /// add, and to the hour it is now, when that's given.
     public static func hours(blocks: some Sequence<DayBlock>, additions: some Sequence<TimeEntry>, nowHour: Int?) -> Range<Int> {
         var first = 7
         var last = 19

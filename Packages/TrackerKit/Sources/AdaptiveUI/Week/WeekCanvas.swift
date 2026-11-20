@@ -20,7 +20,8 @@ struct WeekCanvas: View {
 
     var body: some View {
         let layouts = days.map { DayLayout.blocks(on: $0, entries: week.entries(on: $0), now: model.now) }
-        let hours = DayLayout.hours(
+        let hours = DayLayout.allDay
+        let shown = DayLayout.hours(
             blocks: layouts.joined(),
             additions: week.suggestedAdditions.map(\.entry),
             nowHour: days.contains(model.today) ? model.now.local(in: model.environment.timeZone()).hour : nil
@@ -69,18 +70,13 @@ struct WeekCanvas: View {
                     }
                 }
                 .onAppear {
-                    proxy.scrollTo(max(hours.lowerBound, min(firstBusyHour(layouts), hours.upperBound - 1)), anchor: .top)
+                    proxy.scrollTo(shown.lowerBound, anchor: .top)
                 }
             }
         }
         .background(RoundedRectangle(cornerRadius: 12).fill(Theme.canvas))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.line))
-    }
-
-    /// The hour of the first entry, to scroll to.
-    private func firstBusyHour(_ layouts: [[DayBlock]]) -> Int {
-        layouts.joined().map { $0.startSecond / 3600 }.min() ?? 8
     }
 }
 
