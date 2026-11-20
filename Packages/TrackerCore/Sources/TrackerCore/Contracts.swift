@@ -274,7 +274,9 @@ extension Ledger {
     public func contractAlerts(dayTotals: DayTotals, running: ResolvedEntry?, today: LocalDate, now: Timestamp) -> [ContractAlert] {
         var alerts: [ContractAlert] = []
         for project in projects.values where !project.isDeleted && !isArchived(project: project.id) {
-            for contract in project.contracts where contract.days.contains(today) {
+            // A contract edited by hand to no hours, or an end before its
+            // start, has nothing to alert about.
+            for contract in project.contracts where contract.isValid && contract.days.contains(today) {
                 let status = ContractStatus(contract: contract, projectID: project.id, dayTotals: dayTotals, today: today, now: now)
                 let isRunning = running.map { $0.entry.projectID == project.id && contract.days.contains($0.entry.day) } ?? false
                 func alert(_ kind: ContractAlert.Kind, line: Int64) {

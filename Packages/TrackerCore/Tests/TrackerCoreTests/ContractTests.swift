@@ -257,6 +257,10 @@ import Testing
         let archived = makeLedger([contract], entries: [entry(1, on: "2026-11-20", hours: 9.5)], archived: true)
         #expect(archived.contractAlerts(dayTotals: DayTotals(archived.resolvedEntries()), running: nil, today: day("2026-11-20"), now: now).isEmpty)
         #expect(ledger.contractAlerts(dayTotals: DayTotals(ledger.resolvedEntries()), running: nil, today: day("2026-12-01"), now: now).isEmpty)
+
+        // Nor does one with no hours, as a file edited by hand may have.
+        let empty = makeLedger([Contract(id: uuid(1), hours: 0, start: day("2026-11-01"), end: day("2026-11-30"))])
+        #expect(empty.contractAlerts(dayTotals: DayTotals(empty.resolvedEntries()), running: nil, today: day("2026-11-20"), now: now).isEmpty)
     }
 
     @Test func schedulesTheRunningTimersAlertsAhead() {
