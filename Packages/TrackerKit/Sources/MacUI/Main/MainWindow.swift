@@ -6,8 +6,9 @@ import TrackerKit
 import UniformTypeIdentifiers
 import WideUI
 
-/// The main window: the wide window's bar and screens, with the Mac's
-/// File menu imports and exports, and a background to drag it by.
+/// The main window: the wide window's bar and screens, or in a narrow
+/// window the iPhone's tabs, with the Mac's File menu imports and exports,
+/// and a background to drag it by.
 struct MainWindow: View {
     let model: AppModel
     @Environment(\.undoManager) private var undoManager
@@ -19,10 +20,14 @@ struct MainWindow: View {
     @State private var exportError: String?
 
     var body: some View {
-        WideRoot(model: model, leadingInset: 62) {
-            Color.clear.frame(width: 60, height: 1)
+        AdaptiveRoot {
+            WideRoot(model: model, leadingInset: 62) {
+                Color.clear.frame(width: 60, height: 1)
+            }
+        } narrow: {
+            PhoneRoot(model: model)
         }
-        .frame(minWidth: 960, minHeight: 600)
+        .frame(minWidth: 360, minHeight: 600)
         .background(WindowConfigurator())
         .modifier(FileMenuActions(
             model: model,
@@ -174,6 +179,11 @@ struct WindowConfigurator: NSViewRepresentable {
 #Preview("No Data") {
     MainWindow(model: PreviewData.model(Ledger()))
         .frame(width: 1280, height: 820)
+}
+
+#Preview("Narrow") {
+    MainWindow(model: PreviewData.model())
+        .frame(width: 420, height: 820)
 }
 #endif
 #endif

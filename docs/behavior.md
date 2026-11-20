@@ -50,6 +50,8 @@ What a line can say:
 
 The main window, and an iPad window wide enough, has a bar with Back and Forward, the zoom (Week, Month, Year or Projects) and the command line, over the screen it shows. A window opens on the zoom it last showed.
 
+Every window of the app picks its layout by its width, and changes it as it's resized: at least 960 points wide, the bar and the week's seven days; narrower, the iPhone's tabs, Week, Month and Projects, with the command line floating over them. The Mac's main window can be made as narrow as 360 points, and an iPad window in Split View or Slide Over is narrow too. In the Mac's narrow window, the gear opens the Settings window, and the empty space on a day's grid is dragged across to draw an entry, as on the week.
+
 - ⌘1 to ⌘4 show the week, the month, the year or the projects, around the day shown, and ⌘[ and ⌘] go back and forward. They're in the View menu on the Mac, and with a keyboard on iPad.
 - Zooming keeps the day shown. From a year, the month and week are today's when the year is this one, and otherwise today's date in that year; from the projects, they're today's.
 - Each screen shows its keys under it, or for a project, at the top. Keys a screen doesn't use do nothing, without the alert sound; a key it uses but can't act on now, such as Return on a week with nothing to accept, or any of them while the data is read-only, still sounds.

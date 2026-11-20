@@ -1,8 +1,6 @@
-#if os(iOS)
 import SwiftUI
 import TrackerCore
 import TrackerKit
-import UIKit
 
 /// A project's page: its running timer, its time this week, this month
 /// and in all, its last twelve weeks day by day, and its tags by
@@ -34,7 +32,7 @@ struct PhoneProjectPage: View {
             }
         }
         .background(Theme.background)
-        .navigationBarTitleDisplayMode(.inline)
+        .inlineNavigationTitle()
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button("Edit") { editing = true }
@@ -122,7 +120,7 @@ struct PhoneProjectPage: View {
             presenting: renaming
         ) { tag in
             TextField("Name", text: $newName)
-                .textInputAutocapitalization(.never)
+                .noAutocapitalization()
                 .autocorrectionDisabled()
             Button("Rename") {
                 model.renameTag(tag.name, to: newName, inProject: projectID, undoManager: undoManager)
@@ -417,7 +415,7 @@ struct PhoneProjectSettings: View {
             }
             .disabled(model.isReadOnly)
             .navigationTitle(project.name)
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") {
@@ -457,4 +455,3 @@ struct PhoneProjectSettings: View {
         model.renameProject(project.id, to: name, undoManager: undoManager)
     }
 }
-#endif

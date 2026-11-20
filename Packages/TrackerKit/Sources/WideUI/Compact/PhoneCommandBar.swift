@@ -1,9 +1,6 @@
-#if os(iOS)
 import SwiftUI
 import TrackerCore
 import TrackerKit
-import UIKit
-import WideUI
 
 /// The command line floating over the tab bar: the running timer, on two
 /// lines with its project's color, and Stop, or what to type. Tapping it
@@ -274,4 +271,3 @@ struct PhoneCommandSheet: View {
         close()
     }
 }
-#endif

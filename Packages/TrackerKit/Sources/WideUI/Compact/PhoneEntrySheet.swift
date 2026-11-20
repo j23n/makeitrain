@@ -1,9 +1,6 @@
-#if os(iOS)
 import SwiftUI
 import TrackerCore
 import TrackerKit
-import UIKit
-import WideUI
 
 /// What an entry's line reads as, part by part: its day, times, project,
 /// tags and note. A part the line leaves out shows as what could go there,
@@ -108,7 +105,7 @@ struct PhoneEntrySheet: View {
             }
             .background(Theme.background)
             .navigationTitle(entry.map { Format.day($0.entry.day) } ?? "Entry")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
@@ -223,9 +220,7 @@ struct PhoneEntrySheet: View {
         }
     }
 }
-#endif
 
-#if os(iOS)
 /// A correction about an entry, in the entry's sheet: what's wrong, such as
 /// an overlap, and its fixes, the likeliest first.
 struct PhoneEntryCorrection: View {
@@ -337,7 +332,7 @@ struct PhoneNewEntrySheet: View {
             }
             .background(Theme.background)
             .navigationTitle("New entry")
-            .navigationBarTitleDisplayMode(.inline)
+            .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -380,5 +375,4 @@ struct PhoneNewEntrySheet: View {
             PhoneNewEntrySheet(model: model, week: week)
         }
 }
-#endif
 #endif

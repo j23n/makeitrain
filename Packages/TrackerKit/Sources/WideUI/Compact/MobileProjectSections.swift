@@ -1,8 +1,6 @@
-#if os(iOS)
 import SwiftUI
 import TrackerCore
 import TrackerKit
-import UIKit
 
 // The parts of a project's settings beyond its name and client: its GitHub
 // repositories, and the calendar on this device its events come from.
@@ -78,9 +76,9 @@ struct MobileRepositoriesSection: View {
             }
             HStack {
                 TextField("owner/repo or URL", text: $newRepository)
-                    .textInputAutocapitalization(.never)
+                    .noAutocapitalization()
                     .autocorrectionDisabled()
-                    .keyboardType(.URL)
+                    .urlKeyboard()
                     .onSubmit(add)
                     .onChange(of: newRepository) { _, _ in
                         invalid = false
@@ -132,7 +130,7 @@ struct MobileProjectCalendarSection: View {
                 }
             case .denied:
                 Button("Allow Access in Settings") {
-                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                    if let url = calendarPrivacySettings {
                         openURL(url)
                     }
                 }
@@ -179,4 +177,3 @@ struct MobileProjectCalendarSection: View {
         return "\(calendar.title) (\(model.ledger.projectTitle(other)))"
     }
 }
-#endif

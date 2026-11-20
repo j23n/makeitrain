@@ -1,9 +1,6 @@
-#if os(iOS)
 import SwiftUI
 import TrackerCore
 import TrackerKit
-import UIKit
-import WideUI
 
 /// One day on an hour grid, as the Week tab shows it: the entries as
 /// blocks in their projects' colors, and what the corrections would change
@@ -172,27 +169,50 @@ struct PhoneDayGrid: View {
         model.latestNewEntryEnd(on: day)
     }
 
-    /// Empty space under the blocks, where a touch held, then dragged,
-    /// draws a new entry. A swipe still scrolls.
+    /// Empty space under the blocks. On a touch screen, a touch held there,
+    /// then dragged, draws a new entry, and a swipe still scrolls. On the
+    /// Mac, dragging across it draws one, as on the week.
+    @ViewBuilder
     private func emptySpace(_ hours: Range<Int>, width: CGFloat) -> some View {
+        #if os(iOS)
         HoldAndDrag { start, location in
-            guard !model.isReadOnly,
-                  let span = NewEntrySpan.held(at: second(at: start.y, hours), to: second(at: location.y, hours), latest: latest)
-            else { return }
-            week.isDrawingNewEntry = true
-            if var draft = week.newEntry, draft.day == day {
-                draft.startSecond = span.start
-                draft.endSecond = span.end
-                if draft != week.newEntry {
-                    week.newEntry = draft
-                }
-            } else {
-                week.newEntry = model.newEntryDraft(on: day, startSecond: span.start, endSecond: span.end)
-            }
+            draw(NewEntrySpan.held(at: second(at: start.y, hours), to: second(at: location.y, hours), latest: latest))
         } onEnd: {
             week.isDrawingNewEntry = false
         }
         .frame(width: width, height: CGFloat(hours.count) * hourHeight)
+        #else
+        Color.clear
+            .frame(width: width, height: CGFloat(hours.count) * hourHeight)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                week.newEntry = nil
+            }
+            .gesture(
+                DragGesture(minimumDistance: 4, coordinateSpace: .named(Self.space))
+                    .onChanged { value in
+                        draw(NewEntrySpan.dragged(from: second(at: value.startLocation.y, hours), to: second(at: value.location.y, hours), latest: latest))
+                    }
+                    .onEnded { _ in
+                        week.isDrawingNewEntry = false
+                    }
+            )
+        #endif
+    }
+
+    /// Puts the new entry being drawn at `span`, when there's one.
+    private func draw(_ span: (start: Int, end: Int)?) {
+        guard !model.isReadOnly, let span else { return }
+        week.isDrawingNewEntry = true
+        if var draft = week.newEntry, draft.day == day {
+            draft.startSecond = span.start
+            draft.endSecond = span.end
+            if draft != week.newEntry {
+                week.newEntry = draft
+            }
+        } else {
+            week.newEntry = model.newEntryDraft(on: day, startSecond: span.start, endSecond: span.end)
+        }
     }
 
     /// The new entry being made on this day: a dashed outline with its
@@ -558,4 +578,3 @@ struct PhoneEntryBlock: View {
         .lineLimit(1)
     }
 }
-#endif

@@ -1,8 +1,6 @@
-#if os(iOS)
 import SwiftUI
 import TrackerCore
 import TrackerKit
-import UIKit
 
 /// A week: its days in a strip with their time, the chosen day's date and
 /// time, the day on an hour grid with what needs correcting drawn in place,
@@ -408,4 +406,3 @@ struct PhoneCorrectionPanel: View {
         }
     }
 }
-#endif

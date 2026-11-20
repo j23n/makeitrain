@@ -29,8 +29,8 @@ let package = Package(
             dependencies: [.product(name: "TrackerCore", package: "TrackerCore")],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
-        // The wide window's screens: the Mac's main window, and an iPad's
-        // when it's wide.
+        // The screens every window shows, on the Mac and on iOS: the wide
+        // layout and the narrow one, and what picks one by the width.
         .target(
             name: "WideUI",
             dependencies: ["TrackerKit"],

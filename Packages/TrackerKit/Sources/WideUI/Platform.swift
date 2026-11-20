@@ -6,7 +6,7 @@ import AppKit
 import UIKit
 #endif
 
-// The few things the Mac and the iPad do differently in the same screens.
+// The few things the Mac, the iPhone and the iPad do differently in the same screens.
 
 extension View {
     /// A menu drawn as its label alone, as in the Mac's toolbars.
@@ -59,6 +59,47 @@ extension View {
                 NSCursor.pop()
             }
         }
+        #else
+        return self
+        #endif
+    }
+}
+
+extension View {
+    /// A navigation title drawn small, in line with the bar's buttons, on
+    /// iPhone and iPad. The Mac has no such bar.
+    func inlineNavigationTitle() -> some View {
+        #if os(iOS)
+        return navigationBarTitleDisplayMode(.inline)
+        #else
+        return self
+        #endif
+    }
+
+    /// Hides the navigation bar on iPhone and iPad, for a screen that draws
+    /// its own title.
+    func hidesNavigationBar() -> some View {
+        #if os(iOS)
+        return toolbar(.hidden, for: .navigationBar)
+        #else
+        return self
+        #endif
+    }
+
+    /// Leaves what's typed as it is, without a capital at the start, as for
+    /// names and repositories on a touch keyboard.
+    func noAutocapitalization() -> some View {
+        #if os(iOS)
+        return textInputAutocapitalization(.never)
+        #else
+        return self
+        #endif
+    }
+
+    /// The touch keyboard for typing a web address.
+    func urlKeyboard() -> some View {
+        #if os(iOS)
+        return keyboardType(.URL)
         #else
         return self
         #endif
