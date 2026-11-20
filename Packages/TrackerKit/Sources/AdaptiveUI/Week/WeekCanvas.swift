@@ -20,10 +20,12 @@ struct WeekCanvas: View {
 
     var body: some View {
         let layouts = days.map { DayLayout.blocks(on: $0, entries: week.entries(on: $0), now: model.now) }
-        let hours = DayLayout.hours(
+        let hours = DayLayout.allDay
+        let nowHour = days.contains(model.today) ? model.now.local(in: model.environment.timeZone()).hour : nil
+        let shown = DayLayout.hours(
             blocks: layouts.joined(),
             additions: week.suggestedAdditions.map(\.entry),
-            nowHour: days.contains(model.today) ? model.now.local(in: model.environment.timeZone()).hour : nil
+            nowHour: nowHour
         )
         VStack(spacing: 0) {
             HStack(spacing: 0) {
@@ -69,18 +71,20 @@ struct WeekCanvas: View {
                     }
                 }
                 .onAppear {
-                    proxy.scrollTo(max(hours.lowerBound, min(firstBusyHour(layouts), hours.upperBound - 1)), anchor: .top)
+                    proxy.scrollTo(DayLayout.openingHour(shown: shown, nowHour: nowHour), anchor: .top)
+                }
+                .onChange(of: week.days) {
+                    // Another week keeps this canvas, so it opens on its
+                    // own hours here rather than where the last one was.
+                    // The week's days, not the ones shown, which change
+                    // when a weekend day gains or loses its entries.
+                    proxy.scrollTo(DayLayout.openingHour(shown: shown, nowHour: nowHour), anchor: .top)
                 }
             }
         }
         .background(RoundedRectangle(cornerRadius: 12).fill(Theme.canvas))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.line))
-    }
-
-    /// The hour of the first entry, to scroll to.
-    private func firstBusyHour(_ layouts: [[DayBlock]]) -> Int {
-        layouts.joined().map { $0.startSecond / 3600 }.min() ?? 8
     }
 }
 

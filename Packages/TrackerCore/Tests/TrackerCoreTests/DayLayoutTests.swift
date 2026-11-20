@@ -70,6 +70,16 @@ import Testing
         #expect(DayLayout.hours(blocks: overnight, additions: none, nowHour: 0) == 0..<24)
     }
 
+    @Test func opensAtSevenOrKeepsNowInViewOnToday() {
+        #expect(DayLayout.allDay == 0..<24)
+        #expect(DayLayout.openingHour(shown: 7..<19, nowHour: nil) == 7)
+        #expect(DayLayout.openingHour(shown: 6..<19, nowHour: nil) == 6)
+        // On today, 7:00 until it's late, then nine hours before now.
+        #expect(DayLayout.openingHour(shown: 7..<19, nowHour: 10) == 7)
+        #expect(DayLayout.openingHour(shown: 7..<21, nowHour: 20) == 11)
+        #expect(DayLayout.openingHour(shown: 0..<24, nowHour: 23) == 14)
+    }
+
     @Test func aShortBlockEndsWhereItsEntryDoes() throws {
         let result = blocks([
             entry(1, "2026-09-23T09:00:00+02:00", "2026-09-23T09:10:00+02:00"),
