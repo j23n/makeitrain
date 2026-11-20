@@ -73,9 +73,11 @@ struct WeekCanvas: View {
                 .onAppear {
                     proxy.scrollTo(DayLayout.openingHour(shown: shown, nowHour: nowHour), anchor: .top)
                 }
-                .onChange(of: days) {
+                .onChange(of: week.days) {
                     // Another week keeps this canvas, so it opens on its
                     // own hours here rather than where the last one was.
+                    // The week's days, not the ones shown, which change
+                    // when a weekend day gains or loses its entries.
                     proxy.scrollTo(DayLayout.openingHour(shown: shown, nowHour: nowHour), anchor: .top)
                 }
             }
