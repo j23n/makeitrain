@@ -11,15 +11,19 @@ import TrackerKit
 struct NewEntryPanel: View {
     let model: AppModel
     let week: WeekModel
+    /// Bumped by the screen when Return asks for the line again.
+    let focusRequest: Int
     /// When it's saved or dropped, so the screen takes the keyboard back.
     let done: () -> Void
     @State private var line: EntryLineModel
-    @State private var focusRequest = 0
+    /// Bumped when the panel opens, to give the line the keyboard.
+    @State private var opened = 0
     @Environment(\.undoManager) private var undoManager
 
-    init(model: AppModel, week: WeekModel, done: @escaping () -> Void) {
+    init(model: AppModel, week: WeekModel, focusRequest: Int, done: @escaping () -> Void) {
         self.model = model
         self.week = week
+        self.focusRequest = focusRequest
         self.done = done
         _line = State(initialValue: EntryLineModel(model: model))
     }
@@ -57,7 +61,7 @@ struct NewEntryPanel: View {
             }
         }
         .task {
-            focusRequest += 1
+            opened += 1
         }
     }
 
@@ -84,7 +88,7 @@ struct NewEntryPanel: View {
         CommandField(
             entryLine: line,
             fontSize: 13,
-            focusRequest: focusRequest,
+            focusRequest: focusRequest + opened,
             onSubmit: { save() },
             onCancel: { discard() }
         )
@@ -153,7 +157,7 @@ struct NewEntryPanel: View {
     let model = PreviewData.model()
     let week = WeekModel(model: model, days: ReportPeriod.week.range(containing: model.today, firstWeekday: model.firstWeekday))
     week.newEntry = model.newEntryDraft(on: model.today, startSecond: 9 * 3600, endSecond: 10 * 3600 + 1800)
-    return NewEntryPanel(model: model, week: week) {}
+    return NewEntryPanel(model: model, week: week, focusRequest: 0) {}
         .frame(height: 560)
 }
 #endif
