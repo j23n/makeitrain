@@ -391,7 +391,7 @@ struct DayColumn: View {
     /// Empty space under the blocks. On the Mac, dragging across it draws a
     /// new entry, double-clicking makes one an hour long, and clicking drops
     /// one being made. On a touch screen, a touch held there draws one as
-    /// it's dragged, and a swipe still scrolls.
+    /// it's dragged, a tap drops one being made, and a swipe still scrolls.
     @ViewBuilder
     private func emptySpace(width: CGFloat, columnHeight: CGFloat) -> some View {
         #if os(macOS)
@@ -420,6 +420,9 @@ struct DayColumn: View {
             draw(NewEntrySpan.held(at: second(at: start.y), to: second(at: location.y), latest: latest))
         } onEnd: {
             week.isDrawingNewEntry = false
+        } onTap: {
+            week.newEntry = nil
+            onSelect()
         }
         .frame(width: width, height: columnHeight)
         #endif

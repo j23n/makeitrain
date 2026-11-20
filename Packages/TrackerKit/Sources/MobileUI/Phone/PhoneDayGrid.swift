@@ -173,7 +173,8 @@ struct PhoneDayGrid: View {
     }
 
     /// Empty space under the blocks, where a touch held, then dragged,
-    /// draws a new entry. A swipe still scrolls.
+    /// draws a new entry, and a tap drops one being made. A swipe still
+    /// scrolls.
     private func emptySpace(_ hours: Range<Int>, width: CGFloat) -> some View {
         HoldAndDrag { start, location in
             guard !model.isReadOnly,
@@ -191,6 +192,8 @@ struct PhoneDayGrid: View {
             }
         } onEnd: {
             week.isDrawingNewEntry = false
+        } onTap: {
+            week.newEntry = nil
         }
         .frame(width: width, height: CGFloat(hours.count) * hourHeight)
     }
