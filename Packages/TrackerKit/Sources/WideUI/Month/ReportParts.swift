@@ -236,7 +236,7 @@ struct StatementPanel: View {
                     Text(subtitle)
                         .foregroundStyle(Theme.text2)
                 }
-                ReportFigures(model: model, state: state)
+                ReportFigures(state: state)
                 ReportBreakdown(state: state)
                 checks
                 csvPreview
@@ -363,7 +363,6 @@ struct StatementPanel: View {
 /// shows them on its statement in the wide layout, and under its days in
 /// the narrow one, smaller.
 struct ReportFigures: View {
-    let model: AppModel
     let state: ReportState
     var compact = false
 
@@ -449,6 +448,8 @@ struct ReportBreakdown: View {
                             ReportGroupTitle(group, in: state, spacing: compact ? 7 : 6)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             Text(Format.duration(group.milliseconds))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
                                 .frame(width: 78, alignment: .trailing)
                             Text(Format.percent(group.milliseconds, of: report.total))
                                 .foregroundStyle(Theme.text3)
