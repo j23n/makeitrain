@@ -10,7 +10,6 @@ import UniformTypeIdentifiers
 struct PhoneMonth: View {
     let model: AppModel
     let router: PhoneRouter
-    @State private var showsAll = false
     @State private var csv: ExportDocument?
     @State private var savingCSV = false
     @State private var pdf: ExportDocument?
@@ -26,13 +25,13 @@ struct PhoneMonth: View {
                 choices
                 PhoneMonthGrid(model: model, state: state, month: shownMonth)
                     .padding(.horizontal, 12)
-                figures
+                ReportFigures(state: state, compact: true)
                     .padding(.horizontal, 12)
                 if report.doubleCounted > 0 {
                     overlapWarning
                         .padding(.horizontal, 12)
                 }
-                breakdown
+                ReportBreakdown(state: state, compact: true)
                     .padding(.horizontal, 20)
             }
             .padding(.bottom, 16)
@@ -180,57 +179,6 @@ struct PhoneMonth: View {
             .compactMap { spelling[$0] }
     }
 
-    // MARK: Figures
-
-    private var figures: some View {
-        let comparison = state.comparison
-        let change = comparison.total - comparison.previousTotal
-        return Grid(horizontalSpacing: 1, verticalSpacing: 1) {
-            GridRow {
-                figure("Total", Text(Format.duration(report.total)))
-                figure("Average day", Text(Format.duration(report.averagePerDayWorked)))
-            }
-            GridRow {
-                figure("Days worked", Text("\(report.daysWorked) ") + Text("of \(state.weekdays)").font(.system(size: 12)).foregroundColor(Theme.text3))
-                figure(comparisonTitle, Text((change >= 0 ? "+" : "−") + Format.duration(abs(change))))
-            }
-        }
-        .background(Theme.line)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Theme.line))
-    }
-
-    /// "vs. August", or "vs. previous week".
-    private var comparisonTitle: String {
-        switch state.period {
-        case .month:
-            "vs. \(Format.monthName(state.comparison.previousRange.lowerBound))"
-        case .week:
-            "vs. previous week"
-        case .day:
-            "vs. previous day"
-        case .custom:
-            "vs. previous days"
-        }
-    }
-
-    private func figure(_ label: String, _ value: Text) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.system(size: 11.5))
-                .foregroundStyle(Theme.text2)
-            value
-                .font(.system(size: 19, weight: .medium))
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.panel)
-    }
-
     // MARK: Checks
 
     private var overlapWarning: some View {
@@ -256,43 +204,6 @@ struct PhoneMonth: View {
         .padding(.vertical, 2)
         .background(RoundedRectangle(cornerRadius: 12).fill(Theme.amberFill))
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.amberLine))
-    }
-
-    // MARK: Breakdown
-
-    private var breakdown: some View {
-        let rows = report.groups
-        let shown = showsAll ? rows : Array(rows.prefix(8))
-        return VStack(alignment: .leading, spacing: 8) {
-            Text("By \(state.grouping.rawValue)")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Theme.text2)
-            if rows.isEmpty {
-                Text("Nothing logged.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(Theme.text3)
-            }
-            ForEach(shown) { group in
-                HStack(spacing: 10) {
-                    ReportGroupTitle(group, in: state, spacing: 7)
-                    Spacer(minLength: 8)
-                    Text(Format.duration(group.milliseconds))
-                        .monospacedDigit()
-                    Text(Format.percent(group.milliseconds, of: report.total))
-                        .monospacedDigit()
-                        .foregroundStyle(Theme.text3)
-                        .frame(width: 40, alignment: .trailing)
-                }
-                .font(.system(size: 14))
-                .frame(minHeight: 28)
-            }
-            if rows.count > 8 {
-                Button(showsAll ? "Show fewer" : "\(rows.count - 8) more") {
-                    showsAll.toggle()
-                }
-                .font(.system(size: 14))
-            }
-        }
     }
 }
 
