@@ -247,6 +247,22 @@ extension CommandReading {
 }
 
 extension Ledger {
+    /// A day as an entry's line writes it: "2 oct", or with its year,
+    /// "2025-10-01", 300 days or more before `today`.
+    static func dayText(_ day: LocalDate, today: LocalDate) -> String {
+        today.daysSince1970 - day.daysSince1970 < 300 ? "\(day.day) \(TimeWords.monthNames[day.month - 1])" : day.description
+    }
+
+    /// The start of a new entry's line, its day and times, such as
+    /// "19 nov 14:15-16:30 ", ready for its project, tags and note.
+    /// `startSecond` and `endSecond` are seconds after midnight, the end
+    /// before midnight.
+    public static func newEntryLine(day: LocalDate, startSecond: Int, endSecond: Int, today: LocalDate) -> String {
+        let start = TimeWords.clockText(secondOfDay: startSecond)
+        let end = TimeWords.clockText(secondOfDay: min(endSecond, 86399))
+        return "\(dayText(day, today: today)) \(start)-\(end) "
+    }
+
     /// An entry written as a line the command line reads back, such as
     /// "2 oct 13:30-16:30 Website #12 Fix login", for editing it as text.
     /// A day 300 days or more before `today` is written with its year.
@@ -257,7 +273,7 @@ extension Ledger {
         func clock(_ time: LocalDateTime) -> String {
             TimeWords.clockText(secondOfDay: time.millisecondOfDay / 1000)
         }
-        var parts = [today.daysSince1970 - day.daysSince1970 < 300 ? "\(day.day) \(TimeWords.monthNames[day.month - 1])" : day.description]
+        var parts = [Self.dayText(day, today: today)]
         if let end = entry.end {
             parts.append("\(clock(start))-\(clock(end.local(in: zone)))")
         } else {

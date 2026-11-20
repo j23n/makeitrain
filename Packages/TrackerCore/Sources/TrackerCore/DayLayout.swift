@@ -161,3 +161,94 @@ extension Timestamp {
         self.init(calendar.date(from: components) ?? Date(timeIntervalSince1970: 0))
     }
 }
+
+/// Where a new entry drawn on a day's grid goes, in seconds after midnight:
+/// from dragging across empty space, from touching and holding it, or from
+/// double-clicking it. Times snap to five minutes, as dragging an entry
+/// does, a new entry is at least five minutes long, and it ends by
+/// `latest`: now on today, so it can't end in the future, or else 23:55,
+/// so its end is a time of the same day.
+public enum NewEntrySpan {
+    /// Five minutes, in seconds.
+    public static let snap = 300
+    /// How long a new entry made by touching and holding is, before it's
+    /// dragged: 30 minutes.
+    public static let heldLength = 1800
+    /// How long a new entry made by double-clicking is: an hour.
+    public static let clickedLength = 3600
+    /// The latest a new entry can end on a day: 23:55.
+    public static let lastEnd = 86400 - snap
+
+    /// The latest end on `day`: now on today, the day's last end on a day
+    /// before it, and nothing after it.
+    public static func latest(on day: LocalDate, now: Timestamp, zone: String) -> Int {
+        let local = now.local(in: zone)
+        if day < local.date { return lastEnd }
+        if day > local.date { return 0 }
+        return min(local.millisecondOfDay / 1000 / snap * snap, lastEnd)
+    }
+
+    /// Dragged from `from` to `to`, either way: the times between them,
+    /// snapped. Nil when there's no room for one, as just after midnight.
+    public static func dragged(from: Int, to: Int, latest: Int) -> (start: Int, end: Int)? {
+        let limit = min(latest, lastEnd)
+        guard limit >= snap else { return nil }
+        var start = min(max(rounded(min(from, to)), 0), limit)
+        var end = min(max(rounded(max(from, to)), 0), limit)
+        if end - start < snap {
+            end = min(start + snap, limit)
+            start = end - snap
+        }
+        return (start, end)
+    }
+
+    /// Touched and held at `at`, then dragged to `to`: half an hour from
+    /// the five minutes under the finger, until the drag takes it further
+    /// down, or above where it started.
+    public static func held(at: Int, to: Int, latest: Int) -> (start: Int, end: Int)? {
+        if to < at - snap / 2 || to - at > heldLength {
+            return dragged(from: at, to: to, latest: latest)
+        }
+        return placed(at: at, length: heldLength, latest: latest)
+    }
+
+    /// Double-clicked at `at`: an hour from the five minutes under the
+    /// pointer.
+    public static func clicked(at: Int, latest: Int) -> (start: Int, end: Int)? {
+        placed(at: at, length: clickedLength, latest: latest)
+    }
+
+    /// `length` from the five minutes before `at`, moved earlier when it
+    /// would end after `latest`.
+    static func placed(at: Int, length: Int, latest: Int) -> (start: Int, end: Int)? {
+        let limit = min(latest, lastEnd)
+        guard limit >= snap else { return nil }
+        let end = min(max(at / snap * snap, 0) + length, limit)
+        return (max(end - length, 0), end)
+    }
+
+    /// A new entry's start or end dragged to `second`: the other end stays,
+    /// and it stays at least five minutes long.
+    public static func adjusted(start: Int, end: Int, movingStart: Bool, to second: Int, latest: Int) -> (start: Int, end: Int) {
+        let limit = min(latest, lastEnd)
+        if movingStart {
+            return (min(max(rounded(second), 0), end - snap), end)
+        }
+        return (start, max(min(rounded(second), limit), start + snap))
+    }
+
+    /// The parts of the span from `start` to `end` that blocks already
+    /// take, each as seconds after midnight, for hatching them as time
+    /// counted twice while a new entry is drawn.
+    public static func overlaps(start: Int, end: Int, with blocks: [DayBlock]) -> [Range<Int>] {
+        blocks.compactMap { block in
+            let from = max(start, block.startSecond)
+            let to = min(end, block.endSecond)
+            return from < to ? from..<to : nil
+        }
+    }
+
+    private static func rounded(_ second: Int) -> Int {
+        Int((Double(second) / Double(snap)).rounded()) * snap
+    }
+}
