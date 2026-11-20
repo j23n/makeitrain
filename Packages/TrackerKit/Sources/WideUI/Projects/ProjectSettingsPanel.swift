@@ -24,6 +24,11 @@ struct ProjectSettingsPanel: View {
     private var swatch: CGFloat { compact ? 30 : 26 }
     private var rowHeight: CGFloat { compact ? 44 : 34 }
     private var smallFont: CGFloat { compact ? 14 : 12 }
+    /// The size of a row's small parts, such as "Make first".
+    private var detailFont: CGFloat { compact ? 13 : 11.5 }
+    /// How wide a row's small buttons are to tap: a finger's width in the
+    /// narrow layout.
+    private var buttonWidth: CGFloat? { compact ? 44 : nil }
 
     var body: some View {
         if compact {
@@ -146,21 +151,27 @@ struct ProjectSettingsPanel: View {
                         Spacer()
                         if index == 0 {
                             Text("#123")
-                                .font(.system(size: 11.5))
+                                .font(.system(size: detailFont))
                                 .foregroundStyle(Theme.tag)
                         } else {
-                            Button("Make first") {
+                            Button {
                                 model.makeFirstRepository(address, ofProject: project.id, undoManager: undoManager)
+                            } label: {
+                                Text("Make first")
+                                    .frame(height: rowHeight)
+                                    .contentShape(Rectangle())
                             }
                             .linkButton()
-                            .font(.system(size: 11.5))
+                            .font(.system(size: detailFont))
                         }
                         Button {
                             model.removeRepository(address, fromProject: project.id, undoManager: undoManager)
                         } label: {
                             Image(systemName: "xmark")
-                                .font(.system(size: 10, weight: .semibold))
+                                .font(.system(size: compact ? 12 : 10, weight: .semibold))
                                 .foregroundStyle(Theme.text3)
+                                .frame(width: buttonWidth, height: rowHeight)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(Text("Remove \(repository?.title ?? address)"))
@@ -172,6 +183,7 @@ struct ProjectSettingsPanel: View {
                 HStack(spacing: 8) {
                     TextField("owner/repo or URL", text: $repository)
                         .textFieldStyle(.plain)
+                        .onChange(of: repository) { repositoryError = false }
                         .noAutocapitalization()
                         .autocorrectionDisabled()
                         .urlKeyboard()
@@ -185,6 +197,12 @@ struct ProjectSettingsPanel: View {
             }
             .background(RoundedRectangle(cornerRadius: 8).fill(Theme.field))
             .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(repositoryError ? Theme.amber : Theme.strongLine))
+            if repositoryError {
+                Text("Not a GitHub repository. Use owner/repo or a URL.")
+                    .font(.system(size: smallFont))
+                    .foregroundStyle(Theme.amberText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
@@ -212,10 +230,10 @@ struct ProjectSettingsPanel: View {
                         }
                     }
                 }
-                .font(.system(size: 12))
+                .font(.system(size: smallFont))
             case .restricted:
                 Text("Calendar access is restricted on this \(deviceName).")
-                    .font(.system(size: 12))
+                    .font(.system(size: smallFont))
                     .foregroundStyle(Theme.text2)
             case .granted:
                 Picker("Calendar", selection: Binding(
@@ -277,7 +295,7 @@ struct ProjectSettingsPanel: View {
             .buttonStyle(ChoiceButtonStyle(compact: true))
             if hasEntries {
                 Text("A project with entries can't be deleted.")
-                    .font(.system(size: 12))
+                    .font(.system(size: smallFont))
                     .foregroundStyle(Theme.text3)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -285,6 +303,7 @@ struct ProjectSettingsPanel: View {
         .confirmationDialog(
             "Merge “\(project.name)” into “\(mergeTarget.map { model.ledger.projectTitle($0.id) } ?? "")”?",
             isPresented: Binding(get: { mergeTarget != nil }, set: { if !$0 { mergeTarget = nil } }),
+            titleVisibility: .visible,
             presenting: mergeTarget
         ) { target in
             Button("Merge") {
@@ -295,7 +314,7 @@ struct ProjectSettingsPanel: View {
         } message: { target in
             Text("Its entries move to “\(target.name)”, and “\(project.name)” is deleted.")
         }
-        .confirmationDialog("Delete “\(project.name)”?", isPresented: $confirmingDelete) {
+        .confirmationDialog("Delete “\(project.name)”?", isPresented: $confirmingDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 if (try? model.deleteProject(project.id, undoManager: undoManager)) != nil {
                     gone(nil)
@@ -304,3 +323,25 @@ struct ProjectSettingsPanel: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Wide") {
+    let model = PreviewData.model()
+    return Group {
+        if let project = model.ledger.projects[PreviewData.mobileApp] {
+            ProjectSettingsPanel(model: model, project: project) { _ in }
+        }
+    }
+    .frame(width: 320, height: 720)
+}
+
+#Preview("Narrow") {
+    let model = PreviewData.model()
+    return Group {
+        if let project = model.ledger.projects[PreviewData.mobileApp] {
+            ProjectSettingsPanel(model: model, project: project, compact: true) { _ in }
+        }
+    }
+    .frame(width: 390, height: 760)
+}
+#endif
