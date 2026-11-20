@@ -73,6 +73,11 @@ struct WeekCanvas: View {
                 .onAppear {
                     proxy.scrollTo(DayLayout.openingHour(shown: shown, nowHour: nowHour), anchor: .top)
                 }
+                .onChange(of: days) {
+                    // Another week keeps this canvas, so it opens on its
+                    // own hours here rather than where the last one was.
+                    proxy.scrollTo(DayLayout.openingHour(shown: shown, nowHour: nowHour), anchor: .top)
+                }
             }
         }
         .background(RoundedRectangle(cornerRadius: 12).fill(Theme.canvas))
