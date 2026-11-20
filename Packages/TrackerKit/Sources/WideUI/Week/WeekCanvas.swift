@@ -510,7 +510,7 @@ struct DayColumn: View {
             week.isDrawingNewEntry = false
         } onTap: {
             week.newEntry = nil
-            onSelect()
+            onSelect(nil)
         }
         .frame(width: width, height: columnHeight)
         #endif
