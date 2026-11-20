@@ -2,23 +2,20 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 
-/// One day on an hour grid, as the Week tab shows it: the entries as
-/// blocks in their projects' colors, and what the corrections would change
-/// drawn over them, as on the Mac: changed times struck through, what would
-/// be added as dashed outlines, time counted twice hatched, and numbered
-/// markers. Touching and holding empty space, then dragging, draws a new
-/// entry.
+/// One day on an hour grid, as the narrow layout's Week shows it: the
+/// hours down the side, with the current time on today, and the day's
+/// column, the same as each of the week's in the wide layout, at the
+/// narrow layout's size (`DayColumn`, `DayGridMetrics.compact`): the
+/// entries as blocks, what the corrections would change drawn over them,
+/// and a new entry being drawn.
 struct PhoneDayGrid: View {
     let model: AppModel
     let week: WeekModel
     let day: LocalDate
     var gutter: CGFloat = 52
     let onSelect: (ResolvedEntry) -> Void
-    let onCorrection: (CorrectionPreview) -> Void
 
-    private let hourHeight: CGFloat = 40
-    /// The grid's own coordinates, which a new entry's handles measure in.
-    private static let space = "phoneDayGrid"
+    private let hourHeight = DayGridMetrics.compact.hourHeight
     private var zone: String { model.environment.timeZone() }
 
     var body: some View {
@@ -37,24 +34,24 @@ struct PhoneDayGrid: View {
                         }
                     }
                     gutterLabels(hours)
-                    GeometryReader { geometry in
-                        let width = geometry.size.width - gutter - 16
-                        ZStack(alignment: .topLeading) {
-                            emptySpace(hours, width: width)
-                            hourLines(hours, width: width)
-                            ForEach(blocks) { block in
-                                blockView(block, in: blocks, hours: hours, width: width)
+                    DayColumn(
+                        model: model,
+                        week: week,
+                        days: [day],
+                        index: 0,
+                        blocks: blocks,
+                        hours: hours,
+                        metrics: .compact,
+                        isShown: { _ in true },
+                        onSelect: { entry in
+                            if let entry {
+                                onSelect(entry)
                             }
-                            newEntryView(hours: hours, width: width)
-                            ghosts(hours, width: width)
-                            overlaps(hours, width: width)
-                            longEntries(hours, width: width)
-                            markers(hours, width: width)
-                            nowLine(hours, width: width)
                         }
-                        .coordinateSpace(.named(Self.space))
-                        .offset(x: gutter)
-                    }
+                    )
+                    .frame(height: CGFloat(hours.count) * hourHeight)
+                    .padding(.leading, gutter)
+                    .padding(.trailing, 16)
                 }
                 .frame(height: CGFloat(hours.count) * hourHeight + 16)
                 .padding(.top, 8)
@@ -76,8 +73,7 @@ struct PhoneDayGrid: View {
         y(DayLayout.second(of: time, on: day, zone: zone), hours)
     }
 
-    // MARK: Grid
-
+    /// The hours down the side, and the current time on today.
     private func gutterLabels(_ hours: Range<Int>) -> some View {
         ZStack(alignment: .topTrailing) {
             ForEach(hours, id: \.self) { hour in
@@ -102,326 +98,6 @@ struct PhoneDayGrid: View {
         }
         .frame(width: gutter, alignment: .topTrailing)
         .accessibilityHidden(true)
-    }
-
-    private func hourLines(_ hours: Range<Int>, width: CGFloat) -> some View {
-        ForEach(hours, id: \.self) { hour in
-            Rectangle()
-                .fill(Theme.hourLine)
-                .frame(width: width, height: 1)
-                .offset(y: y(hour * 3600, hours))
-        }
-    }
-
-    // MARK: Blocks
-
-    /// The least height a block can be tapped in.
-    private static let minimumHitHeight = 24.0
-
-    /// An entry's block, ending where the entry does however short it is,
-    /// so it never covers the entry after it. A short one can be tapped a
-    /// little above and below it, over the edges of its neighbors, so it
-    /// goes over them.
-    private func blockView(_ block: DayBlock, in blocks: [DayBlock], hours: Range<Int>, width: CGFloat) -> some View {
-        let columnWidth = (width - 8) / CGFloat(max(block.columns, 1))
-        let blockWidth = columnWidth - (block.columns > 1 ? 2 : 0)
-        let top = y(block.startSecond, hours)
-        let drawnHeight = DayLayout.height(
-            from: block.startSecond,
-            to: block.endSecond,
-            hourHeight: Double(hourHeight),
-            nextStart: DayLayout.nextStart(after: block, in: blocks)
-        )
-        let height = CGFloat(drawnHeight)
-        let hit = DayLayout.hitSpan(top: Double(top), height: drawnHeight, minimum: Self.minimumHitHeight)
-        let entry = block.entry
-        return PhoneEntryBlock(
-            model: model,
-            entry: entry,
-            height: height,
-            selected: week.selectedEntry == entry.id,
-            change: week.suggestedChange(of: entry.id),
-            overnight: week.ranLongNote(for: entry),
-            overlaps: week.isInOverlap(entry.id)
-        )
-        .frame(width: blockWidth, height: height)
-        .frame(width: blockWidth, height: CGFloat(hit.height))
-        .contentShape(Rectangle())
-        .offset(x: 4 + CGFloat(block.column) * columnWidth, y: CGFloat(hit.top))
-        .zIndex(CGFloat(hit.height) > height ? 1 : 0)
-        .onTapGesture {
-            week.selectedEntry = entry.id
-            onSelect(entry)
-        }
-        .contextMenu {
-            EntryMenu(model: model, entry: entry, touch: true)
-        }
-    }
-
-    // MARK: New entries
-
-    /// The second of the day at `y`, within the hours shown.
-    private func second(at y: CGFloat, _ hours: Range<Int>) -> Int {
-        let second = Int((y / hourHeight + CGFloat(hours.lowerBound)) * 3600)
-        return min(max(second, hours.lowerBound * 3600), hours.upperBound * 3600)
-    }
-
-    private var latest: Int {
-        model.latestNewEntryEnd(on: day)
-    }
-
-    /// Empty space under the blocks. On a touch screen, a touch held there,
-    /// then dragged, draws a new entry, a tap drops one being made, and a
-    /// swipe still scrolls. On the Mac, dragging across it draws one, as on
-    /// the week.
-    @ViewBuilder
-    private func emptySpace(_ hours: Range<Int>, width: CGFloat) -> some View {
-        #if os(iOS)
-        HoldAndDrag { start, location in
-            draw(NewEntrySpan.held(at: second(at: start.y, hours), to: second(at: location.y, hours), latest: latest))
-        } onEnd: {
-            week.isDrawingNewEntry = false
-        } onTap: {
-            week.newEntry = nil
-        }
-        .frame(width: width, height: CGFloat(hours.count) * hourHeight)
-        #else
-        Color.clear
-            .frame(width: width, height: CGFloat(hours.count) * hourHeight)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                week.newEntry = nil
-            }
-            .gesture(
-                DragGesture(minimumDistance: 4, coordinateSpace: .named(Self.space))
-                    .onChanged { value in
-                        draw(NewEntrySpan.dragged(from: second(at: value.startLocation.y, hours), to: second(at: value.location.y, hours), latest: latest))
-                    }
-                    .onEnded { _ in
-                        week.isDrawingNewEntry = false
-                    }
-            )
-        #endif
-    }
-
-    /// Puts the new entry being drawn at `span`, when there's one.
-    private func draw(_ span: (start: Int, end: Int)?) {
-        guard !model.isReadOnly, let span else { return }
-        week.isDrawingNewEntry = true
-        if var draft = week.newEntry, draft.day == day {
-            draft.startSecond = span.start
-            draft.endSecond = span.end
-            if draft != week.newEntry {
-                week.newEntry = draft
-            }
-        } else {
-            week.newEntry = model.newEntryDraft(on: day, startSecond: span.start, endSecond: span.end)
-        }
-    }
-
-    /// The new entry being made on this day: a dashed outline with its
-    /// times, round handles to drag its start and end, and what it
-    /// overlaps hatched.
-    @ViewBuilder
-    private func newEntryView(hours: Range<Int>, width: CGFloat) -> some View {
-        if let draft = week.newEntry, draft.day == day {
-            let top = y(draft.startSecond, hours)
-            let bottom = y(draft.endSecond, hours)
-            ForEach(model.overlapRanges(of: draft), id: \.lowerBound) { range in
-                Hatching()
-                    .frame(width: width - 8, height: max(y(range.upperBound, hours) - y(range.lowerBound, hours), 2))
-                    .overlay(alignment: .top) { Rectangle().fill(Theme.amber).frame(height: 1.5) }
-                    .overlay(alignment: .bottom) { Rectangle().fill(Theme.amber).frame(height: 1.5) }
-                    .offset(x: 4, y: y(range.lowerBound, hours))
-                    .allowsHitTesting(false)
-                    .zIndex(4)
-            }
-            NewEntryOutline(startSecond: draft.startSecond, endSecond: draft.endSecond, height: bottom - top, size: 12)
-                .frame(width: width - 8, height: max(bottom - top, 6))
-                .overlay(alignment: .topTrailing) {
-                    handle(movingStart: true, hours)
-                        .offset(x: -2, y: -22)
-                }
-                .overlay(alignment: .bottomLeading) {
-                    handle(movingStart: false, hours)
-                        .offset(x: 2, y: 22)
-                }
-                .offset(x: 4, y: top)
-                .zIndex(4)
-        }
-    }
-
-    /// A round handle that drags the new entry's start or end.
-    private func handle(movingStart: Bool, _ hours: Range<Int>) -> some View {
-        NewEntryHandle(touch: true)
-            .gesture(
-                DragGesture(minimumDistance: 1, coordinateSpace: .named(Self.space))
-                    .onChanged { value in
-                        guard var draft = week.newEntry else { return }
-                        let span = NewEntrySpan.adjusted(
-                            start: draft.startSecond,
-                            end: draft.endSecond,
-                            movingStart: movingStart,
-                            to: second(at: value.location.y, hours),
-                            latest: latest
-                        )
-                        draft.startSecond = span.start
-                        draft.endSecond = span.end
-                        if draft != week.newEntry {
-                            week.newEntry = draft
-                        }
-                    }
-            )
-            .accessibilityLabel(Text(movingStart ? "Drag the new entry's start" : "Drag the new entry's end"))
-    }
-
-    // MARK: Corrections
-
-    /// What suggestions would add: calendar events and parts of split
-    /// entries, dashed.
-    private func ghosts(_ hours: Range<Int>, width: CGFloat) -> some View {
-        ForEach(week.suggestedAdditions.filter { $0.entry.day == day }) { addition in
-            let entry = addition.entry
-            let zone = entry.timeZone
-            let top = y(entry.start, zone: zone, hours)
-            let bottom = y(entry.end ?? model.now, zone: zone, hours)
-            let times = Format.span(entry)
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 5) {
-                    if addition.isEvent {
-                        Image(systemName: "calendar")
-                            .font(.system(size: 10))
-                        Text(times + calendarName(entry))
-                    } else {
-                        Text(model.ledger.title(of: entry))
-                        Text(times)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Theme.amberText)
-                        Spacer(minLength: 2)
-                        Text("new")
-                            .fontWeight(.semibold)
-                            .foregroundStyle(Theme.amberText)
-                    }
-                }
-                .font(.system(size: 11))
-                .monospacedDigit()
-                .foregroundStyle(Theme.text3)
-                if addition.isEvent {
-                    Text(model.ledger.title(of: entry))
-                        .font(.system(size: 12.5))
-                        .foregroundStyle(Theme.text4)
-                }
-            }
-            .lineLimit(1)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .frame(width: width - 8, height: max(bottom - top, 22), alignment: .topLeading)
-            .suggestedAdditionChrome(isEvent: addition.isEvent, tint: model.ledger.tint(ofProject: entry.projectID), cornerRadius: 9)
-            .offset(x: 4, y: top)
-            .onTapGesture {
-                if let preview = week.previews.first(where: { $0.number == addition.number }) {
-                    onCorrection(preview)
-                }
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(Text("Suggested: \(entry.note), \(times)"))
-        }
-    }
-
-    /// " · Work calendar", for an event from a project's calendar.
-    private func calendarName(_ entry: TimeEntry) -> String {
-        guard let projectID = entry.projectID, let calendar = model.linkedCalendar(ofProject: projectID) else { return "" }
-        return " · \(calendar.title) calendar"
-    }
-
-    /// Time two entries both count, hatched.
-    private func overlaps(_ hours: Range<Int>, width: CGFloat) -> some View {
-        ForEach(week.previews.filter { $0.correction.day == day }) { preview in
-            if case let .overlap(overlap) = preview.correction.kind,
-               let span = model.ledger.doubleCountedSpan(overlap),
-               let later = model.ledger.entries[overlap.later] {
-                let zone = later.timeZone
-                let top = y(span.start, zone: zone, hours)
-                let bottom = y(span.end, zone: zone, hours)
-                Hatching()
-                    .frame(width: width - 8, height: max(bottom - top, 3))
-                    .overlay(alignment: .top) { Rectangle().fill(Theme.amber).frame(height: 1.5) }
-                    .overlay(alignment: .bottom) { Rectangle().fill(Theme.amber).frame(height: 1.5) }
-                    .offset(x: 4, y: top)
-                    .allowsHitTesting(false)
-            }
-        }
-    }
-
-    /// Where an entry that ran long likely ended: a line at the suggested
-    /// time.
-    private func longEntries(_ hours: Range<Int>, width: CGFloat) -> some View {
-        ForEach(week.previews.filter { $0.correction.day == day }) { preview in
-            if case let .ranLong(id, _) = preview.correction.kind, let entry = model.ledger.entries[id],
-               case let .end(_, suggested)? = preview.correction.suggestion {
-                let line = y(suggested, zone: entry.timeZone, hours)
-                HStack(spacing: 0) {
-                    Rectangle().fill(Theme.amber).frame(height: 1.5)
-                    Text("\(Format.time(suggested, zone: entry.timeZone))?")
-                        .font(.system(size: 11, weight: .semibold))
-                        .monospacedDigit()
-                        .foregroundStyle(Theme.markerText)
-                        .padding(.horizontal, 7)
-                        .frame(height: 20)
-                        .background(Capsule().fill(Theme.marker))
-                }
-                .frame(width: width - 8)
-                .offset(x: 4, y: line - 10)
-                .allowsHitTesting(false)
-            }
-        }
-    }
-
-    /// The corrections' numbers, at the top right of what they're about.
-    private func markers(_ hours: Range<Int>, width: CGFloat) -> some View {
-        ForEach(week.previews.filter { $0.correction.day == day }) { preview in
-            CorrectionMarker(preview.number)
-                .background(Circle().strokeBorder(Theme.background, lineWidth: 2).padding(-2))
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
-                .offset(x: width - 30, y: max(markerTop(preview, hours) - 22, -12))
-                .onTapGesture {
-                    onCorrection(preview)
-                }
-                .accessibilityLabel(Text("Correction \(preview.number)"))
-                .accessibilityAddTraits(.isButton)
-        }
-    }
-
-    private func markerTop(_ preview: CorrectionPreview, _ hours: Range<Int>) -> CGFloat {
-        switch preview.correction.kind {
-        case let .overlap(overlap):
-            let entry = model.ledger.entries[overlap.earlier]
-            let later = model.ledger.entries[overlap.later]
-            if let entry, entry.day == day {
-                return y(entry.start, zone: entry.timeZone, hours)
-            }
-            return later.map { y($0.start, zone: $0.timeZone, hours) } ?? 0
-        case let .ranLong(id, _), let .noProject(id):
-            return model.ledger.entries[id].map { y($0.start, zone: $0.timeZone, hours) } ?? 0
-        case let .notLogged(entry):
-            return y(entry.start, zone: entry.timeZone, hours)
-        }
-    }
-
-    /// The red line at the current time, on today.
-    @ViewBuilder
-    private func nowLine(_ hours: Range<Int>, width: CGFloat) -> some View {
-        if day == model.today {
-            let top = y(model.now, zone: zone, hours)
-            HStack(spacing: 0) {
-                Circle().fill(Theme.now).frame(width: 10, height: 10)
-                Rectangle().fill(Theme.now).frame(height: 2)
-            }
-            .frame(width: width + 5)
-            .offset(x: -5, y: top - 5)
-            .allowsHitTesting(false)
-        }
     }
 }
 

@@ -36,8 +36,6 @@ struct PhoneWeek: View {
             dayLine
             PhoneDayGrid(model: model, week: week, day: router.weekDay, gutter: 44) { entry in
                 editing = entry
-            } onCorrection: { preview in
-                week.selectedCorrection = preview.id
             }
             .id(router.weekDay)
             .overlay {
