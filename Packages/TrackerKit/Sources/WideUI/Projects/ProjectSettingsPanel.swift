@@ -50,6 +50,7 @@ struct ProjectSettingsPanel: View {
                     .textFieldStyle(.roundedBorder)
                     .onSubmit(rename)
             }
+            .disabled(model.isReadOnly)
             field("Client") {
                 Picker("Client", selection: Binding(
                     get: { project.clientID },
@@ -65,6 +66,7 @@ struct ProjectSettingsPanel: View {
                 }
                 .labelsHidden()
             }
+            .disabled(model.isReadOnly)
             field("Color") {
                 let users = colorUsers
                 HStack(spacing: 8) {
@@ -89,16 +91,22 @@ struct ProjectSettingsPanel: View {
                     }
                 }
             }
+            .disabled(model.isReadOnly)
             field("Contract", footer: "Time on the contract's days counts toward its hours. Each device alerts once when the time left reaches the alert.") {
                 ContractEditor(model: model, project: project, touch: compact)
                     .font(.system(size: compact ? 15 : 12.5))
             }
+            .disabled(model.isReadOnly)
+            // The repositories disable their own changes, so that a link
+            // still opens while the data is read-only.
             repositories
-            calendar
-            actions
+            Group {
+                calendar
+                actions
+            }
+            .disabled(model.isReadOnly)
         }
         .padding(compact ? 16 : 22)
-        .disabled(model.isReadOnly)
         .onAppear { name = project.name }
         .onChange(of: project.name) { name = project.name }
         .onDisappear(perform: renameIfChanged)
@@ -172,6 +180,7 @@ struct ProjectSettingsPanel: View {
                             }
                             .linkButton()
                             .font(.system(size: detailFont))
+                            .disabled(model.isReadOnly)
                         }
                         Button {
                             model.removeRepository(address, fromProject: project.id, undoManager: undoManager)
@@ -183,6 +192,7 @@ struct ProjectSettingsPanel: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .disabled(model.isReadOnly)
                         .accessibilityLabel(Text("Remove \(repository?.title ?? address)"))
                     }
                     .padding(.horizontal, 10)
@@ -203,6 +213,7 @@ struct ProjectSettingsPanel: View {
                 .font(.system(size: smallFont))
                 .padding(.horizontal, 10)
                 .frame(height: rowHeight)
+                .disabled(model.isReadOnly)
             }
             .background(RoundedRectangle(cornerRadius: 8).fill(Theme.field))
             .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(repositoryError ? Theme.amber : Theme.strongLine))
