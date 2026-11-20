@@ -12,6 +12,12 @@ import Testing
         #expect(ProjectColumn.layoutWidth(in: 1358) == 1358)
     }
 
+    /// The main window opens 1410 points wide, with 24 on each side of the
+    /// table, which leaves room for every column.
+    @Test func theMainWindowOpensWideEnoughForEveryColumn() {
+        #expect(ProjectColumn.layoutWidth(in: 1410 - 48) == 1410 - 48)
+    }
+
     /// The main window is at least 960 points wide, with 24 on each side
     /// of the table: there the table keeps its least width and scrolls.
     @Test func aNarrowViewKeepsTheTablesLeastWidth() {
