@@ -5,9 +5,9 @@ import TrackerKit
 /// Clients and their projects: each project's repositories and calendar,
 /// its last twelve weeks and its time this week, then the entries without
 /// a project and the archived ones. A project opens its page.
-struct PhoneProjects: View {
+struct CompactProjects: View {
     let model: AppModel
-    @Bindable var router: PhoneRouter
+    @Bindable var router: CompactRouter
     @State private var filter = ""
     #if os(macOS)
     @Environment(\.openSettings) private var openSettings
@@ -18,17 +18,17 @@ struct PhoneProjects: View {
             list
                 .navigationTitle("Projects")
                 .hidesNavigationBar()
-                .navigationDestination(for: PhoneProjectRoute.self) { route in
+                .navigationDestination(for: CompactProjectRoute.self) { route in
                     switch route {
                     case let .project(id):
-                        PhoneProjectPage(model: model, router: router, projectID: id)
+                        CompactProjectPage(model: model, router: router, projectID: id)
                     case .archived:
-                        PhoneArchivedProjects(model: model)
+                        CompactArchivedProjects(model: model)
                     }
                 }
         }
         .safeAreaInset(edge: .bottom) {
-            PhoneCommandBar(model: model, placeholder: "new project, or switch", open: { router.openCommandLine() })
+            CompactCommandBar(model: model, placeholder: "new project, or switch", open: { router.openCommandLine() })
         }
     }
 
@@ -290,7 +290,7 @@ struct PhoneProjects: View {
 }
 
 /// The archived projects, and the projects of archived clients.
-struct PhoneArchivedProjects: View {
+struct CompactArchivedProjects: View {
     let model: AppModel
     @Environment(\.undoManager) private var undoManager
 
@@ -299,7 +299,7 @@ struct PhoneArchivedProjects: View {
         let stats = model.projectStats
         List {
             ForEach(projects) { project in
-                NavigationLink(value: PhoneProjectRoute.project(project.id)) {
+                NavigationLink(value: CompactProjectRoute.project(project.id)) {
                     HStack(spacing: 12) {
                         RoundedRectangle(cornerRadius: 4)
                             .fill(ProjectTint(hex: project.color).ink)

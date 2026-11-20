@@ -27,7 +27,7 @@ struct PadWideRoot: View {
             .accessibilityLabel(Text("Settings"))
         }
         .sheet(isPresented: $showsSettings) {
-            PhoneSettings(model: model)
+            MobileSettings(model: model)
         }
     }
 }

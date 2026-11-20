@@ -6,7 +6,7 @@ import TrackerKit
 /// web #12 Fix login", and what else can be done with it. Over the line
 /// are the corrections about the entry, such as an overlap, with their
 /// fixes.
-struct PhoneEntrySheet: View {
+struct CompactEntrySheet: View {
     let model: AppModel
     let week: WeekModel
     let entryID: UUID
@@ -59,7 +59,7 @@ struct PhoneEntrySheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 ForEach(week.previews(involving: entryID)) { preview in
-                    PhoneEntryCorrection(model: model, week: week, preview: preview) {
+                    CompactEntryCorrection(model: model, week: week, preview: preview) {
                         line.revert()
                     }
                 }
@@ -104,7 +104,7 @@ struct PhoneEntrySheet: View {
 
 /// A correction about an entry, in the entry's sheet: what's wrong, such as
 /// an overlap, and its fixes, the likeliest first.
-struct PhoneEntryCorrection: View {
+struct CompactEntryCorrection: View {
     let model: AppModel
     let week: WeekModel
     let preview: CorrectionPreview
@@ -175,7 +175,7 @@ struct PhoneEntryCorrection: View {
 /// at half height, so the entry stays in sight above it and its handles can
 /// still be dragged, which changes the times in the line. Save adds it;
 /// Cancel, or closing the sheet, drops it.
-struct PhoneNewEntrySheet: View {
+struct CompactNewEntrySheet: View {
     let model: AppModel
     let week: WeekModel
     @State private var line: EntryLineModel
@@ -254,7 +254,7 @@ struct PhoneNewEntrySheet: View {
     week.newEntry = model.newEntryDraft(on: model.today, startSecond: 9 * 3600, endSecond: 10 * 3600)
     return Color.clear
         .sheet(isPresented: .constant(true)) {
-            PhoneNewEntrySheet(model: model, week: week)
+            CompactNewEntrySheet(model: model, week: week)
         }
 }
 #endif

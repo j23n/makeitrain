@@ -73,8 +73,8 @@ struct MobileRoot: View {
         AdaptiveRoot {
             PadWideRoot(model: model)
         } narrow: {
-            PhoneRoot(model: model) {
-                PhoneSettings(model: model)
+            CompactRoot(model: model) {
+                MobileSettings(model: model)
             }
         }
         .onChange(of: model.preferences.appearance, initial: true) { _, appearance in
@@ -134,8 +134,8 @@ struct MobileNotices: View {
 }
 
 #Preview("iPhone") {
-    PhoneRoot(model: PreviewData.model()) {
-        PhoneSettings(model: PreviewData.model())
+    CompactRoot(model: PreviewData.model()) {
+        MobileSettings(model: PreviewData.model())
     }
 }
 

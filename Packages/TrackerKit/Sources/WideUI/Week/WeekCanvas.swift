@@ -403,7 +403,7 @@ struct DayColumn: View {
                 overlaps: week.isInOverlap(entry.id)
             )
         } else {
-            PhoneEntryBlock(
+            CompactEntryBlock(
                 model: model,
                 entry: entry,
                 height: height,
@@ -902,9 +902,10 @@ struct EntryBlock: View {
     }
 }
 
-/// What an entry's context menu offers, on the week and on the iPhone's
-/// day: stopping or continuing it, its project, splitting, duplicating and
-/// deleting it. With `touch`, as on the iPhone, the items have icons.
+/// What an entry's context menu offers, on the wide week and on the narrow
+/// layout's day: stopping or continuing it, its project, splitting,
+/// duplicating and deleting it. With `touch`, as on a touch screen, the
+/// items have icons.
 public struct EntryMenu: View {
     let model: AppModel
     let entry: ResolvedEntry

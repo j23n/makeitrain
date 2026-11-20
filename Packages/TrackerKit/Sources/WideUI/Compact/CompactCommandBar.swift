@@ -5,7 +5,7 @@ import TrackerKit
 /// The command line floating over the tab bar: the running timer, on two
 /// lines with its project's color, and Stop, or what to type. Tapping it
 /// opens the command line.
-struct PhoneCommandBar: View {
+struct CompactCommandBar: View {
     let model: AppModel
     let placeholder: String
     let open: () -> Void
@@ -85,9 +85,9 @@ struct PhoneCommandBar: View {
 /// lists: the latest entries to start again, the earlier entries it could
 /// start again, what it does as typed, or what "find" found. On the Month tab it can read a
 /// report instead, such as "acme sep by tag".
-struct PhoneCommandSheet: View {
+struct CompactCommandSheet: View {
     let model: AppModel
-    let router: PhoneRouter
+    let router: CompactRouter
     @Bindable var line: CommandLineModel
     let close: () -> Void
     @State private var reportText = ""
@@ -97,8 +97,8 @@ struct PhoneCommandSheet: View {
         VStack(alignment: .leading, spacing: 0) {
             if router.tab == .month {
                 Picker("Mode", selection: Binding(get: { router.commandMode }, set: { router.commandMode = $0; router.focusRequest += 1 })) {
-                    Text("Report").tag(PhoneCommandMode.report)
-                    Text("Time").tag(PhoneCommandMode.command)
+                    Text("Report").tag(CompactCommandMode.report)
+                    Text("Time").tag(CompactCommandMode.command)
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal, 16)

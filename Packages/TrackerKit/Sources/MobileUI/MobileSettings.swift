@@ -11,7 +11,7 @@ import UniformTypeIdentifiers
 /// The iPhone's and iPad's settings: how the app looks, starting timers
 /// from outside it, where the data is and what's in it, importing and
 /// exporting, and which calendar on this device belongs to which project.
-struct PhoneSettings: View {
+struct MobileSettings: View {
     let model: AppModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.undoManager) private var undoManager
@@ -39,7 +39,7 @@ struct PhoneSettings: View {
                 Section {
                     Toggle("Live Activity", isOn: $preferences.showsLiveActivity)
                     NavigationLink("Shortcuts and controls") {
-                        PhoneShortcutsHelp()
+                        MobileShortcutsHelp()
                     }
                 }
 
@@ -66,7 +66,7 @@ struct PhoneSettings: View {
                     }
                     ICloudToggle(model: model)
                     NavigationLink {
-                        PhoneDataFiles(model: model)
+                        MobileDataFiles(model: model)
                     } label: {
                         LabeledContent("Files", value: model.filesSummary)
                     }
@@ -159,7 +159,7 @@ struct PhoneSettings: View {
 }
 
 /// The data files, with what each holds or why it can't be read.
-struct PhoneDataFiles: View {
+struct MobileDataFiles: View {
     let model: AppModel
 
     var body: some View {
@@ -176,7 +176,7 @@ struct PhoneDataFiles: View {
 }
 
 /// What can start, stop or switch timers from outside the app.
-struct PhoneShortcutsHelp: View {
+struct MobileShortcutsHelp: View {
     var body: some View {
         List {
             Section {

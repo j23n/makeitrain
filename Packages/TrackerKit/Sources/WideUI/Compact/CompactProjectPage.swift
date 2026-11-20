@@ -5,9 +5,9 @@ import TrackerKit
 /// A project's page: its running timer, its time this week, this month
 /// and in all, its last twelve weeks day by day, and its tags by
 /// repository. Edit opens its settings.
-struct PhoneProjectPage: View {
+struct CompactProjectPage: View {
     let model: AppModel
-    let router: PhoneRouter
+    let router: CompactRouter
     let projectID: UUID
     @State private var overview: ProjectOverview?
     @State private var editing = false
@@ -42,7 +42,7 @@ struct PhoneProjectPage: View {
         }
         .sheet(isPresented: $editing) {
             if let project {
-                PhoneProjectSettings(model: model, project: project) { merged in
+                CompactProjectSettings(model: model, project: project) { merged in
                     if let merged {
                         router.projectsPath = [.project(merged)]
                     } else {
@@ -282,7 +282,7 @@ struct PhoneProjectPage: View {
 }
 
 /// A project's settings in a sheet over its page, with Done.
-struct PhoneProjectSettings: View {
+struct CompactProjectSettings: View {
     let model: AppModel
     let project: Project
     /// After a merge, the project it went into; after a delete, nil.
