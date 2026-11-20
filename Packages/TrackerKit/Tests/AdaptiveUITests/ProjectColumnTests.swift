@@ -18,7 +18,7 @@ import Testing
         #expect(ProjectColumn.tableWidth <= WideWindow.defaultWidth - 48)
     }
 
-    /// The main window is at least 960 points wide, with 24 on each side
+    /// The wide layout is at least 960 points wide, with 24 on each side
     /// of the table: there the table keeps its least width and scrolls.
     @Test func aNarrowViewKeepsTheTablesLeastWidth() {
         #expect(ProjectColumn.layoutWidth(in: 912) == 1358)
