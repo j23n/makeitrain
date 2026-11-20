@@ -6,7 +6,8 @@ import UIKit
 
 /// A week: its days in a strip with their time, the chosen day's date and
 /// time, the day on an hour grid with what needs correcting drawn in place,
-/// and the corrections one at a time in a panel at the bottom.
+/// and the corrections one at a time in a panel at the bottom. A new entry
+/// drawn on the grid opens its sheet once the finger lifts.
 struct PhoneWeek: View {
     let model: AppModel
     let router: PhoneRouter
@@ -18,21 +19,38 @@ struct PhoneWeek: View {
         week.days.days
     }
 
+    /// Whether the new entry's sheet shows: once a new entry is drawn and
+    /// the finger has lifted. Closing it drops the entry.
+    private var showsNewEntry: Binding<Bool> {
+        Binding {
+            week.newEntry != nil && !week.isDrawingNewEntry
+        } set: { shown in
+            if !shown {
+                week.newEntry = nil
+            }
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
             dayStrip
             dayLine
-            if week.isEmpty(on: router.weekDay) {
-                PhoneEmptyDay(isToday: router.weekDay == model.today)
-            } else {
-                PhoneDayGrid(model: model, week: week, day: router.weekDay, gutter: 44) { entry in
-                    editing = entry
-                } onCorrection: { preview in
-                    week.selectedCorrection = preview.id
-                }
-                .id(router.weekDay)
+            PhoneDayGrid(model: model, week: week, day: router.weekDay, gutter: 44) { entry in
+                editing = entry
+            } onCorrection: { preview in
+                week.selectedCorrection = preview.id
             }
+            .id(router.weekDay)
+            .overlay {
+                if week.isEmpty(on: router.weekDay), week.newEntry?.day != router.weekDay {
+                    PhoneEmptyDay(isToday: router.weekDay == model.today)
+                        .allowsHitTesting(false)
+                }
+            }
+        }
+        .sheet(isPresented: showsNewEntry) {
+            PhoneNewEntrySheet(model: model, week: week)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Theme.background)
@@ -50,7 +68,7 @@ struct PhoneWeek: View {
             }
         }
         .sheet(item: $editing) { entry in
-            PhoneEntrySheet(model: model, entryID: entry.id)
+            PhoneEntrySheet(model: model, week: week, entryID: entry.id)
         }
         .onChange(of: week.selectedCorrection) { _, id in
             if let correction = week.corrections.first(where: { $0.id == id }), correction.day != router.weekDay {
@@ -199,7 +217,8 @@ struct PhoneWeek: View {
     }
 }
 
-/// A day with nothing on it.
+/// A day with nothing on it, over its empty grid, which a new entry can
+/// still be drawn on.
 struct PhoneEmptyDay: View {
     let isToday: Bool
 
@@ -210,13 +229,17 @@ struct PhoneEmptyDay: View {
                 .foregroundStyle(Theme.text3)
             Text(isToday ? "Nothing logged yet" : "Nothing logged")
                 .font(.system(size: 15, weight: .semibold))
-            Text(isToday ? "Type a project in the line below to start a timer." : "Type a project, the day and the times in the line below to log time.")
+            Text(isToday
+                ? "Type a project in the line below to start a timer, or touch and hold the grid to log time."
+                : "Touch and hold the grid to log time, or type a project, the day and the times in the line below.")
                 .font(.system(size: 13))
                 .foregroundStyle(Theme.text2)
                 .multilineTextAlignment(.center)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(20)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Theme.background.opacity(0.94)))
         .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
