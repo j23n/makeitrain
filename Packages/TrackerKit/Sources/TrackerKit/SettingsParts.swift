@@ -203,7 +203,7 @@ public struct CalendarProjectPicker<Label: View>: View {
     public var body: some View {
         Picker(selection: binding) {
             Text("None").tag(UUID?.none)
-            ForEach(model.ledger.pickerProjects()) { project in
+            ForEach(model.calendarPickerProjects(for: calendar.id)) { project in
                 Text(model.ledger.projectTitle(project.id)).tag(UUID?.some(project.id))
             }
         } label: {
@@ -214,13 +214,7 @@ public struct CalendarProjectPicker<Label: View>: View {
     private var binding: Binding<UUID?> {
         Binding(
             get: { model.linkedProject(of: calendar.id) },
-            set: { projectID in
-                if let projectID {
-                    model.setCalendar(calendar.id, forProject: projectID)
-                } else if let linked = model.linkedProject(of: calendar.id) {
-                    model.setCalendar(nil, forProject: linked)
-                }
-            }
+            set: { model.setProject($0, forCalendar: calendar.id) }
         )
     }
 }

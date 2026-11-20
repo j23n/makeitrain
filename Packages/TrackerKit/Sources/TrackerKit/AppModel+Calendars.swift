@@ -54,6 +54,29 @@ extension AppModel {
         calendarLinks = links
     }
 
+    /// Links a calendar on this device to a project, which moves the
+    /// project off any other calendar, or unlinks the calendar with nil.
+    public func setProject(_ projectID: UUID?, forCalendar calendarID: String) {
+        if let projectID {
+            setCalendar(calendarID, forProject: projectID)
+        } else {
+            calendarLinks = calendarLinks.filter { $0.calendarID != calendarID }
+        }
+    }
+
+    /// The projects to offer for a calendar in Settings: those that aren't
+    /// archived, after the project it's linked to if that one is archived,
+    /// so the calendar still shows where its events go.
+    public func calendarPickerProjects(for calendarID: String) -> [Project] {
+        var projects = ledger.pickerProjects()
+        if let linked = linkedProject(of: calendarID),
+           !projects.contains(where: { $0.id == linked }),
+           let project = ledger.projects[linked] {
+            projects.insert(project, at: 0)
+        }
+        return projects
+    }
+
     /// Whether a calendar on this device is linked to a project.
     public var hasLinkedCalendars: Bool {
         calendars.contains { linkedProject(of: $0.id) != nil }

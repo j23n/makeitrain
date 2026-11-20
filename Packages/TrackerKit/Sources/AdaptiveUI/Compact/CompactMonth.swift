@@ -25,7 +25,7 @@ struct CompactMonth: View {
                 choices
                 CompactMonthGrid(model: model, state: state, month: shownMonth)
                     .padding(.horizontal, 12)
-                ReportFigures(model: model, state: state, compact: true)
+                ReportFigures(state: state, compact: true)
                     .padding(.horizontal, 12)
                 if report.doubleCounted > 0 {
                     overlapWarning
