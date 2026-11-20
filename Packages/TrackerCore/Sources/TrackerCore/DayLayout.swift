@@ -81,7 +81,7 @@ public enum DayLayout {
     /// the time now is in view.
     public static func openingHour(shown: Range<Int>, nowHour: Int?) -> Int {
         guard let nowHour else { return shown.lowerBound }
-        return min(max(shown.lowerBound, nowHour - 9), allDay.upperBound - 1)
+        return max(shown.lowerBound, nowHour - 9)
     }
 
     /// The hours a day's grid shows at first, before it's scrolled: 7:00
