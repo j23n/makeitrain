@@ -37,7 +37,7 @@ Pushing a tag such as `v1.2.0` on a commit on `main` archives the app for the iP
 
 Every screen has SwiftUI previews, in Debug builds only. They show a week of sample data, `PreviewData` in TrackerKit: two clients, a running timer, an overlap, an unassigned entry, an entry recorded in New York, an archived project and a run of short entries back to back, with "now" fixed at Wednesday, September 23, 2026, 15:40 in Berlin. Some also show a freelancer's three months, two clients with a project each, hundreds of hours and dozens of tags that refer to issues, written like `Core/#131`, to see long totals and long lists of tags. The previews read no files, and edits made in a live preview go to a temporary folder.
 
-To see them, open `TimeTracker.xcodeproj` (`make project` generates it), choose the `TimeTracker` scheme with My Mac as the destination for the Mac's screens or an iPhone or iPad for iOS's, open a view's file from the TrackerKit package, and show the canvas (Editor › Canvas, ⌥⌘↩). The screens in `AdaptiveUI` build for both; pick an iPad in landscape as the canvas's device to see the wide layout as a wide iPad window shows it, and the main window's Narrow preview for the iPhone's tabs on the Mac.
+To see them, open `TimeTracker.xcodeproj` (`make project` generates it), choose the `TimeTracker` scheme with My Mac as the destination for the Mac's screens or an iPhone or iPad for iOS's, open a view's file from the TrackerKit package, and show the canvas (Editor › Canvas, ⌥⌘↩). The screens in `AdaptiveUI` build for both; pick an iPad in landscape as the canvas's device to see the wide layout as a wide iPad window shows it, and the main window's Narrow preview for the narrow layout's tabs on the Mac.
 
 ## Layout
 
