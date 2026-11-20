@@ -43,12 +43,14 @@ public enum LineSuggestions {
     /// Suggestions for the word at `cursor`, a UTF-16 offset into `text`,
     /// at most `limit`. `entryID` is the entry the line edits, if it edits
     /// one: commands aren't offered then, and the times come from the
-    /// other entries of its day rather than today's.
+    /// other entries of its day rather than today's. `day`, for a new
+    /// entry drawn on a day, is the day the times come from.
     public static func suggestions(
         for text: String,
         cursor: Int,
         in context: CommandContext,
-        editing entryID: UUID? = nil
+        editing entryID: UUID? = nil,
+        on day: LocalDate? = nil
     ) -> [LineSuggestion] {
         let word = Word(text, cursor: cursor)
         let typed = word.typed
@@ -115,7 +117,9 @@ public enum LineSuggestions {
         }
 
         // Times of day, where one goes.
-        let day = entryID.flatMap { id in context.resolved.first { $0.id == id } }?.start.local(in: context.timeZone).date ?? context.today
+        let day = day
+            ?? entryID.flatMap { id in context.resolved.first { $0.id == id } }?.start.local(in: context.timeZone).date
+            ?? context.today
         let afterTimeWord = before.last.map(timeWords.contains) ?? false
         let clocks = times(typed, after: afterTimeWord, word: word, day: day, in: context, editing: entryID)
         if !clocks.isEmpty || typed.isEmpty {

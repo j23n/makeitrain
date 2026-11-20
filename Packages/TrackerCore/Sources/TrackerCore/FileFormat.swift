@@ -27,9 +27,13 @@ extension FileProblem {
 public enum FileFormat {
     /// The version of month files.
     public static let entriesVersion = 1
-    /// The version of `projects.json`. Version 2 added projects'
-    /// `repositories`.
-    public static let projectsVersion = 2
+    /// The newest version of `projects.json`. Version 2 added projects'
+    /// `repositories`, and version 3 their `contracts`.
+    public static let projectsVersion = 3
+    /// The version `projects.json` is written in while no project has a
+    /// contract, so copies of the app from before contracts can still read
+    /// it.
+    static let projectsVersionWithoutContracts = 2
 
     public static func encode(entries: [TimeEntry]) -> Data {
         JSONWriter.data(.object([
@@ -42,7 +46,7 @@ public enum FileFormat {
         JSONWriter.data(.object([
             "clients": .array(clients.sorted(by: Client.fileOrder).map(\.json)),
             "projects": .array(projects.sorted(by: Project.fileOrder).map(\.json)),
-            "version": .number(projectsVersion),
+            "version": .number(projects.contains { !$0.contracts.isEmpty } ? projectsVersion : projectsVersionWithoutContracts),
         ]))
     }
 
@@ -207,7 +211,7 @@ extension Client: Decodable {
 
 extension Project: Decodable {
     private enum Key: String, CodingKey {
-        case id, client, name, color, archived, repositories, updated, deleted
+        case id, client, name, color, archived, repositories, contracts, updated, deleted
     }
 
     public init(from decoder: any Decoder) throws {
@@ -219,6 +223,7 @@ extension Project: Decodable {
             color: try container.decodeIfPresent(String.self, forKey: .color) ?? "#4F7CAC",
             archived: try container.decodeIfPresent(Bool.self, forKey: .archived) ?? false,
             repositories: try container.decodeIfPresent([String].self, forKey: .repositories) ?? [],
+            contracts: try container.decodeIfPresent([Contract].self, forKey: .contracts) ?? [],
             updated: try container.time(.updated),
             deleted: try container.timeIfPresent(.deleted)
         )
@@ -238,6 +243,9 @@ extension Project: Decodable {
         if !repositories.isEmpty {
             members["repositories"] = .array(repositories.map { .string($0) })
         }
+        if !contracts.isEmpty {
+            members["contracts"] = .array(contracts.sorted(by: Contract.fileOrder).map(\.json))
+        }
         if let deleted {
             members["deleted"] = .string(DateTimeFormat.formatUTC(deleted))
         }
@@ -247,6 +255,46 @@ extension Project: Decodable {
     /// The order projects are written in: by name, then id.
     public static func fileOrder(_ a: Project, _ b: Project) -> Bool {
         byName(a.name, a.id, b.name, b.id)
+    }
+}
+
+extension Contract: Decodable {
+    private enum Key: String, CodingKey {
+        case id, hours, start, end, alertHours
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: Key.self)
+        self.init(
+            id: try container.decode(UUID.self, forKey: .id),
+            hours: try container.decode(Int.self, forKey: .hours),
+            start: try container.day(.start),
+            end: try container.day(.end),
+            alertHours: try container.decodeIfPresent(Int.self, forKey: .alertHours)
+        )
+    }
+
+    var json: JSON {
+        var members: [String: JSON] = [
+            "end": .string(end.description),
+            "hours": .number(hours),
+            "id": .string(id.uuidString),
+            "start": .string(start.description),
+        ]
+        if let alertHours {
+            members["alertHours"] = .number(alertHours)
+        }
+        return .object(members)
+    }
+
+    /// The contract as one line, for comparing copies when they merge.
+    var fileText: String {
+        "\(id.uuidString) \(start) \(end) \(hours) \(alertHours.map(String.init) ?? "-")"
+    }
+
+    /// The order contracts are written in: by start, then id.
+    static func fileOrder(_ a: Contract, _ b: Contract) -> Bool {
+        a.start != b.start ? a.start < b.start : a.id.uuidString < b.id.uuidString
     }
 }
 
@@ -268,6 +316,18 @@ extension KeyedDecodingContainer {
             )
         }
         return time
+    }
+
+    fileprivate func day(_ key: Key) throws -> LocalDate {
+        let text = try decode(String.self, forKey: key)
+        guard let day = LocalDate(fileText: text) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: key,
+                in: self,
+                debugDescription: "\"\(text)\" isn't a day such as 2026-09-23"
+            )
+        }
+        return day
     }
 
     fileprivate func timeIfPresent(_ key: Key) throws -> Timestamp? {

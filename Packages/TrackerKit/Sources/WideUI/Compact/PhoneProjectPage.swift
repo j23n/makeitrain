@@ -81,6 +81,9 @@ struct PhoneProjectPage: View {
                 }
                 .padding(.horizontal, 4)
                 timer(project)
+                if let status = model.contractStatus(ofProject: projectID) {
+                    ContractCard(status: status, tint: ProjectTint(hex: project.color), compact: true)
+                }
                 if let overview {
                     figures(overview)
                     ProjectWeeks(model: model, projectID: projectID, tint: ProjectTint(hex: project.color), compact: true) {

@@ -48,12 +48,29 @@ extension AppModel {
         Ledger.newEntryLine(day: draft.day, startSecond: draft.startSecond, endSecond: draft.endSecond, today: today)
     }
 
+    /// The entries a new entry overlaps, in order, each with the part it
+    /// overlaps as seconds after midnight on the new entry's day. Entries
+    /// from the day before and ones recorded in other zones count.
+    public func overlaps(of draft: NewEntryDraft) -> [(entry: ResolvedEntry, range: Range<Int>)] {
+        NewEntrySpan.overlapping(start: draft.start, end: draft.end, startSecond: draft.startSecond, entries: resolved, now: now)
+    }
+
+    /// The parts of a new entry that other entries already take, joined
+    /// where they touch, for hatching each once.
+    public func overlapRanges(of draft: NewEntryDraft) -> [Range<Int>] {
+        NewEntrySpan.merged(overlaps(of: draft).map(\.range))
+    }
+
     /// A line typed for a new entry, read in its zone: the reading, what
     /// it makes of the entry, or else why it can't be one. A line without
     /// times keeps the draft's, and one with only a start keeps its end.
     func readNewEntryLine(_ line: String, for draft: NewEntryDraft) -> (reading: CommandReading, parts: EntryLineParts?, problem: String?) {
         var context = commandContext
         context.timeZone = draft.timeZone
+        // A new entry never starts or stops a timer, so the running one
+        // mustn't turn a line away as running already or as starting
+        // before it.
+        context.resolved.removeAll { $0.isRunning }
         let reading = CommandReading(line, in: context)
         let zone = draft.timeZone
         switch reading.primary {

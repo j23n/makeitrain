@@ -89,6 +89,10 @@ struct ProjectSettingsPanel: View {
                     }
                 }
             }
+            field("Contract", footer: "Time on the contract's days counts toward its hours. Each device alerts once when the time left reaches the alert.") {
+                ContractEditor(model: model, project: project)
+                    .font(.system(size: compact ? 15 : 12.5))
+            }
             repositories
             calendar
             actions

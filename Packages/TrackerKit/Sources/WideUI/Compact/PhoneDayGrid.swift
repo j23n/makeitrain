@@ -45,7 +45,7 @@ struct PhoneDayGrid: View {
                             ForEach(blocks) { block in
                                 blockView(block, in: blocks, hours: hours, width: width)
                             }
-                            newEntryView(blocks, hours: hours, width: width)
+                            newEntryView(hours: hours, width: width)
                             ghosts(hours, width: width)
                             overlaps(hours, width: width)
                             longEntries(hours, width: width)
@@ -160,9 +160,10 @@ struct PhoneDayGrid: View {
 
     // MARK: New entries
 
-    /// The seconds after midnight at `y` points down the grid.
+    /// The second of the day at `y`, within the hours shown.
     private func second(at y: CGFloat, _ hours: Range<Int>) -> Int {
-        Int((y / hourHeight + CGFloat(hours.lowerBound)) * 3600)
+        let second = Int((y / hourHeight + CGFloat(hours.lowerBound)) * 3600)
+        return min(max(second, hours.lowerBound * 3600), hours.upperBound * 3600)
     }
 
     private var latest: Int {
@@ -170,8 +171,9 @@ struct PhoneDayGrid: View {
     }
 
     /// Empty space under the blocks. On a touch screen, a touch held there,
-    /// then dragged, draws a new entry, and a swipe still scrolls. On the
-    /// Mac, dragging across it draws one, as on the week.
+    /// then dragged, draws a new entry, a tap drops one being made, and a
+    /// swipe still scrolls. On the Mac, dragging across it draws one, as on
+    /// the week.
     @ViewBuilder
     private func emptySpace(_ hours: Range<Int>, width: CGFloat) -> some View {
         #if os(iOS)
@@ -179,6 +181,8 @@ struct PhoneDayGrid: View {
             draw(NewEntrySpan.held(at: second(at: start.y, hours), to: second(at: location.y, hours), latest: latest))
         } onEnd: {
             week.isDrawingNewEntry = false
+        } onTap: {
+            week.newEntry = nil
         }
         .frame(width: width, height: CGFloat(hours.count) * hourHeight)
         #else
@@ -219,11 +223,11 @@ struct PhoneDayGrid: View {
     /// times, round handles to drag its start and end, and what it
     /// overlaps hatched.
     @ViewBuilder
-    private func newEntryView(_ blocks: [DayBlock], hours: Range<Int>, width: CGFloat) -> some View {
+    private func newEntryView(hours: Range<Int>, width: CGFloat) -> some View {
         if let draft = week.newEntry, draft.day == day {
             let top = y(draft.startSecond, hours)
             let bottom = y(draft.endSecond, hours)
-            ForEach(NewEntrySpan.overlaps(start: draft.startSecond, end: draft.endSecond, with: blocks), id: \.lowerBound) { range in
+            ForEach(model.overlapRanges(of: draft), id: \.lowerBound) { range in
                 Hatching()
                     .frame(width: width - 8, height: max(y(range.upperBound, hours) - y(range.lowerBound, hours), 2))
                     .overlay(alignment: .top) { Rectangle().fill(Theme.amber).frame(height: 1.5) }

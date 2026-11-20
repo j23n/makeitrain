@@ -45,6 +45,8 @@ struct PhoneSettings: View {
 
                 Section("General") {
                     WeekStartPicker(model: model)
+                    Toggle("Contract alerts", isOn: $preferences.contractAlerts)
+                        .onChange(of: preferences.contractAlerts) { model.updateContractAlerts() }
                 }
 
                 #if FEEDBACK
