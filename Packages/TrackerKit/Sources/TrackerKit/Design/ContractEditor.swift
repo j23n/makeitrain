@@ -4,19 +4,21 @@ import TrackerCore
 /// A project's contracts in its settings: the hours, days and alert of the
 /// one that holds today, or else the next to start, the others under it,
 /// and buttons to add the next one or remove one. Each change is kept as
-/// it's made. Its rows go in a Form's section on iPhone, with `inForm`
-/// set, and in the settings column of a project's page on the Mac and iPad.
+/// it's made. It sits in a project's settings, at touch size with `touch`
+/// set; in a Form's section, `inForm` leaves the hours field to the Form.
 public struct ContractEditor: View {
     let model: AppModel
     let project: Project
     let inForm: Bool
+    let touch: Bool
     @State private var error: ContractError?
     @Environment(\.undoManager) private var undoManager
 
-    public init(model: AppModel, project: Project, inForm: Bool = false) {
+    public init(model: AppModel, project: Project, inForm: Bool = false, touch: Bool = false) {
         self.model = model
         self.project = project
         self.inForm = inForm
+        self.touch = touch
     }
 
     private var contract: Contract? {
@@ -50,7 +52,7 @@ public struct ContractEditor: View {
             }
             if let error {
                 Text(message(for: error))
-                    .font(.system(size: 12))
+                    .font(.system(size: touch ? 14 : 12))
                     .foregroundStyle(Theme.amberText)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -96,13 +98,15 @@ public struct ContractEditor: View {
                 model.removeContract(other.id, fromProject: project.id, undoManager: undoManager)
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: touch ? 13 : 10, weight: .semibold))
                     .foregroundStyle(Theme.text3)
+                    .frame(width: touch ? 44 : nil, height: touch ? 44 : nil)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.borderless)
             .accessibilityLabel(Text("Remove the contract for \(Format.days(other.days))"))
         }
-        .font(.system(size: 12.5))
+        .font(.system(size: touch ? 15 : 12.5))
     }
 
     /// A picker's date for one of the contract's days, which changes it.
