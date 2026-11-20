@@ -6,9 +6,9 @@ import TrackerCore
 
 extension ContractStatus {
     /// The color of the time left: amber at or under the alert, red once
-    /// it's over, or nil for the usual text color.
+    /// the hours are used up, or nil for the usual text color.
     public var leftColor: Color? {
-        isOver ? Theme.overText : (isLow ? Theme.amberText : nil)
+        isUsedUp ? Theme.overText : (isLow ? Theme.amberText : nil)
     }
 }
 
@@ -60,7 +60,7 @@ public struct ContractBar: View {
     }
 
     private var fill: Color {
-        status.isOver ? Theme.now : (status.isLow ? Theme.amber : tint.bar)
+        status.isUsedUp ? Theme.now : (status.isLow ? Theme.amber : tint.bar)
     }
 
     /// A vertical line, for the alert's dots.
@@ -87,7 +87,7 @@ public struct ContractLeftText: View {
 
     public var body: some View {
         HStack(spacing: 4) {
-            if status.isLow, !status.isOver {
+            if status.isLow, !status.isUsedUp {
                 Image(systemName: "bell.fill")
                     .font(.system(size: size * 0.8))
                     .foregroundStyle(Theme.amber)
