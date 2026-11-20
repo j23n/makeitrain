@@ -9,6 +9,9 @@ import TrackerCore
 /// `.form` lays it out as a section of a grouped Form, as the narrow
 /// layout's settings sheet shows it; `.panel` as a tinted box in the wide
 /// layout's settings column on the Mac and iPad.
+///
+/// Each row presents its own sheet and question, so they work while the
+/// other rows of a long Form are scrolled away and not loaded.
 public struct ContractList: View {
     public enum Layout: Sendable {
         case form
@@ -18,16 +21,6 @@ public struct ContractList: View {
     let model: AppModel
     let project: Project
     let layout: Layout
-    @State private var editing: Editing?
-    @State private var removing: Contract?
-    @Environment(\.undoManager) private var undoManager
-
-    /// A contract open in the sheet.
-    private struct Editing: Identifiable {
-        let contract: Contract
-        let isNew: Bool
-        var id: UUID { contract.id }
-    }
 
     public init(model: AppModel, project: Project, layout: Layout) {
         self.model = model
@@ -47,36 +40,14 @@ public struct ContractList: View {
         }
     }
 
-    /// The sheet and the question before removing. In a Form they go on
-    /// one row, since a section passes what's put on it to every row.
-    private func presentations<Content: View>(_ content: Content) -> some View {
-        content
-            .sheet(item: $editing) { item in
-                ContractSheet(model: model, projectID: project.id, contract: item.contract, isNew: item.isNew, undoManager: undoManager)
-            }
-            .confirmationDialog(
-                "Remove the contract for \(removing.map { Format.days($0.days) } ?? "")?",
-                isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
-                titleVisibility: .visible,
-                presenting: removing
-            ) { contract in
-                Button("Remove", role: .destructive) {
-                    model.removeContract(contract.id, fromProject: project.id, undoManager: undoManager)
-                }
-            }
-    }
-
     // MARK: - Form
 
     private var formLayout: some View {
         Section {
             ForEach(contracts) { contract in
-                formRow(contract)
+                ContractRow(model: model, project: project, contract: contract, layout: .form, isFirst: false)
             }
-            presentations(
-                Button("New Contract…", action: openNew)
-                    .disabled(model.isReadOnly)
-            )
+            NewContractButton(model: model, project: project, layout: .form)
         } header: {
             Text("Contracts")
         } footer: {
@@ -87,10 +58,6 @@ public struct ContractList: View {
     // MARK: - Panel
 
     private var panelLayout: some View {
-        presentations(panelBox)
-    }
-
-    private var panelBox: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Contracts")
                 .font(.system(size: 12, weight: .semibold))
@@ -98,7 +65,7 @@ public struct ContractList: View {
             if !contracts.isEmpty {
                 VStack(spacing: 0) {
                     ForEach(Array(contracts.enumerated()), id: \.element.id) { index, contract in
-                        panelRow(contract, isFirst: index == 0)
+                        ContractRow(model: model, project: project, contract: contract, layout: .panel, isFirst: index == 0)
                     }
                 }
             }
@@ -106,22 +73,90 @@ public struct ContractList: View {
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.text3)
                 .fixedSize(horizontal: false, vertical: true)
-            Button("New Contract…", action: openNew)
-                .buttonStyle(ChoiceButtonStyle(compact: true))
-                .disabled(model.isReadOnly)
+            NewContractButton(model: model, project: project, layout: .panel)
         }
         .padding(14)
         .background(RoundedRectangle(cornerRadius: 12).fill(Theme.accentFill.opacity(0.6)))
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.accentLine.opacity(0.65)))
     }
 
-    /// A contract in the form, which opens it, with a swipe to remove it.
-    private func formRow(_ contract: Contract) -> some View {
+    private var note: String {
+        contracts.isEmpty
+            ? "Add the hours agreed for some days. Time on those days counts toward them."
+            : "Time on a contract's days counts toward its hours."
+    }
+}
+
+/// "New Contract…", which opens a contract after the project's latest,
+/// with its hours, length and alert, or 40 hours over this month for the
+/// first.
+private struct NewContractButton: View {
+    let model: AppModel
+    let project: Project
+    let layout: ContractList.Layout
+    @State private var contract: Contract?
+    @Environment(\.undoManager) private var undoManager
+
+    var body: some View {
+        styled(Button("New Contract…") {
+            contract = Contract.next(after: project.contracts, today: model.today)
+        })
+        .disabled(model.isReadOnly)
+        .sheet(item: $contract) { contract in
+            ContractSheet(model: model, projectID: project.id, contract: contract, isNew: true, undoManager: undoManager)
+        }
+    }
+
+    @ViewBuilder
+    private func styled(_ button: Button<Text>) -> some View {
+        if layout == .panel {
+            button.buttonStyle(ChoiceButtonStyle(compact: true))
+        } else {
+            button
+        }
+    }
+}
+
+/// A contract in the list: its days and its time, opening it in the
+/// sheet, with a menu to change or remove it.
+private struct ContractRow: View {
+    let model: AppModel
+    let project: Project
+    let contract: Contract
+    let layout: ContractList.Layout
+    /// Whether it's the panel's first row, which has no line above it.
+    let isFirst: Bool
+    @State private var editing = false
+    @State private var removing = false
+    @Environment(\.undoManager) private var undoManager
+
+    var body: some View {
+        content
+            .sheet(isPresented: $editing) {
+                ContractSheet(model: model, projectID: project.id, contract: contract, isNew: false, undoManager: undoManager)
+            }
+            .confirmationDialog("Remove the contract for \(Format.days(contract.days))?", isPresented: $removing, titleVisibility: .visible) {
+                Button("Remove", role: .destructive) {
+                    model.removeContract(contract.id, fromProject: project.id, undoManager: undoManager)
+                }
+            }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch layout {
+        case .form: formRow
+        case .panel: panelRow
+        }
+    }
+
+    /// In the form: the row with a chevron, and a swipe to remove it.
+    private var formRow: some View {
         Button {
-            open(contract)
+            editing = true
         } label: {
             HStack(spacing: 8) {
-                row(contract)
+                summary
                 Image(systemName: "chevron.right")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Theme.text3)
@@ -130,27 +165,27 @@ public struct ContractList: View {
         }
         .buttonStyle(.plain)
         .swipeActions {
-            Button("Remove", role: .destructive) { removing = contract }
+            Button("Remove", role: .destructive) { removing = true }
                 .disabled(model.isReadOnly)
         }
-        .contextMenu { menu(contract) }
+        .contextMenu { menu }
     }
 
-    /// A contract in the panel: its row, which opens it, and a menu.
-    private func panelRow(_ contract: Contract, isFirst: Bool) -> some View {
+    /// In the panel: the row, and a menu at its end.
+    private var panelRow: some View {
         HStack(spacing: 6) {
             Button {
-                open(contract)
+                editing = true
             } label: {
-                row(contract)
+                summary
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .help("Change or remove this contract")
-            moreMenu(contract)
+            moreMenu
         }
         .padding(.vertical, 7)
-        .contextMenu { menu(contract) }
+        .contextMenu { menu }
         .overlay(alignment: .top) {
             if !isFirst {
                 Rectangle().fill(Theme.accentLine.opacity(0.6)).frame(height: 1)
@@ -158,13 +193,13 @@ public struct ContractList: View {
         }
     }
 
-    private func moreMenu(_ contract: Contract) -> some View {
+    private var moreMenu: some View {
         let label = Image(systemName: "ellipsis")
             .foregroundStyle(Theme.text3)
             .frame(width: 22, height: 22)
             .contentShape(Rectangle())
         return Menu {
-            menu(contract)
+            menu
         } label: {
             label
         }
@@ -174,11 +209,16 @@ public struct ContractList: View {
         .accessibilityLabel(Text("More for the contract for \(Format.days(contract.days))"))
     }
 
-    // MARK: - Parts
+    @ViewBuilder
+    private var menu: some View {
+        Button("Change…") { editing = true }
+        Button("Remove…", role: .destructive) { removing = true }
+            .disabled(model.isReadOnly)
+    }
 
-    /// A contract's days, and its time left while it runs, its time used
-    /// once it's ended, or its hours before it starts.
-    private func row(_ contract: Contract) -> some View {
+    /// The days, and the time left while it runs, the time used once it's
+    /// ended, or the hours before it starts.
+    private var summary: some View {
         let status = model.status(of: contract, projectID: project.id)
         return VStack(alignment: .leading, spacing: 2) {
             Text(Format.days(contract.days))
@@ -205,29 +245,6 @@ public struct ContractList: View {
             Text("\(Format.left(status)) of \(hours)")
                 .foregroundStyle(status.leftColor ?? Theme.text2)
         }
-    }
-
-    @ViewBuilder
-    private func menu(_ contract: Contract) -> some View {
-        Button("Change…") { open(contract) }
-        Button("Remove…", role: .destructive) { removing = contract }
-            .disabled(model.isReadOnly)
-    }
-
-    private var note: String {
-        contracts.isEmpty
-            ? "Add the hours agreed for some days. Time on those days counts toward them."
-            : "Time on a contract's days counts toward its hours."
-    }
-
-    private func open(_ contract: Contract) {
-        editing = Editing(contract: contract, isNew: false)
-    }
-
-    /// Opens a contract after the project's latest, with its hours, length
-    /// and alert, or 40 hours over this month for the first.
-    private func openNew() {
-        editing = Editing(contract: Contract.next(after: project.contracts, today: model.today), isNew: true)
     }
 }
 
