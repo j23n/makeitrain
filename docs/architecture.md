@@ -39,6 +39,7 @@ Screens and intents talk only to the app model; only the file store touches disk
 - **FileStore** (`TrackerCore`) is an actor, so file work never blocks the main thread. It wraps `Folder`, which loads every file and saves each one as a read-merge-write.
 - **FileAccess** is the small protocol `Folder` uses to reach the disk: plain file access for the local folder and tests, and `NSFileCoordinator` for iCloud.
 - **Watcher** (`TrackerKit`) runs a metadata query on the iCloud folder, asks iCloud to download missing files, resolves conflicting versions, and tells the model to reload when another device changes something.
+- **Contracts:** `ContractStatus` (`TrackerCore`, `Contracts.swift`) works out where a project's contract stands from each day's time: the time used and left, the even pace and when the hours likely run out. `Ledger.contractAlerts` lists the alerts due now and those a running timer reaches later, and `ContractAlertPlan` decides which to show, schedule or take back, given what this device has shown and scheduled. `AppModel.updateContractAlerts` (`TrackerKit`) runs the plan whenever the data or the time changes, through a `NotificationProvider`, the system's notifications in the app and none in tests, and keeps what it showed and scheduled in `Preferences`. `Design/ContractViews.swift` and `Design/ContractEditor.swift` have the bar, the card and the settings every platform shows.
 - **Calendars** (`TrackerKit`) reads the Calendar app's calendars through EventKit, which has every account on the device, and hands their events to `CalendarImport` in TrackerCore, for corrections and for importing. Which calendar goes to which project is a setting on each device, not part of the synced data, as are the appearance, the shortcut, the corrections skipped and the lines typed, in `Preferences`.
 
 ## Screens
@@ -57,7 +58,7 @@ The iOS app is one app for iPhone and iPad:
 
 ## Permissions
 
-The Mac app has the App Sandbox, iCloud Documents for its own container, read-write access to files the user picks, for CSV export and import, and calendars. The iOS app has iCloud Documents, and shows a Live Activity while a timer runs. Both ask for full access to calendars when the user allows it, since EventKit can't give access to single calendars. GitHub links open in the browser, so the apps still never use the network. Calendar data never leaves the device except as the entries imported, so the App Store privacy label can still say "Data Not Collected".
+The Mac app has the App Sandbox, iCloud Documents for its own container, read-write access to files the user picks, for CSV export and import, and calendars. The iOS app has iCloud Documents, and shows a Live Activity while a timer runs. Both ask for full access to calendars when the user allows it, since EventKit can't give access to single calendars. GitHub links open in the browser, so the apps still never use the network. Calendar data never leaves the device except as the entries imported, so the App Store privacy label can still say "Data Not Collected". Both ask to show notifications the first time a contract alert is due; the alerts are local notifications, which need no entitlement.
 
 ## Choices
 

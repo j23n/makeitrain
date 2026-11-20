@@ -454,6 +454,13 @@ public struct RunningTimerLabel: View {
             Text(Format.duration(model.duration(of: running)))
                 .fontWeight(.semibold)
                 .monospacedDigit()
+            if let contract = model.activeContract(ofProject: projectID), contract.isLow {
+                Text("· \(Format.left(contract))")
+                    .fontWeight(.semibold)
+                    .monospacedDigit()
+                    .foregroundStyle(contract.leftColor ?? Theme.text)
+                    .lineLimit(1)
+            }
         }
         .padding(.horizontal, 9)
         .frame(maxHeight: .infinity)

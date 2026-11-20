@@ -207,7 +207,7 @@ public enum NewEntrySpan {
     /// down, or above where it started.
     public static func held(at: Int, to: Int, latest: Int) -> (start: Int, end: Int)? {
         if to < at - snap / 2 || to - at > heldLength {
-            return dragged(from: at, to: to, latest: latest)
+            return dragged(from: at / snap * snap, to: to, latest: latest)
         }
         return placed(at: at, length: heldLength, latest: latest)
     }
@@ -237,15 +237,45 @@ public enum NewEntrySpan {
         return (start, max(min(rounded(second), limit), start + snap))
     }
 
-    /// The parts of the span from `start` to `end` that blocks already
-    /// take, each as seconds after midnight, for hatching them as time
-    /// counted twice while a new entry is drawn.
-    public static func overlaps(start: Int, end: Int, with blocks: [DayBlock]) -> [Range<Int>] {
-        blocks.compactMap { block in
-            let from = max(start, block.startSecond)
-            let to = min(end, block.endSecond)
-            return from < to ? from..<to : nil
+    /// The entries that a new entry from `start` to `end` overlaps, in
+    /// order, each with the part it overlaps as seconds after midnight on
+    /// the new entry's day, which starts at `startSecond`. It compares real
+    /// instants, so an entry from the day before that runs past midnight,
+    /// or one recorded in another zone, counts. A running entry runs to
+    /// `now`.
+    public static func overlapping(
+        start: Timestamp,
+        end: Timestamp,
+        startSecond: Int,
+        entries: [ResolvedEntry],
+        now: Timestamp
+    ) -> [(entry: ResolvedEntry, range: Range<Int>)] {
+        var found: [(entry: ResolvedEntry, range: Range<Int>)] = []
+        for entry in entries {
+            let from = max(start, entry.start)
+            let to = min(end, entry.end ?? now)
+            guard from < to else { continue }
+            let lower = startSecond + Int(start.distance(to: from) / 1000)
+            let upper = startSecond + Int(start.distance(to: to) / 1000)
+            if lower < upper {
+                found.append((entry, lower..<upper))
+            }
         }
+        return found.sorted { $0.range.lowerBound < $1.range.lowerBound }
+    }
+
+    /// `ranges` with the ones that touch or overlap joined, in order, for
+    /// hatching time counted twice once each.
+    public static func merged(_ ranges: [Range<Int>]) -> [Range<Int>] {
+        var result: [Range<Int>] = []
+        for range in ranges.sorted(by: { $0.lowerBound < $1.lowerBound }) {
+            if let last = result.last, range.lowerBound <= last.upperBound {
+                result[result.count - 1] = last.lowerBound..<max(last.upperBound, range.upperBound)
+            } else {
+                result.append(range)
+            }
+        }
+        return result
     }
 
     private static func rounded(_ second: Int) -> Int {

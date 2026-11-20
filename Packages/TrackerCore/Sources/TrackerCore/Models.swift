@@ -36,6 +36,9 @@ public struct Project: Identifiable, Hashable, Sendable {
     /// "https://github.com/j23n/makeitrain". Tags like "#123" refer to issues
     /// and pull requests in the first one; see `GitHub`.
     public var repositories: [String]
+    /// The hours agreed for the project over some days, earlier ones too.
+    /// They don't overlap.
+    public var contracts: [Contract]
     /// When the project last changed.
     public var updated: Timestamp
     /// Set when the project is deleted. The record keeps its name, color and
@@ -49,6 +52,7 @@ public struct Project: Identifiable, Hashable, Sendable {
         color: String = "#4F7CAC",
         archived: Bool = false,
         repositories: [String] = [],
+        contracts: [Contract] = [],
         updated: Timestamp,
         deleted: Timestamp? = nil
     ) {
@@ -58,6 +62,7 @@ public struct Project: Identifiable, Hashable, Sendable {
         self.color = color
         self.archived = archived
         self.repositories = repositories
+        self.contracts = contracts
         self.updated = updated
         self.deleted = deleted
     }
