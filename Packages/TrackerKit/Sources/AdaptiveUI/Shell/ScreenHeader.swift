@@ -7,7 +7,14 @@ import TrackerKit
 /// filter and what its colors mean, and its own figures at the end. The
 /// title is as wide as the widest it can be in the year, the same on all
 /// three, so the arrows stay put while stepping and switching.
-struct ScreenHeader<Content: View, Trailing: View>: View {
+///
+/// It's one line while the title, Today, the filter and the figures fit at
+/// their own size, and two lines otherwise, with the filter and the figures
+/// on the second. What the colors mean goes between them where there's
+/// room. The lines depend on the window's width and the parts' own, not on
+/// the legend or whether Today shows, so stepping the month or year leaves
+/// them as they are; the week's figures are wider with corrections.
+struct ScreenHeader<Filter: View, Legend: View, Trailing: View>: View {
     let title: String
     /// The titles the title's room fits.
     let widest: [String]
@@ -16,7 +23,8 @@ struct ScreenHeader<Content: View, Trailing: View>: View {
     let showsToday: Bool
     let step: (Int) -> Void
     let today: () -> Void
-    let content: Content
+    let filter: Filter
+    let legend: Legend
     let trailing: Trailing
 
     init(
@@ -28,7 +36,8 @@ struct ScreenHeader<Content: View, Trailing: View>: View {
         showsToday: Bool,
         step: @escaping (Int) -> Void,
         today: @escaping () -> Void,
-        @ViewBuilder content: () -> Content,
+        @ViewBuilder filter: () -> Filter,
+        @ViewBuilder legend: () -> Legend,
         @ViewBuilder trailing: () -> Trailing
     ) {
         self.title = title
@@ -38,11 +47,36 @@ struct ScreenHeader<Content: View, Trailing: View>: View {
         self.showsToday = showsToday
         self.step = step
         self.today = today
-        self.content = content()
+        self.filter = filter()
+        self.legend = legend()
         self.trailing = trailing()
     }
 
     var body: some View {
+        // One of each part, so the typed report's field keeps what's typed
+        // and its focus as the header changes lines.
+        ScreenHeaderLayout(showsToday: showsToday) {
+            navigation
+            Button("Today", action: today)
+                .buttonStyle(ChoiceButtonStyle(compact: true))
+                .lineLimit(1)
+                .fixedSize()
+                // Kept while hidden, for its room.
+                .opacity(showsToday ? 1 : 0)
+                .disabled(!showsToday)
+                .accessibilityHidden(!showsToday)
+            HStack(spacing: 12) { filter }
+            // The legend where it fits, or nothing.
+            ViewThatFits(in: .horizontal) {
+                legend
+                Color.clear.frame(width: 0, height: 0)
+            }
+            HStack(spacing: 12) { trailing }
+        }
+    }
+
+    /// The title and the arrows that step it.
+    private var navigation: some View {
         HStack(alignment: .center, spacing: 12) {
             ZStack(alignment: .leading) {
                 ForEach(widest, id: \.self) { title in
@@ -54,18 +88,11 @@ struct ScreenHeader<Content: View, Trailing: View>: View {
             .font(.system(size: 19, weight: .semibold))
             .monospacedDigit()
             .lineLimit(1)
-            .layoutPriority(1)
+            .fixedSize()
             HStack(spacing: 2) {
                 stepButton("chevron.left", previousTitle, -1)
                 stepButton("chevron.right", nextTitle, 1)
             }
-            if showsToday {
-                Button("Today", action: today)
-                    .buttonStyle(ChoiceButtonStyle(compact: true))
-            }
-            content
-            Spacer(minLength: 12)
-            trailing
         }
     }
 
@@ -83,6 +110,97 @@ struct ScreenHeader<Content: View, Trailing: View>: View {
         .buttonStyle(.plain)
         .help(title)
         .accessibilityLabel(Text(title))
+    }
+}
+
+/// Where the screen header's parts go: the title with its arrows, Today,
+/// the filter, the legend and the figures, in that order. On one line when
+/// all but the legend fit at their own size, Today counted even while it's
+/// hidden, and otherwise the filter, the legend and the figures on a second
+/// line. The figures are at the end of their line, and the legend gets the
+/// room between them and the filter.
+struct ScreenHeaderLayout: Layout {
+    let showsToday: Bool
+    var spacing: CGFloat = 12
+    var lineSpacing: CGFloat = 10
+
+    /// The parts' own sizes, by their order.
+    private struct Parts {
+        let navigation, today, filter, legend, trailing: CGSize
+
+        init(_ subviews: Subviews) {
+            let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+            func size(_ index: Int) -> CGSize {
+                sizes.indices.contains(index) ? sizes[index] : .zero
+            }
+            navigation = size(0)
+            today = size(1)
+            filter = size(2)
+            legend = size(3)
+            trailing = size(4)
+        }
+    }
+
+    /// The width the header needs on one line, leaving out the legend.
+    private func oneLineWidth(_ parts: Parts) -> CGFloat {
+        parts.navigation.width + spacing + parts.today.width + spacing + parts.filter.width + spacing + parts.trailing.width
+    }
+
+    /// Whether the header fits on one line `width` points wide.
+    private func fitsOneLine(_ parts: Parts, width: CGFloat) -> Bool {
+        oneLineWidth(parts) <= width
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let parts = Parts(subviews)
+        // The width offered, or its own for none or an unlimited one.
+        let offered = proposal.width.flatMap { $0.isFinite ? $0 : nil }
+        if fitsOneLine(parts, width: offered ?? .infinity) {
+            let height = [parts.navigation, parts.today, parts.filter, parts.legend, parts.trailing].map(\.height).max() ?? 0
+            return CGSize(width: offered ?? oneLineWidth(parts) + spacing + parts.legend.width, height: height)
+        }
+        let first = max(parts.navigation.height, parts.today.height)
+        let second = [parts.filter, parts.legend, parts.trailing].map(\.height).max() ?? 0
+        return CGSize(width: offered ?? oneLineWidth(parts), height: first + lineSpacing + second)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard subviews.count == 5 else { return }
+        let parts = Parts(subviews)
+        let oneLine = fitsOneLine(parts, width: bounds.width)
+        // The middle of each line.
+        let firstLine: CGFloat
+        let secondLine: CGFloat
+        if oneLine {
+            firstLine = bounds.midY
+            secondLine = bounds.midY
+        } else {
+            let firstHeight = max(parts.navigation.height, parts.today.height)
+            firstLine = bounds.minY + firstHeight / 2
+            let secondHeight = [parts.filter, parts.legend, parts.trailing].map(\.height).max() ?? 0
+            secondLine = bounds.maxY - secondHeight / 2
+        }
+
+        func place(_ index: Int, x: CGFloat, y: CGFloat, size: CGSize) {
+            subviews[index].place(at: CGPoint(x: x, y: y), anchor: .leading, proposal: ProposedViewSize(size))
+        }
+
+        var x = bounds.minX
+        place(0, x: x, y: firstLine, size: parts.navigation)
+        x += parts.navigation.width + spacing
+        place(1, x: x, y: firstLine, size: parts.today)
+        if showsToday {
+            x += parts.today.width + spacing
+        }
+        if !oneLine {
+            x = bounds.minX
+        }
+        place(2, x: x, y: secondLine, size: parts.filter)
+        x += parts.filter.width + spacing
+        let trailingX = bounds.maxX - parts.trailing.width
+        place(4, x: trailingX, y: secondLine, size: parts.trailing)
+        let legendWidth = max(0, trailingX - spacing - x)
+        place(3, x: x, y: secondLine, size: CGSize(width: legendWidth, height: parts.legend.height))
     }
 }
 
