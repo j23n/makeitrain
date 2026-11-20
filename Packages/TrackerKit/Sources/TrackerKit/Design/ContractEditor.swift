@@ -52,7 +52,7 @@ public struct ContractEditor: View {
             }
             if let error {
                 Text(message(for: error))
-                    .font(.system(size: 12))
+                    .font(.system(size: touch ? 13 : 12))
                     .foregroundStyle(Theme.amberText)
                     .fixedSize(horizontal: false, vertical: true)
             }
