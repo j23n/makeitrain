@@ -18,9 +18,10 @@ struct TimerWidgets: WidgetBundle {
 }
 
 /// The running timer on the Lock Screen and in the Dynamic Island: its
-/// project, what it's for, how long it's run, Stop, other entries to switch
-/// to and the command line. Once it counts as left running it asks whether
-/// it still is, and once stopped it offers to continue it.
+/// project, what it's for, the time left on its contract, how long it's
+/// run, Stop, other entries to switch to and the command line. Once it
+/// counts as left running it asks whether it still is, and once stopped it
+/// offers to continue it.
 struct TimerLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: TimerActivityAttributes.self) { context in
@@ -59,6 +60,8 @@ struct TimerLiveActivity: Widget {
                 DynamicIslandExpandedRegion(.bottom) {
                     VStack(alignment: .leading, spacing: 10) {
                         TimerDetail(state: context.state, isStale: context.isStale)
+                            .padding(.leading, 4)
+                        ContractLine(state: context.state)
                             .padding(.leading, 4)
                         ActivityActions(state: context.state, isStale: context.isStale)
                     }
@@ -105,6 +108,8 @@ struct TimerHeader: View {
                 }
                 TimerDetail(state: state, isStale: isStale)
                     .padding(.leading, 18)
+                ContractLine(state: state)
+                    .padding(.leading, 18)
             }
             Spacer(minLength: 8)
             TimerText(state: state, isStale: isStale)
@@ -134,6 +139,30 @@ struct TimerDetail: View {
         .font(.subheadline)
         .foregroundStyle(.white.opacity(0.72))
         .lineLimit(1)
+    }
+}
+
+/// The time left on the project's contract while the timer runs,
+/// counting down, such as "3:10:00 left until Nov 30": in amber at or under
+/// its alert, and "Over the hours" once they're used up.
+struct ContractLine: View {
+    let state: TimerActivityAttributes.ContentState
+
+    var body: some View {
+        if state.end == nil, let out = state.contractOut, let until = state.contractUntil {
+            let now = Date()
+            Group {
+                if out <= now {
+                    Text("Over the hours until \(until)")
+                } else {
+                    Text(timerInterval: now...out, countsDown: true) + Text(" left until \(until)")
+                }
+            }
+            .font(.subheadline.weight(state.contractLow == true ? .semibold : .regular))
+            .monospacedDigit()
+            .foregroundStyle(out <= now ? Color.red : state.contractLow == true ? Color.orange : .white.opacity(0.72))
+            .lineLimit(1)
+        }
     }
 }
 

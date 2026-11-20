@@ -5,8 +5,8 @@ import TrackerCore
 // the Mac, iPhone and iPad.
 
 /// The running timer over a command line: a bar in its project's color,
-/// the project and its client, the tags and note and when it started, how
-/// long it's run, and Stop.
+/// the project and its client, the tags and note and when it started, the
+/// time left on its contract, how long it's run, and Stop.
 public struct RunningCard: View {
     let model: AppModel
     let running: ResolvedEntry
@@ -42,6 +42,11 @@ public struct RunningCard: View {
                     .font(.system(size: touch ? 13 : 12))
                     .lineLimit(1)
                     .truncationMode(.tail)
+                if let contract = model.activeContract(ofProject: running.entry.projectID) {
+                    RunningContractText(contract)
+                        .font(.system(size: touch ? 13 : 12))
+                        .padding(.top, 2)
+                }
             }
             Spacer(minLength: 8)
             Text(Format.duration(model.duration(of: running)))

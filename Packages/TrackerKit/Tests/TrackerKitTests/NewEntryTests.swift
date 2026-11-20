@@ -53,6 +53,26 @@ import TrackerCore
         #expect(line.parts?.end == draft.end)
     }
 
+    @Test func aRunningTimerDoesntTurnANewEntrysLineAway() async throws {
+        let (harness, model) = await Harness.started()
+        defer { harness.cleanUp() }
+        let website = model.addProject(named: "Website", client: nil, color: Palette.colors[0], undoManager: nil)
+        model.startTimer(EntryDraft(projectID: website), undoManager: nil)
+        let draft = model.newEntryDraft(on: tuesday, startSecond: hm(14, 0), endSecond: hm(16, 30))
+        let line = EntryLineModel(model: model)
+        line.showNew(draft)
+
+        // The running timer's project, without times.
+        line.text = "web"
+        #expect(line.parts?.start == draft.start)
+        #expect(line.parts?.end == draft.end)
+
+        // Only a start, before the running timer's.
+        line.text = "22 sep 14:15 web"
+        #expect(line.parts?.start == Timestamp(date: tuesday, secondOfDay: hm(14, 15), zone: draft.timeZone))
+        #expect(line.parts?.end == draft.end)
+    }
+
     @Test func draggingTheNewEntryChangesTheTimesInItsLine() async throws {
         let (harness, model) = await Harness.started()
         defer { harness.cleanUp() }

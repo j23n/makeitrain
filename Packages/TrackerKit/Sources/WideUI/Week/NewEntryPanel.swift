@@ -11,15 +11,19 @@ import TrackerKit
 struct NewEntryPanel: View {
     let model: AppModel
     let week: WeekModel
+    /// Bumped by the screen when Return asks for the line again.
+    let focusRequest: Int
     /// When it's saved or dropped, so the screen takes the keyboard back.
     let done: () -> Void
     @State private var line: EntryLineModel
-    @State private var focusRequest = 0
+    /// Bumped when the panel opens, to give the line the keyboard.
+    @State private var opened = 0
     @Environment(\.undoManager) private var undoManager
 
-    init(model: AppModel, week: WeekModel, done: @escaping () -> Void) {
+    init(model: AppModel, week: WeekModel, focusRequest: Int, done: @escaping () -> Void) {
         self.model = model
         self.week = week
+        self.focusRequest = focusRequest
         self.done = done
         _line = State(initialValue: EntryLineModel(model: model))
     }
@@ -57,7 +61,7 @@ struct NewEntryPanel: View {
             }
         }
         .task {
-            focusRequest += 1
+            opened += 1
         }
     }
 
@@ -69,22 +73,16 @@ struct NewEntryPanel: View {
     /// What the new entry overlaps, such as "Overlaps Push notifications
     /// from 14:15 to 14:30.", for the first entry it does.
     private func overlap(_ draft: NewEntryDraft) -> String? {
-        let blocks = DayLayout.blocks(on: draft.day, entries: week.entries(on: draft.day), now: model.now)
-        for block in blocks {
-            let from = max(draft.startSecond, block.startSecond)
-            let to = min(draft.endSecond, block.endSecond)
-            if from < to {
-                return "Overlaps \(model.ledger.title(of: block.entry.entry)) from \(Format.time(secondOfDay: from)) to \(Format.time(secondOfDay: to))."
-            }
-        }
-        return nil
+        guard let first = model.overlaps(of: draft).first else { return nil }
+        let title = model.ledger.title(of: first.entry.entry)
+        return "Overlaps \(title) from \(Format.time(secondOfDay: first.range.lowerBound)) to \(Format.time(secondOfDay: first.range.upperBound))."
     }
 
     private var field: some View {
         CommandField(
             entryLine: line,
             fontSize: 13,
-            focusRequest: focusRequest,
+            focusRequest: focusRequest + opened,
             onSubmit: { save() },
             onCancel: { discard() }
         )
@@ -153,7 +151,7 @@ struct NewEntryPanel: View {
     let model = PreviewData.model()
     let week = WeekModel(model: model, days: ReportPeriod.week.range(containing: model.today, firstWeekday: model.firstWeekday))
     week.newEntry = model.newEntryDraft(on: model.today, startSecond: 9 * 3600, endSecond: 10 * 3600 + 1800)
-    return NewEntryPanel(model: model, week: week) {}
+    return NewEntryPanel(model: model, week: week, focusRequest: 0) {}
         .frame(height: 560)
 }
 #endif

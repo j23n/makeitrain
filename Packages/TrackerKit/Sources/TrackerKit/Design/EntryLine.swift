@@ -174,8 +174,8 @@ public final class EntryLineModel {
     }
 
     private func refreshSuggestions() {
-        if newEntry != nil, !text.isEmpty {
-            suggestions.reset(to: model.suggestions(for: text, cursor: cursor ?? text.utf16.count))
+        if let newEntry, !text.isEmpty {
+            suggestions.reset(to: model.suggestions(for: text, cursor: cursor ?? text.utf16.count, newEntry: newEntry))
         } else if let entryID, !text.isEmpty {
             suggestions.reset(to: model.suggestions(for: text, cursor: cursor ?? text.utf16.count, editing: entryID))
         } else {
