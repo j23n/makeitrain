@@ -135,7 +135,7 @@ struct MobileProjectCalendarSection: View {
                     }
                 }
             case .restricted:
-                Text("Calendar access is restricted on this device.")
+                Text("Calendar access is restricted on this \(deviceName).")
                     .foregroundStyle(.secondary)
             case .granted:
                 Picker("Calendar", selection: Binding(
