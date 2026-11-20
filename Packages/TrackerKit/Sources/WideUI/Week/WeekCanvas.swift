@@ -379,8 +379,10 @@ struct DayColumn: View {
     // MARK: New entries
 
     /// The seconds after midnight at `y` points down the column.
+    /// The second of the day at `y`, within the hours shown.
     private func second(at y: CGFloat) -> Int {
-        Int((y / height + CGFloat(hours.lowerBound)) * 3600)
+        let second = Int((y / height + CGFloat(hours.lowerBound)) * 3600)
+        return min(max(second, hours.lowerBound * 3600), hours.upperBound * 3600)
     }
 
     /// The latest a new entry here can end: now on today.

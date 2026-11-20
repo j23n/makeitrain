@@ -164,8 +164,10 @@ struct PhoneDayGrid: View {
     // MARK: New entries
 
     /// The seconds after midnight at `y` points down the grid.
+    /// The second of the day at `y`, within the hours shown.
     private func second(at y: CGFloat, _ hours: Range<Int>) -> Int {
-        Int((y / hourHeight + CGFloat(hours.lowerBound)) * 3600)
+        let second = Int((y / hourHeight + CGFloat(hours.lowerBound)) * 3600)
+        return min(max(second, hours.lowerBound * 3600), hours.upperBound * 3600)
     }
 
     private var latest: Int {
