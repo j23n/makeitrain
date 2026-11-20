@@ -48,6 +48,9 @@ struct ProjectsScreen: View {
                         archivedSection(tree, stats: stats)
                     }
                     .frame(width: ProjectColumn.layoutWidth(in: geometry.size.width))
+                    // A list shorter than the panel starts at its top, where
+                    // a scroll view that scrolls both ways may center it.
+                    .frame(minHeight: geometry.size.height, alignment: .top)
                 }
                 .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
             }
