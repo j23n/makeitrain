@@ -77,6 +77,8 @@ extension AppModel {
         Task {
             guard await notifications.requestAuthorization() else { return }
             for (index, item) in messages.enumerated() {
+                // Taken back while permission was asked, as when the timer stopped.
+                if item.date != nil, preferences.scheduledContractAlerts[item.alert.key] == nil { continue }
                 notifications.add(id: item.alert.key, title: texts[index].title, body: texts[index].body, at: item.date)
             }
         }
