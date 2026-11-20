@@ -168,7 +168,7 @@ A project can have contracts: a whole number of hours agreed between two days, s
 
 ### Contract alerts
 
-- The alert is the hours left at which to notify. It's 10% of the contract's hours, rounded up to a whole hour, unless changed: 120 hours alert at 12 hours left. Zero turns it off.
+- The alert is the hours left at which to notify. It's 10% of the contract's hours, rounded up to a whole hour, unless changed: 120 hours alert at 12 hours left. Zero turns it off, and an alert above the hours is lowered to them when saved.
 - Each device notifies once when a contract that holds today reaches its alert, and once when its hours are used up. A used-up notice covers the alert if both are due at once. While a timer runs, the device schedules them for the moment the timer reaches them, so they come on time with the app closed, and takes them back once it sees the timer stop. A device that's asleep while the timer is stopped elsewhere can still show what it scheduled.
 - Saving a change to a contract's hours or alert notifies again when the new alert is reached. Changes in the sheet before it's saved don't notify.
 - Settings has a switch for contract alerts on each device, on unless turned off. The first alert asks for permission to notify.

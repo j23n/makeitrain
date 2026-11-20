@@ -52,7 +52,7 @@ public struct ContractList: View {
     private func presentations<Content: View>(_ content: Content) -> some View {
         content
             .sheet(item: $editing) { item in
-                ContractSheet(model: model, projectID: project.id, contract: item.contract, isNew: item.isNew)
+                ContractSheet(model: model, projectID: project.id, contract: item.contract, isNew: item.isNew, undoManager: undoManager)
             }
             .confirmationDialog(
                 "Remove the contract for \(removing.map { Format.days($0.days) } ?? "")?",
@@ -168,7 +168,7 @@ public struct ContractList: View {
         } label: {
             label
         }
-        .menuIndicatorHidden()
+        .menuIndicator(.hidden)
         .fixedSize()
         .buttonStyle(.plain)
         .accessibilityLabel(Text("More for the contract for \(Format.days(contract.days))"))

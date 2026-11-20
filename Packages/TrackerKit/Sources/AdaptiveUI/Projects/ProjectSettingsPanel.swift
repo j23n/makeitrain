@@ -279,7 +279,7 @@ struct ProjectSettingsPanel: View {
         } label: {
             label
         }
-        .menuIndicatorHidden()
+        .menuIndicator(.hidden)
         .fixedSize()
         .buttonStyle(.plain)
         .accessibilityLabel(Text("More for \(title)"))

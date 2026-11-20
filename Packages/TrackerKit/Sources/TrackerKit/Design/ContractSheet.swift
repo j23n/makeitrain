@@ -14,11 +14,14 @@ public struct ContractSheet: View {
     @State private var hoursText: String
     @State private var error: ContractError?
     @State private var confirmingRemove = false
-    @Environment(\.undoManager) private var undoManager
+    /// The presenting window's, so that the change undoes there: on the
+    /// Mac, a sheet has an undo manager of its own, gone once it closes.
+    let undoManager: UndoManager?
     @Environment(\.dismiss) private var dismiss
 
-    public init(model: AppModel, projectID: UUID, contract: Contract, isNew: Bool) {
+    public init(model: AppModel, projectID: UUID, contract: Contract, isNew: Bool, undoManager: UndoManager?) {
         self.model = model
+        self.undoManager = undoManager
         self.projectID = projectID
         self.original = contract
         self.isNew = isNew
@@ -26,10 +29,14 @@ public struct ContractSheet: View {
         _hoursText = State(initialValue: "\(contract.hours)")
     }
 
-    /// The draft with the hours as typed: 0 while they aren't a number.
+    /// The draft with the hours as typed, 0 while they aren't a number,
+    /// and an alert no larger than the hours.
     private var edited: Contract {
         var contract = draft
         contract.hours = Int(hoursText.trimmingCharacters(in: .whitespaces)) ?? 0
+        if let alert = contract.alertHours, alert > contract.hours, contract.hours > 0 {
+            contract.alertHours = contract.hours
+        }
         return contract
     }
 
@@ -252,7 +259,7 @@ public struct ContractSheet: View {
     let model = PreviewData.model()
     return Group {
         if let project = model.ledger.projects[PreviewData.website], let contract = project.contract(on: model.today) {
-            ContractSheet(model: model, projectID: project.id, contract: contract, isNew: false)
+            ContractSheet(model: model, projectID: project.id, contract: contract, isNew: false, undoManager: nil)
         }
     }
 }
@@ -263,7 +270,8 @@ public struct ContractSheet: View {
         model: model,
         projectID: PreviewData.mobileApp,
         contract: Contract.next(after: [], today: model.today),
-        isNew: true
+        isNew: true,
+        undoManager: nil
     )
 }
 #endif
