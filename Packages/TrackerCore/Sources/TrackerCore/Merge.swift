@@ -90,6 +90,7 @@ extension Project {
             Order.compareText(color, other.color),
             Order.compareFlags(archived, other.archived),
             Order.compareText(repositories.joined(separator: "\n"), other.repositories.joined(separator: "\n")),
+            Order.compareText(contracts.map(\.fileText).joined(separator: "\n"), other.contracts.map(\.fileText).joined(separator: "\n")),
         ])
         return order >= 0 ? self : other
     }

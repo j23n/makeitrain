@@ -31,6 +31,13 @@ public struct TimerActivityAttributes: ActivityAttributes {
         public var likelyEnd: Date?
         /// The latest other entries, to switch to.
         public var switchTo: [Shortcut]?
+        /// When the project's contract runs out of hours as the timer runs,
+        /// to count down to, while one holds today.
+        public var contractOut: Date?
+        /// The contract's last day, such as "Nov 30".
+        public var contractUntil: String?
+        /// Whether the contract's time left is at or under its alert.
+        public var contractLow: Bool?
 
         public init(
             start: Date,
@@ -42,7 +49,10 @@ public struct TimerActivityAttributes: ActivityAttributes {
             line: String? = nil,
             ranLong: Date? = nil,
             likelyEnd: Date? = nil,
-            switchTo: [Shortcut] = []
+            switchTo: [Shortcut] = [],
+            contractOut: Date? = nil,
+            contractUntil: String? = nil,
+            contractLow: Bool? = nil
         ) {
             self.start = start
             self.entryID = entryID
@@ -54,6 +64,9 @@ public struct TimerActivityAttributes: ActivityAttributes {
             self.ranLong = ranLong
             self.likelyEnd = likelyEnd
             self.switchTo = switchTo
+            self.contractOut = contractOut
+            self.contractUntil = contractUntil
+            self.contractLow = contractLow
         }
 
         /// The project's color, for drawing.

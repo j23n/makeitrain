@@ -378,9 +378,10 @@ struct DayColumn: View {
 
     // MARK: New entries
 
-    /// The seconds after midnight at `y` points down the column.
+    /// The second of the day at `y`, within the hours shown.
     private func second(at y: CGFloat) -> Int {
-        Int((y / height + CGFloat(hours.lowerBound)) * 3600)
+        let second = Int((y / height + CGFloat(hours.lowerBound)) * 3600)
+        return min(max(second, hours.lowerBound * 3600), hours.upperBound * 3600)
     }
 
     /// The latest a new entry here can end: now on today.
@@ -391,7 +392,7 @@ struct DayColumn: View {
     /// Empty space under the blocks. On the Mac, dragging across it draws a
     /// new entry, double-clicking makes one an hour long, and clicking drops
     /// one being made. On a touch screen, a touch held there draws one as
-    /// it's dragged, and a swipe still scrolls.
+    /// it's dragged, a tap drops one being made, and a swipe still scrolls.
     @ViewBuilder
     private func emptySpace(width: CGFloat, columnHeight: CGFloat) -> some View {
         #if os(macOS)
@@ -420,6 +421,9 @@ struct DayColumn: View {
             draw(NewEntrySpan.held(at: second(at: start.y), to: second(at: location.y), latest: latest))
         } onEnd: {
             week.isDrawingNewEntry = false
+        } onTap: {
+            week.newEntry = nil
+            onSelect()
         }
         .frame(width: width, height: columnHeight)
         #endif
@@ -448,7 +452,7 @@ struct DayColumn: View {
         if let draft = week.newEntry, draft.day == day {
             let top = y(draft.startSecond)
             let bottom = y(draft.endSecond)
-            ForEach(NewEntrySpan.overlaps(start: draft.startSecond, end: draft.endSecond, with: blocks), id: \.lowerBound) { range in
+            ForEach(model.overlapRanges(of: draft), id: \.lowerBound) { range in
                 Hatching()
                     .frame(width: width - 8, height: max(y(range.upperBound) - y(range.lowerBound), 2))
                     .overlay(alignment: .top) { Rectangle().fill(Theme.amber).frame(height: 1.5) }

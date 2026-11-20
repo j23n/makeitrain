@@ -145,6 +145,8 @@ public enum Theme {
 
     /// The running timer and the line at the current time.
     public static let now = Color(light: RGBA(0xE5484D), dark: RGBA(0xFF5C5C))
+    /// Text that says a contract's hours are over.
+    public static let overText = Color(light: RGBA(0xB42318), dark: RGBA(0xFF8A80))
     /// Text on `now`.
     public static let nowText = Color(light: RGBA(0xFFFFFF), dark: RGBA(0x14161B))
 

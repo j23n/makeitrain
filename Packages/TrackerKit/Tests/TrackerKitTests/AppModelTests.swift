@@ -60,7 +60,7 @@ struct Harness {
     var cloudFolder: URL { root.appendingPathComponent("iCloud") }
     var backupsFolder: URL { root.appendingPathComponent("Backups") }
 
-    func model(cloud: FakeCloud? = nil, calendars: FakeCalendars? = nil) -> AppModel {
+    func model(cloud: FakeCloud? = nil, calendars: FakeCalendars? = nil, notifications: FakeNotifications? = nil) -> AppModel {
         let clock = clock
         return AppModel(environment: AppEnvironment(
             localFolder: localFolder,
@@ -69,7 +69,8 @@ struct Harness {
             now: { clock.now },
             timeZone: { "Europe/Berlin" },
             cloud: cloud,
-            calendars: calendars
+            calendars: calendars,
+            notifications: notifications
         ))
     }
 
