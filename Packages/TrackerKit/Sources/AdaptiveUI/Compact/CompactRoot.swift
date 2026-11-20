@@ -171,6 +171,16 @@ private struct CompactTabs<Settings: View>: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: router.commandOpen)
+        #if os(macOS)
+        .background {
+            // ⌘K opens the command line, as it puts the keyboard in the
+            // wide layout's.
+            Button("Command Line") { router.openCommandLine() }
+                .keyboardShortcut("k")
+                .opacity(0)
+                .accessibilityHidden(true)
+        }
+        #endif
         .sheet(isPresented: $router.showsSettings) {
             settings
         }
