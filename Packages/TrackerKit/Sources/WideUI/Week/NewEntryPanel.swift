@@ -73,15 +73,9 @@ struct NewEntryPanel: View {
     /// What the new entry overlaps, such as "Overlaps Push notifications
     /// from 14:15 to 14:30.", for the first entry it does.
     private func overlap(_ draft: NewEntryDraft) -> String? {
-        let blocks = DayLayout.blocks(on: draft.day, entries: week.entries(on: draft.day), now: model.now)
-        for block in blocks {
-            let from = max(draft.startSecond, block.startSecond)
-            let to = min(draft.endSecond, block.endSecond)
-            if from < to {
-                return "Overlaps \(model.ledger.title(of: block.entry.entry)) from \(Format.time(secondOfDay: from)) to \(Format.time(secondOfDay: to))."
-            }
-        }
-        return nil
+        guard let first = model.overlaps(of: draft).first else { return nil }
+        let title = model.ledger.title(of: first.entry.entry)
+        return "Overlaps \(title) from \(Format.time(secondOfDay: first.range.lowerBound)) to \(Format.time(secondOfDay: first.range.upperBound))."
     }
 
     private var field: some View {

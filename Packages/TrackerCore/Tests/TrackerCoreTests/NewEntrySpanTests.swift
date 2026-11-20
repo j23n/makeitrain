@@ -89,8 +89,37 @@ import Testing
             TimeEntry(id: uuid(1), start: t("2026-11-19T13:00:00+01:00"), end: t("2026-11-19T14:30:00+01:00"), timeZone: "Europe/Berlin", updated: t("2026-11-19T00:00:00Z")),
             TimeEntry(id: uuid(2), start: t("2026-11-19T17:00:00+01:00"), end: t("2026-11-19T18:00:00+01:00"), timeZone: "Europe/Berlin", updated: t("2026-11-19T00:00:00Z")),
         ]
-        let blocks = DayLayout.blocks(on: day, entries: Ledger(entries: entries).resolvedEntries(), now: t("2026-11-20T12:00:00+01:00"))
-        #expect(NewEntrySpan.overlaps(start: hm(14, 15), end: hm(16, 30), with: blocks) == [hm(14, 15)..<hm(14, 30)])
+        let found = NewEntrySpan.overlapping(
+            start: t("2026-11-19T14:15:00+01:00"),
+            end: t("2026-11-19T16:30:00+01:00"),
+            startSecond: hm(14, 15),
+            entries: Ledger(entries: entries).resolvedEntries(),
+            now: t("2026-11-20T12:00:00+01:00")
+        )
+        #expect(found.map(\.entry.id) == [uuid(1)])
+        #expect(found.map(\.range) == [hm(14, 15)..<hm(14, 30)])
+    }
+
+    @Test func findsAnOverlapFromTheDayBeforeAndAnotherZone() {
+        let entries = [
+            TimeEntry(id: uuid(1), start: t("2026-11-18T22:00:00+01:00"), end: t("2026-11-19T01:30:00+01:00"), timeZone: "Europe/Berlin", updated: t("2026-11-19T00:00:00Z")),
+            TimeEntry(id: uuid(2), start: t("2026-11-19T00:45:00+01:00"), end: t("2026-11-19T02:00:00+01:00"), timeZone: "Europe/London", updated: t("2026-11-19T00:00:00Z")),
+        ]
+        let found = NewEntrySpan.overlapping(
+            start: t("2026-11-19T00:30:00+01:00"),
+            end: t("2026-11-19T01:00:00+01:00"),
+            startSecond: hm(0, 30),
+            entries: Ledger(entries: entries).resolvedEntries(),
+            now: t("2026-11-20T12:00:00+01:00")
+        )
+        #expect(found.map(\.entry.id) == [uuid(1), uuid(2)])
+        #expect(found.map(\.range) == [hm(0, 30)..<hm(1, 0), hm(0, 45)..<hm(1, 0)])
+        #expect(NewEntrySpan.merged(found.map(\.range)) == [hm(0, 30)..<hm(1, 0)])
+    }
+
+    @Test func mergesTouchingRanges() {
+        let ranges = [hm(15, 0)..<hm(15, 30), hm(14, 0)..<hm(14, 30), hm(14, 30)..<hm(14, 45), hm(14, 40)..<hm(14, 50)]
+        #expect(NewEntrySpan.merged(ranges) == [hm(14, 0)..<hm(14, 50), hm(15, 0)..<hm(15, 30)])
     }
 
     @Test func writesTheStartOfTheLine() {

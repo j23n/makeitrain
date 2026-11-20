@@ -448,7 +448,7 @@ struct DayColumn: View {
         if let draft = week.newEntry, draft.day == day {
             let top = y(draft.startSecond)
             let bottom = y(draft.endSecond)
-            ForEach(NewEntrySpan.overlaps(start: draft.startSecond, end: draft.endSecond, with: blocks), id: \.lowerBound) { range in
+            ForEach(model.overlapRanges(of: draft), id: \.lowerBound) { range in
                 Hatching()
                     .frame(width: width - 8, height: max(y(range.upperBound) - y(range.lowerBound), 2))
                     .overlay(alignment: .top) { Rectangle().fill(Theme.amber).frame(height: 1.5) }

@@ -48,7 +48,7 @@ struct PhoneDayGrid: View {
                             ForEach(blocks) { block in
                                 blockView(block, in: blocks, hours: hours, width: width)
                             }
-                            newEntryView(blocks, hours: hours, width: width)
+                            newEntryView(hours: hours, width: width)
                             ghosts(hours, width: width)
                             overlaps(hours, width: width)
                             longEntries(hours, width: width)
@@ -199,11 +199,11 @@ struct PhoneDayGrid: View {
     /// times, round handles to drag its start and end, and what it
     /// overlaps hatched.
     @ViewBuilder
-    private func newEntryView(_ blocks: [DayBlock], hours: Range<Int>, width: CGFloat) -> some View {
+    private func newEntryView(hours: Range<Int>, width: CGFloat) -> some View {
         if let draft = week.newEntry, draft.day == day {
             let top = y(draft.startSecond, hours)
             let bottom = y(draft.endSecond, hours)
-            ForEach(NewEntrySpan.overlaps(start: draft.startSecond, end: draft.endSecond, with: blocks), id: \.lowerBound) { range in
+            ForEach(model.overlapRanges(of: draft), id: \.lowerBound) { range in
                 Hatching()
                     .frame(width: width - 8, height: max(y(range.upperBound, hours) - y(range.lowerBound, hours), 2))
                     .overlay(alignment: .top) { Rectangle().fill(Theme.amber).frame(height: 1.5) }
