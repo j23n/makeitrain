@@ -193,12 +193,12 @@ public struct ContractCard: View {
                 .lineLimit(1)
             Spacer(minLength: 4)
             if !compact, status.isLow, status.hasStarted {
-                Label(status.isOver ? "Over the hours" : "Under the \(Format.hours(contract.alertsAt)) alert", systemImage: "bell.fill")
+                Label(status.isOver ? "Over the hours" : status.isUsedUp ? "Hours used up" : "Under the \(Format.hours(contract.alertsAt)) alert", systemImage: "bell.fill")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(status.isOver ? Theme.overText : Theme.amberText)
+                    .foregroundStyle(status.isUsedUp ? Theme.overText : Theme.amberText)
                     .padding(.horizontal, 9)
                     .frame(height: 26)
-                    .background(RoundedRectangle(cornerRadius: 7).fill(status.isOver ? Theme.now.opacity(0.12) : Theme.amberFill))
+                    .background(RoundedRectangle(cornerRadius: 7).fill(status.isUsedUp ? Theme.now.opacity(0.12) : Theme.amberFill))
             }
         }
     }
