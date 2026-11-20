@@ -83,7 +83,7 @@ struct PhoneProjectPage: View {
                 timer(project)
                 if let overview {
                     figures(overview)
-                    PhoneProjectWeeks(model: model, projectID: projectID, tint: ProjectTint(hex: project.color)) {
+                    ProjectWeeks(model: model, projectID: projectID, tint: ProjectTint(hex: project.color), compact: true) {
                         router.month.show(ReportPeriod.month.range(containing: model.today, firstWeekday: model.firstWeekday), period: .month)
                         router.month.projects = [projectID]
                         router.tab = .month
@@ -281,177 +281,27 @@ struct PhoneProjectPage: View {
     }
 }
 
-/// A project's last twelve weeks, a row of days each, with each day's time
-/// as a bar and the week's total.
-struct PhoneProjectWeeks: View {
-    let model: AppModel
-    let projectID: UUID
-    let tint: ProjectTint
-    let openMonth: () -> Void
-
-    var body: some View {
-        let today = model.today
-        let thisWeek = ReportPeriod.week.range(containing: today, firstWeekday: model.firstWeekday)
-        let first = thisWeek.lowerBound.adding(days: -77)
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Last 12 weeks")
-                    .font(.system(size: 14, weight: .semibold))
-                Spacer()
-                Button("Open in Month", action: openMonth)
-                    .font(.system(size: 13.5))
-            }
-            .padding(.horizontal, 2)
-            VStack(spacing: 3) {
-                ForEach(0..<12, id: \.self) { index in
-                    let start = first.adding(days: index * 7)
-                    let days = (0..<7).map { start.adding(days: $0) }
-                    let times = days.map { model.dayTotals.projects(on: $0, now: model.now)[projectID] ?? 0 }
-                    let total = times.reduce(0, +)
-                    HStack(spacing: 4) {
-                        Text(Format.monthDay(start))
-                            .foregroundStyle(index == 11 ? Theme.text : Theme.text3)
-                            .lineLimit(1)
-                            .frame(width: 44, alignment: .leading)
-                        ForEach(0..<7, id: \.self) { offset in
-                            ProjectDayCell(day: days[offset], time: times[offset], today: today, tint: tint, barHeight: 13, sideInset: 2, bottomInset: 2)
-                        }
-                        Text(total > 0 ? Format.duration(total) : "—")
-                            .monospacedDigit()
-                            .foregroundStyle(total > ChartScale.longWeek ? Theme.amberText : (total > 0 ? Theme.text : Theme.text3))
-                            .lineLimit(1)
-                            .frame(width: 64, alignment: .trailing)
-                    }
-                    .font(.system(size: 11.5))
-                    .frame(height: 17)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(Text("Week of \(Format.monthDay(start)), \(total > 0 ? Format.duration(total) : "no time")"))
-                }
-            }
-        }
-    }
-}
-
-/// A project's settings: name, client, color, GitHub repositories, the
-/// calendar on this iPhone, and archiving, merging or deleting it.
+/// A project's settings in a sheet over its page, with Done.
 struct PhoneProjectSettings: View {
     let model: AppModel
     let project: Project
     /// After a merge, the project it went into; after a delete, nil.
     let gone: (UUID?) -> Void
-    @State private var name = ""
-    @State private var mergeTarget: Project?
-    @State private var confirmingDelete = false
-    @Environment(\.undoManager) private var undoManager
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        let hasEntries = model.ledger.hasEntries(project: project.id)
-        let others = model.ledger.mergeTargets(forProject: project.id)
         NavigationStack {
-            Form {
-                Section {
-                    TextField("Name", text: $name)
-                        .onSubmit(rename)
-                    Picker("Client", selection: Binding(
-                        get: { project.clientID },
-                        set: { clientID in
-                            model.updateProject(project.id, actionName: "Change Client", undoManager: undoManager) { $0.clientID = clientID }
-                        }
-                    )) {
-                        Text("No client").tag(UUID?.none)
-                        ForEach(model.ledger.clientChoices(forProject: project.id)) { client in
-                            Text(client.name).tag(UUID?.some(client.id))
-                        }
-                    }
-                    HStack(spacing: 10) {
-                        ForEach(Palette.colors, id: \.self) { hex in
-                            let chosen = project.color.uppercased() == hex
-                            Button {
-                                model.updateProject(project.id, actionName: "Change Color", undoManager: undoManager) { $0.color = hex }
-                            } label: {
-                                RoundedRectangle(cornerRadius: 7)
-                                    .fill(ProjectTint(hex: hex).ink)
-                                    .frame(width: 30, height: 30)
-                                    .overlay {
-                                        if chosen {
-                                            RoundedRectangle(cornerRadius: 7).strokeBorder(Theme.text, lineWidth: 2.5)
-                                        }
-                                    }
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(Text(Palette.name(of: hex)))
-                            .accessibilityAddTraits(chosen ? .isSelected : [])
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-                MobileRepositoriesSection(model: model, project: project)
-                MobileProjectCalendarSection(model: model, project: project)
-                Section {
-                    Toggle("Archived", isOn: Binding(
-                        get: { project.archived },
-                        set: { archived in
-                            model.updateProject(project.id, actionName: archived ? "Archive Project" : "Unarchive Project", undoManager: undoManager) { $0.archived = archived }
-                        }
-                    ))
-                    Menu("Merge Into…") {
-                        ForEach(others) { other in
-                            Button(model.ledger.projectTitle(other.id)) {
-                                mergeTarget = other
-                            }
-                        }
-                    }
-                    .disabled(others.isEmpty)
-                    Button("Delete…", role: .destructive) {
-                        confirmingDelete = true
-                    }
-                    .disabled(hasEntries)
-                } footer: {
-                    if hasEntries {
-                        Text("A project with entries can't be deleted.")
-                    }
-                }
+            ProjectSettingsPanel(model: model, project: project, compact: true) { target in
+                dismiss()
+                gone(target)
             }
-            .disabled(model.isReadOnly)
             .navigationTitle(project.name)
             .inlineNavigationTitle()
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        rename()
-                        dismiss()
-                    }
-                }
-            }
-            .confirmationDialog(
-                "Merge “\(project.name)” into “\(mergeTarget.map { model.ledger.projectTitle($0.id) } ?? "")”?",
-                isPresented: Binding(get: { mergeTarget != nil }, set: { if !$0 { mergeTarget = nil } }),
-                titleVisibility: .visible,
-                presenting: mergeTarget
-            ) { target in
-                Button("Merge") {
-                    if (try? model.mergeProject(project.id, into: target.id, undoManager: undoManager)) != nil {
-                        dismiss()
-                        gone(target.id)
-                    }
-                }
-            } message: { target in
-                Text("Its entries move to “\(target.name)”, and “\(project.name)” is deleted.")
-            }
-            .confirmationDialog("Delete “\(project.name)”?", isPresented: $confirmingDelete, titleVisibility: .visible) {
-                Button("Delete", role: .destructive) {
-                    if (try? model.deleteProject(project.id, undoManager: undoManager)) != nil {
-                        dismiss()
-                        gone(nil)
-                    }
+                    Button("Done") { dismiss() }
                 }
             }
         }
-        .onAppear { name = project.name }
-    }
-
-    private func rename() {
-        model.renameProject(project.id, to: name, undoManager: undoManager)
     }
 }
