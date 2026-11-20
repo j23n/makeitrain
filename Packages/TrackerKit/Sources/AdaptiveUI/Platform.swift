@@ -96,6 +96,16 @@ extension View {
         #endif
     }
 
+    /// A picker in a form that opens its choices as a list of their own,
+    /// as on iPhone and iPad. The Mac keeps its pop-up menu.
+    func navigationPicker() -> some View {
+        #if os(iOS)
+        return pickerStyle(.navigationLink)
+        #else
+        return self
+        #endif
+    }
+
     /// The touch keyboard for typing a web address.
     func urlKeyboard() -> some View {
         #if os(iOS)
