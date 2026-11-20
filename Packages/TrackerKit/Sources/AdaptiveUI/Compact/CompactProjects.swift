@@ -192,10 +192,18 @@ struct CompactProjects: View {
                             .foregroundStyle(Theme.text2)
                         }
                     }
-                    Text(detail(project, total: row.total))
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.text3)
-                        .lineLimit(1)
+                    if let status = model.contractStatus(ofProject: project.id), status.hasStarted {
+                        HStack(spacing: 6) {
+                            ContractBar(status: status, tint: ProjectTint(hex: project.color), height: 4, showsPace: false)
+                                .frame(width: 44)
+                            ContractLeftText(status, size: 12)
+                        }
+                    } else {
+                        Text(detail(project, total: row.total))
+                            .font(.system(size: 12))
+                            .foregroundStyle(Theme.text3)
+                            .lineLimit(1)
+                    }
                 }
                 Spacer(minLength: 4)
                 Sparkline(values: row.weeks, tint: ProjectTint(hex: project.color), height: 20, spacing: 2, cornerRadius: 1)

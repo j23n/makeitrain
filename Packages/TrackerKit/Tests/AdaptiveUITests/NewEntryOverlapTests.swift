@@ -18,18 +18,16 @@ import TrackerKit
 
     @Test func saysWhatANewEntryOverlapsAndForHowLong() {
         let model = PreviewData.model()
-        let week = WeekModel(model: model, days: ReportPeriod.week.range(containing: monday, firstWeekday: model.firstWeekday))
         let draft = model.newEntryDraft(on: monday, startSecond: hm(12, 0), endSecond: hm(13, 30))
         let from = Format.time(secondOfDay: hm(12, 0))
         let to = Format.time(secondOfDay: hm(12, 15))
         // The first entry it overlaps, not the later one.
-        #expect(NewEntryOverlap.text(for: draft, model: model, week: week) == "Overlaps Planning from \(from) to \(to).")
+        #expect(NewEntryOverlap.text(for: draft, model: model) == "Overlaps Planning from \(from) to \(to).")
     }
 
     @Test func saysNothingForANewEntryThatOnlyTouchesAnother() {
         let model = PreviewData.model()
-        let week = WeekModel(model: model, days: ReportPeriod.week.range(containing: monday, firstWeekday: model.firstWeekday))
         let draft = model.newEntryDraft(on: monday, startSecond: hm(12, 15), endSecond: hm(13, 0))
-        #expect(NewEntryOverlap.text(for: draft, model: model, week: week) == nil)
+        #expect(NewEntryOverlap.text(for: draft, model: model) == nil)
     }
 }

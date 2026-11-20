@@ -87,6 +87,13 @@ import Testing
         #expect(suggest("8", editing: uuid(105)).isEmpty)
     }
 
+    @Test func offersTheTimesOfANewEntrysDay() {
+        let friday = LocalDate(year: 2026, month: 10, day: 2)
+        let suggestions = LineSuggestions.suggestions(for: "2 oct 12", cursor: 8, in: F.context(F.ledger()), on: friday)
+        #expect(suggestions.map(\.title) == ["12:00"])
+        #expect(suggestions.first?.detail == "end of Export to PDF")
+    }
+
     @Test func offersWhatACommandActsOn() {
         #expect(suggest("archive ha").first?.text == "archive Harbor ")
         // Before anything's typed, the projects used last.

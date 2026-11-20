@@ -67,17 +67,25 @@ An entry belongs to the month and the day of its start, in its own time zone, so
       "archived": false,
       "client": "5E0C9A2B-7F41-4D38-8B6E-1A2C3D4E5F60",
       "color": "#4F7CAC",
+      "contracts": [
+        {
+          "end": "2026-12-31",
+          "hours": 120,
+          "id": "C3A1E6F2-9B47-4D05-8E21-6F0A4B7D9C13",
+          "start": "2026-09-01"
+        }
+      ],
       "id": "8B41D7A0-5C2E-4F13-B6A9-0D7E3C1F2A54",
       "name": "Website redesign",
       "repositories": ["https://github.com/acme/website"],
       "updated": "2026-09-01T07:00:00Z"
     }
   ],
-  "version": 2
+  "version": 3
 }
 ```
 
-A project without `client` belongs to no client. `color` is a hex color. `repositories` lists the project's GitHub repositories as web addresses, the first being the one tags like `#123` refer to; it's missing when there are none. Both kinds of record have `updated` and, once deleted, `deleted`.
+A project without `client` belongs to no client. `color` is a hex color. `repositories` lists the project's GitHub repositories as web addresses, the first being the one tags like `#123` refer to; it's missing when there are none. `contracts` lists the project's contracts by their first day: each has an `id`, whole `hours`, and `start` and `end`, the first and last day that count, as `YYYY-MM-DD` dates. `alertHours`, the hours left at which to alert, is there only when it's been changed from the default of 10% of the hours rounded up, and 0 means no alert. `contracts` is missing when there are none. Both kinds of record have `updated` and, once deleted, `deleted`.
 
 Tags aren't listed here: a project's tags are the ones on its entries. Which calendar a project's events come from isn't either, because each device identifies its calendars differently; that's a setting on each device.
 
@@ -94,7 +102,7 @@ The app writes JSON with its own small writer: keys sorted, two-space indents, s
 
 ## Versions
 
-Every file has a `version`. This app writes month files as version 1 and `projects.json` as version 2, which added `repositories`. It reads both versions of `projects.json`.
+Every file has a `version`. This app writes month files as version 1. It writes `projects.json` as version 3, which added `contracts`, when some project has a contract, and otherwise as version 2, which added `repositories`, so copies of the app from before contracts can still save it. It reads all three versions of `projects.json`.
 
 - A file with a newer version is never written; the app says the file needs a newer version of the app.
 - Decoding ignores fields it doesn't know. Adding a field therefore needs a new version, or an older copy of the app would drop the field when it saves.

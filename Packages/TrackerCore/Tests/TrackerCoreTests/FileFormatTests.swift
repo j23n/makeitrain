@@ -82,8 +82,8 @@ import Testing
         let old = #"{"version": 1, "projects": [{"id": "00000000-0000-0000-0000-000000000002", "name": "Old", "updated": "2026-09-23T09:00:00Z"}]}"#
         #expect(try FileFormat.decodeProjects(from: Data(old.utf8)).projects.first?.repositories.isEmpty == true)
         // A newer projects file is left alone.
-        #expect(throws: FileProblem.newerVersion(3)) {
-            try FileFormat.decodeProjects(from: Data(#"{"version": 3, "projects": []}"#.utf8))
+        #expect(throws: FileProblem.newerVersion(4)) {
+            try FileFormat.decodeProjects(from: Data(#"{"version": 4, "projects": []}"#.utf8))
         }
     }
 

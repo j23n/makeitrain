@@ -207,7 +207,7 @@ struct CompactNewEntrySheet: View {
                     }
                     EntryLineReading(model: model, line: line, compact: true)
                     if let draft = week.newEntry {
-                        NewEntryOverlap(model: model, week: week, draft: draft, compact: true)
+                        NewEntryOverlap(model: model, draft: draft, compact: true)
                     }
                 }
                 .padding(16)
