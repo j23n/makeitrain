@@ -256,7 +256,7 @@ import Testing
         #expect(Set(alerts.map(\.kind)) == [.low, .usedUp])
         #expect(alerts.first { $0.kind == .low }?.date == start.adding(seconds: 9000))
         #expect(alerts.first { $0.kind == .usedUp }?.date == start.adding(seconds: 12600))
-        #expect(alerts.allSatisfy(\.running))
+        #expect(alerts.allSatisfy { $0.running })
     }
 
     @Test func plansEachAlertOnce() {
