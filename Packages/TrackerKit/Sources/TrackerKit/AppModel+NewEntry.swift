@@ -54,6 +54,10 @@ extension AppModel {
     func readNewEntryLine(_ line: String, for draft: NewEntryDraft) -> (reading: CommandReading, parts: EntryLineParts?, problem: String?) {
         var context = commandContext
         context.timeZone = draft.timeZone
+        // A new entry never starts or stops a timer, so the running one
+        // mustn't turn a line away as running already or as starting
+        // before it.
+        context.resolved.removeAll { $0.isRunning }
         let reading = CommandReading(line, in: context)
         let zone = draft.timeZone
         switch reading.primary {
