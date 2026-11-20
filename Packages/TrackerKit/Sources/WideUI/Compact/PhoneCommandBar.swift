@@ -63,7 +63,10 @@ struct PhoneCommandBar: View {
                 Text(entry.projectID.flatMap { model.ledger.projects[$0]?.name } ?? "Unassigned")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(entry.projectID == nil ? Theme.text2 : Theme.text)
-                if !detail.isEmpty {
+                if let status = model.activeContract(ofProject: entry.projectID), status.isLow {
+                    RunningContractText(status)
+                        .font(.system(size: 13))
+                } else if !detail.isEmpty {
                     Text(detail)
                         .font(.system(size: 13))
                         .foregroundStyle(Theme.text2)

@@ -169,6 +169,14 @@ extension AppModel {
         return LineSuggestions.suggestions(for: line, cursor: cursor, in: context, editing: entryID)
     }
 
+    /// Suggestions for a new entry's line: times of day from the entries
+    /// on the day it's drawn on, read in its zone.
+    public func suggestions(for line: String, cursor: Int, newEntry draft: NewEntryDraft) -> [LineSuggestion] {
+        var context = commandContext
+        context.timeZone = draft.timeZone
+        return LineSuggestions.suggestions(for: line, cursor: cursor, in: context, on: draft.day)
+    }
+
     /// Changes an entry to what a line typed over it says. Returns false
     /// when the line doesn't describe an entry.
     @discardableResult

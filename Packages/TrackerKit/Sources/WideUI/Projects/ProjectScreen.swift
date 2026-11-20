@@ -2,7 +2,7 @@ import SwiftUI
 import TrackerCore
 import TrackerKit
 
-/// A project's page: its time this week, this month and in all, its last
+/// A project's page: its contract, its time this week, this month and in all, its last
 /// twelve weeks day by day, its tags with the issues they refer to by
 /// repository, and its settings beside them. Single keys start its timer,
 /// and rename, color, archive or merge it, as on the projects table.
@@ -31,6 +31,9 @@ struct ProjectScreen: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 18) {
                             header(project)
+                            if let status = model.contractStatus(ofProject: projectID) {
+                                ContractCard(status: status, tint: ProjectTint(hex: project.color))
+                            }
                             if let overview {
                                 figures(overview)
                                 WeekDays(model: model, projectID: projectID, tint: ProjectTint(hex: project.color)) {
@@ -502,6 +505,10 @@ struct ProjectSettingsPanel: View {
                             .accessibilityAddTraits(project.color.uppercased() == hex ? .isSelected : [])
                         }
                     }
+                }
+                field("Contract", footer: "Time on the contract's days counts toward its hours. Each device alerts once when the time left reaches the alert.") {
+                    ContractEditor(model: model, project: project)
+                        .font(.system(size: 12.5))
                 }
                 repositories
                 calendar

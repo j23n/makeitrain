@@ -17,6 +17,17 @@ public enum Format {
         return rest == 0 ? "\(hours)\u{00A0}h" : "\(hours)\u{00A0}h\u{00A0}\(rest)\u{00A0}m"
     }
 
+    /// A whole number of hours, such as "120 h", as contracts have them.
+    public static func hours(_ hours: Int) -> String {
+        "\(hours)\u{00A0}h"
+    }
+
+    /// A contract's time left, such as "3:10 left", or past its hours,
+    /// such as "1:20 over".
+    public static func left(_ status: ContractStatus) -> String {
+        status.isOver ? "\(duration(-status.left)) over" : "\(duration(status.left)) left"
+    }
+
     /// The wall-clock time in a time zone, such as "09:15" or "9:15 AM",
     /// following the user's settings.
     public static func time(_ time: Timestamp, zone: String) -> String {

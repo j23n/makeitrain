@@ -81,6 +81,9 @@ struct PhoneProjectPage: View {
                 }
                 .padding(.horizontal, 4)
                 timer(project)
+                if let status = model.contractStatus(ofProject: projectID) {
+                    ContractCard(status: status, tint: ProjectTint(hex: project.color), compact: true)
+                }
                 if let overview {
                     figures(overview)
                     PhoneProjectWeeks(model: model, projectID: projectID, tint: ProjectTint(hex: project.color)) {
@@ -385,6 +388,13 @@ struct PhoneProjectSettings: View {
                         }
                     }
                     .padding(.vertical, 4)
+                }
+                Section {
+                    ContractEditor(model: model, project: project, inForm: true)
+                } header: {
+                    Text("Contract")
+                } footer: {
+                    Text("Time on the contract's days counts toward its hours. Each device alerts once when the time left reaches the alert.")
                 }
                 MobileRepositoriesSection(model: model, project: project)
                 MobileProjectCalendarSection(model: model, project: project)

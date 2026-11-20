@@ -51,6 +51,7 @@ extension Ledger {
                     project.color = old.color
                     project.archived = old.archived
                     project.repositories = old.repositories
+                    project.contracts = old.contracts
                     project.deleted = old.deleted
                 })
             } else if projects[change.after.id]?.isDeleted == false {
