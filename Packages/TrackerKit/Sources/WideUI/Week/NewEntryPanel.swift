@@ -36,16 +36,11 @@ struct NewEntryPanel: View {
                     VStack(alignment: .leading, spacing: 10) {
                         field
                         if !line.suggestions.isEmpty {
-                            suggestions
+                            EntryLineSuggestions(model: model, line: line)
                         }
                     }
                     EntryLineReading(model: model, line: line)
-                    if let overlap = overlap(draft) {
-                        Text(overlap)
-                            .font(.system(size: 12.5))
-                            .foregroundStyle(Theme.amberText)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    NewEntryOverlap(model: model, draft: draft)
                     buttons
                 }
             }
@@ -70,14 +65,6 @@ struct NewEntryPanel: View {
         "\(Format.weekday(draft.day)) \(draft.day.day) · \(Format.duration(Int64(draft.endSecond - draft.startSecond) * 1000))"
     }
 
-    /// What the new entry overlaps, such as "Overlaps Push notifications
-    /// from 14:15 to 14:30.", for the first entry it does.
-    private func overlap(_ draft: NewEntryDraft) -> String? {
-        guard let first = model.overlaps(of: draft).first else { return nil }
-        let title = model.ledger.title(of: first.entry.entry)
-        return "Overlaps \(title) from \(Format.time(secondOfDay: first.range.lowerBound)) to \(Format.time(secondOfDay: first.range.upperBound))."
-    }
-
     private var field: some View {
         CommandField(
             entryLine: line,
@@ -95,21 +82,6 @@ struct NewEntryPanel: View {
                 .strokeBorder(line.refused ? Theme.amber : Theme.accent, lineWidth: 1.5)
         )
         .disabled(model.isReadOnly)
-    }
-
-    /// What could replace the word being typed: Tab takes the highlighted
-    /// one, Up and Down move the highlight, and a click takes any.
-    private var suggestions: some View {
-        FlowLayout(spacing: 6) {
-            ForEach(Array(line.suggestions.chips(ledger: model.ledger).enumerated()), id: \.offset) { index, chip in
-                Button {
-                    line.acceptSuggestion(at: index)
-                } label: {
-                    ChipLabel(chip)
-                }
-                .buttonStyle(.plain)
-            }
-        }
     }
 
     private var buttons: some View {
