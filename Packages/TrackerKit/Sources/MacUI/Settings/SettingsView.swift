@@ -336,20 +336,9 @@ struct DataSettings: View {
                             if index > 0 {
                                 Divider().overlay(Theme.line)
                             }
-                            HStack(spacing: 10) {
-                                Image(systemName: file.problem == nil ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                                    .foregroundStyle(file.problem == nil ? Theme.ok : Theme.amber)
-                                    .accessibilityLabel(Text(file.problem == nil ? "Loaded" : "Not loaded"))
-                                Text(file.path)
-                                    .font(.system(size: 12, design: .monospaced))
-                                    .frame(width: 190, alignment: .leading)
-                                Text(file.detail)
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(file.problem == nil ? Theme.text2 : Theme.amberText)
-                                Spacer(minLength: 0)
-                            }
-                            .padding(.horizontal, 14)
-                            .frame(minHeight: 36)
+                            DataFileRow(file, stacked: false)
+                                .padding(.horizontal, 14)
+                                .frame(minHeight: 36)
                         }
                     }
                 }
@@ -368,16 +357,24 @@ struct DataSettings: View {
 
                 SettingsSection(
                     title: "Calendars on this Mac",
-                    footer: "Link a calendar on a project's page."
+                    footer: "A calendar's events that aren't logged show up in its project's week as corrections. A project's page can link one too."
                 ) {
                     SettingsRow(title: "Calendar access", divided: false) {
                         calendarAccess
                     }
-                    ForEach(model.calendars.filter { model.linkedProject(of: $0.id) != nil }) { calendar in
-                        SettingsRow(title: calendar.title, detail: calendar.account) {
-                            HStack(spacing: 7) {
-                                Text("→").foregroundStyle(Theme.text3)
-                                ProjectName(ledger: model.ledger, projectID: model.linkedProject(of: calendar.id))
+                    if model.calendarAccess == .granted {
+                        if model.calendars.isEmpty {
+                            SettingsRow(title: "No calendars on this \(deviceName).") {
+                                EmptyView()
+                            }
+                        }
+                        ForEach(model.calendars) { calendar in
+                            SettingsRow(title: calendar.title, detail: calendar.account) {
+                                CalendarProjectPicker(model: model, calendar: calendar) {
+                                    Text(calendar.title)
+                                }
+                                .labelsHidden()
+                                .fixedSize()
                             }
                         }
                     }

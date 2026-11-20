@@ -70,7 +70,7 @@ struct PhoneSettings: View {
                     NavigationLink {
                         PhoneDataFiles(model: model)
                     } label: {
-                        LabeledContent("Files", value: filesSummary)
+                        LabeledContent("Files", value: model.filesSummary)
                     }
                     LabeledContent("Latest backup", value: model.latestBackup ?? "None yet")
                     BackUpButton(model: model)
@@ -142,12 +142,7 @@ struct PhoneSettings: View {
                         .foregroundStyle(Theme.text2)
                 }
                 ForEach(model.calendars) { calendar in
-                    Picker(selection: projectBinding(for: calendar)) {
-                        Text("None").tag(UUID?.none)
-                        ForEach(model.ledger.pickerProjects()) { project in
-                            Text(model.ledger.projectTitle(project.id)).tag(UUID?.some(project.id))
-                        }
-                    } label: {
+                    CalendarProjectPicker(model: model, calendar: calendar) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(calendar.title)
                             if !calendar.account.isEmpty {
@@ -163,29 +158,6 @@ struct PhoneSettings: View {
             Text("Calendars on this \(deviceName)")
         }
     }
-
-    /// The project a calendar belongs to: choosing one links them, and
-    /// None unlinks it.
-    private func projectBinding(for calendar: CalendarInfo) -> Binding<UUID?> {
-        Binding(
-            get: { model.linkedProject(of: calendar.id) },
-            set: { projectID in
-                if let projectID {
-                    model.setCalendar(calendar.id, forProject: projectID)
-                } else if let linked = model.linkedProject(of: calendar.id) {
-                    model.setCalendar(nil, forProject: linked)
-                }
-            }
-        )
-    }
-
-    // MARK: Data
-
-    private var filesSummary: String {
-        let files = model.dataFiles
-        let unread = files.filter { $0.problem != nil }.count
-        return unread == 0 ? "\(files.count)" : "\(files.count), \(unread) can't be read"
-    }
 }
 
 /// The data files, with what each holds or why it can't be read.
@@ -196,18 +168,7 @@ struct PhoneDataFiles: View {
         List {
             Section {
                 ForEach(model.dataFiles) { file in
-                    HStack(spacing: 10) {
-                        Image(systemName: file.problem == nil ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                            .foregroundStyle(file.problem == nil ? Theme.ok : Theme.amber)
-                            .accessibilityLabel(Text(file.problem == nil ? "Loaded" : "Not loaded"))
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(file.path)
-                                .font(.system(size: 14, design: .monospaced))
-                            Text(file.detail)
-                                .font(.footnote)
-                                .foregroundStyle(file.problem == nil ? Theme.text2 : Theme.amberText)
-                        }
-                    }
+                    DataFileRow(file, stacked: true)
                 }
             }
         }
