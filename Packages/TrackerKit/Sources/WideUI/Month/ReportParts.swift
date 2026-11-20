@@ -220,7 +220,6 @@ struct StatementPanel: View {
     let model: AppModel
     let state: ReportState
     let navigator: Navigator
-    @State private var showsAll = false
     @State private var csv: ExportDocument?
     @State private var savingCSV = false
     @State private var pdf: ExportDocument?
@@ -237,8 +236,8 @@ struct StatementPanel: View {
                     Text(subtitle)
                         .foregroundStyle(Theme.text2)
                 }
-                figures
-                breakdown
+                ReportFigures(model: model, state: state)
+                ReportBreakdown(state: state)
                 checks
                 csvPreview
                 buttons
@@ -253,72 +252,6 @@ struct StatementPanel: View {
         let names = projects.compactMap { model.ledger.projects[$0]?.name }.sorted()
         let who = names.count == 1 && state.projects.isEmpty ? "\(names[0]) · " : ""
         return who + Format.days(state.range)
-    }
-
-    private var figures: some View {
-        let comparison = state.comparison
-        let change = comparison.total - comparison.previousTotal
-        return Grid(horizontalSpacing: 1, verticalSpacing: 1) {
-            GridRow {
-                FigureTile("Total", Format.duration(report.total), "\(report.entries.count) \(report.entries.count == 1 ? "entry" : "entries")")
-                FigureTile("Average day", Format.duration(report.averagePerDayWorked), "on days worked")
-            }
-            GridRow {
-                FigureTile("Days worked", "\(report.daysWorked)", "of \(state.weekdays) weekdays")
-                FigureTile(
-                    "vs. previous \(state.period == .month ? "month" : state.period == .week ? "week" : "days")",
-                    (change >= 0 ? "+" : "−") + Format.duration(abs(change)),
-                    comparison.percent.map { "\($0 >= 0 ? "+" : "")\($0)% from \(Format.duration(comparison.previousTotal))" } ?? "nothing before"
-                )
-            }
-        }
-        .background(Theme.line)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.line))
-    }
-
-    private var breakdown: some View {
-        let rows = report.groups
-        let shown = showsAll ? rows : Array(rows.prefix(6))
-        let highest = rows.map(\.milliseconds).max() ?? 1
-        return VStack(alignment: .leading, spacing: 9) {
-            HStack {
-                Text("By \(state.grouping.rawValue)")
-                    .font(.system(size: 13, weight: .semibold))
-                Spacer()
-                SegmentPicker(
-                    ReportRequest.Grouping.allCases.map { (value: $0, title: $0.rawValue.capitalized) },
-                    selection: Bindable(state).grouping
-                )
-                .scaleEffect(0.9)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                ForEach(shown) { group in
-                    VStack(spacing: 4) {
-                        HStack(spacing: 10) {
-                            ReportGroupTitle(group, in: state)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            Text(Format.duration(group.milliseconds))
-                                .frame(width: 78, alignment: .trailing)
-                            Text(Format.percent(group.milliseconds, of: report.total))
-                                .foregroundStyle(Theme.text3)
-                                .frame(width: 44, alignment: .trailing)
-                        }
-                        .font(.system(size: 12))
-                        .monospacedDigit()
-                        ShareBar(group.milliseconds, of: highest, color: group.color.map { ProjectTint(hex: $0).bar } ?? Theme.accent.opacity(0.7), height: 4)
-                    }
-                    .padding(.bottom, 4)
-                }
-            }
-            if rows.count > 6 {
-                Button(showsAll ? "Show fewer" : "\(rows.count - 6) more · \(Format.duration(rows.dropFirst(6).reduce(0) { $0 + $1.milliseconds }))") {
-                    showsAll.toggle()
-                }
-                .linkButton()
-                .font(.system(size: 12.5))
-            }
-        }
     }
 
     /// What to check before sending the report.
@@ -425,35 +358,155 @@ struct StatementPanel: View {
     }
 }
 
+/// A report's figures, in a grid of four: its total, the average day
+/// worked, the days worked, and the change from the days before. The month
+/// shows them on its statement in the wide layout, and under its days in
+/// the narrow one, smaller.
+struct ReportFigures: View {
+    let model: AppModel
+    let state: ReportState
+    var compact = false
+
+    private var report: Report { state.report }
+
+    var body: some View {
+        let comparison = state.comparison
+        let change = comparison.total - comparison.previousTotal
+        Grid(horizontalSpacing: 1, verticalSpacing: 1) {
+            GridRow {
+                FigureTile("Total", Format.duration(report.total), "\(report.entries.count) \(report.entries.count == 1 ? "entry" : "entries")", compact: compact)
+                FigureTile("Average day", Format.duration(report.averagePerDayWorked), "on days worked", compact: compact)
+            }
+            GridRow {
+                FigureTile("Days worked", "\(report.daysWorked)", "of \(state.weekdays) weekdays", compact: compact)
+                FigureTile(
+                    comparisonTitle,
+                    (change >= 0 ? "+" : "−") + Format.duration(abs(change)),
+                    comparison.percent.map { "\($0 >= 0 ? "+" : "")\($0)% from \(Format.duration(comparison.previousTotal))" } ?? "nothing before",
+                    compact: compact
+                )
+            }
+        }
+        .background(Theme.line)
+        .clipShape(RoundedRectangle(cornerRadius: compact ? 14 : 12))
+        .overlay(RoundedRectangle(cornerRadius: compact ? 14 : 12).strokeBorder(Theme.line))
+    }
+
+    /// "vs. August", or "vs. previous week".
+    private var comparisonTitle: String {
+        switch state.period {
+        case .month:
+            "vs. \(Format.monthName(state.comparison.previousRange.lowerBound))"
+        case .week:
+            "vs. previous week"
+        case .day:
+            "vs. previous day"
+        case .custom:
+            "vs. previous days"
+        }
+    }
+}
+
+/// A report's time by client, project or tag, the most first, each with
+/// its share as a bar. The wide layout picks the grouping beside the
+/// title; the narrow one has it in a chip over the month.
+struct ReportBreakdown: View {
+    let state: ReportState
+    var compact = false
+    @State private var showsAll = false
+
+    private var report: Report { state.report }
+    /// How many rows show before "more".
+    private var shownCount: Int { compact ? 8 : 6 }
+
+    var body: some View {
+        let rows = report.groups
+        let shown = showsAll ? rows : Array(rows.prefix(shownCount))
+        let highest = rows.map(\.milliseconds).max() ?? 1
+        VStack(alignment: .leading, spacing: compact ? 8 : 9) {
+            HStack {
+                Text("By \(state.grouping.rawValue)")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(compact ? Theme.text2 : Theme.text)
+                Spacer()
+                if !compact {
+                    SegmentPicker(
+                        ReportRequest.Grouping.allCases.map { (value: $0, title: $0.rawValue.capitalized) },
+                        selection: Bindable(state).grouping
+                    )
+                    .scaleEffect(0.9)
+                }
+            }
+            if rows.isEmpty {
+                Text("Nothing logged.")
+                    .font(.system(size: compact ? 13 : 12))
+                    .foregroundStyle(Theme.text3)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(shown) { group in
+                    VStack(spacing: 4) {
+                        HStack(spacing: 10) {
+                            ReportGroupTitle(group, in: state, spacing: compact ? 7 : 6)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            Text(Format.duration(group.milliseconds))
+                                .frame(width: 78, alignment: .trailing)
+                            Text(Format.percent(group.milliseconds, of: report.total))
+                                .foregroundStyle(Theme.text3)
+                                .frame(width: 44, alignment: .trailing)
+                        }
+                        .font(.system(size: compact ? 14 : 12))
+                        .monospacedDigit()
+                        .frame(minHeight: compact ? 24 : nil)
+                        ShareBar(group.milliseconds, of: highest, color: group.color.map { ProjectTint(hex: $0).bar } ?? Theme.accent.opacity(0.7), height: 4)
+                    }
+                    .padding(.bottom, 4)
+                }
+            }
+            if rows.count > shownCount {
+                Button(showsAll ? "Show fewer" : "\(rows.count - shownCount) more · \(Format.duration(rows.dropFirst(shownCount).reduce(0) { $0 + $1.milliseconds }))") {
+                    showsAll.toggle()
+                }
+                .linkButton()
+                .font(.system(size: compact ? 14 : 12.5))
+            }
+        }
+    }
+}
+
 /// A figure in a grid of them, as on a statement or a project's page:
-/// what it is, its value, and a line about it.
+/// what it is, its value, and a line about it. In the narrow layout it's
+/// smaller, two to a row on an iPhone.
 struct FigureTile<Detail: View>: View {
     let label: String
     let value: String
     let detail: Detail
+    let compact: Bool
 
-    init(_ label: String, _ value: String, @ViewBuilder detail: () -> Detail) {
+    init(_ label: String, _ value: String, compact: Bool = false, @ViewBuilder detail: () -> Detail) {
         self.label = label
         self.value = value
+        self.compact = compact
         self.detail = detail()
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: compact ? 2 : 4) {
             Text(label)
-                .font(.system(size: 12))
+                .font(.system(size: compact ? 11.5 : 12))
                 .foregroundStyle(Theme.text2)
+                .lineLimit(1)
             Text(value)
-                .font(.system(size: 24, weight: .medium))
+                .font(.system(size: compact ? 19 : 24, weight: .medium))
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             detail
-                .font(.system(size: 12))
+                .font(.system(size: compact ? 11 : 12))
                 .foregroundStyle(Theme.text2)
                 .lineLimit(1)
         }
-        .padding(14)
+        .padding(.horizontal, compact ? 12 : 14)
+        .padding(.vertical, compact ? 9 : 14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.card)
     }
@@ -461,9 +514,10 @@ struct FigureTile<Detail: View>: View {
 
 extension FigureTile where Detail == Text {
     /// A figure with a line of text about it.
-    init(_ label: String, _ value: String, _ detail: String) {
+    init(_ label: String, _ value: String, _ detail: String, compact: Bool = false) {
         self.label = label
         self.value = value
+        self.compact = compact
         self.detail = Text(detail)
     }
 }
